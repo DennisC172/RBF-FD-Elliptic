@@ -185,7 +185,9 @@ def grad_poly(p):
     """
     
     x, y = p
-    return np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    return np.array([[0.0, 0.0],
+                     [1.0, 0.0],
+                     [0.0, 1.0]])
 
 def anisotropic_diffusion_poly(p,A,tol=1e-12):
     """
@@ -212,10 +214,11 @@ def anisotropic_diffusion_poly(p,A,tol=1e-12):
 
     Returns
     -------
-    float
-        Always `0.0`.
+    numpy.ndarray, shape (3,)
+        Always `[0.0,0.0,0.0]` for polynomial basis '[1,x,y]'.
     """
-    return 0.0
+    
+    return np.zeros(poly_basis(p).shape)
 
 # Define the radial basis functions
 def phi_cubic(p):  
@@ -331,9 +334,9 @@ def phi_gauss(p,eps=0.5):
         The value `exp(-(eps * r)**2)`, where `r = ||p||`.
     """
     
-    r = np.sqrt(np.dot(p, p))   
+    r2 = np.dot(p, p)   
     
-    return np.exp(-(eps*r)**2)
+    return np.exp(-(eps**2*r2))
 
 def grad_phi_gauss(p, eps= 0.5):  
     """
@@ -356,7 +359,9 @@ def grad_phi_gauss(p, eps= 0.5):
         Gradient vector `-2 * eps**2 * phi_gauss(p, eps) * p`.
     """
     
-    return - 2 * eps **2 * phi_gauss(p, eps) * p
+    r2 = np.dot(p, p)  
+    
+    return - 2 * eps **2 * np.exp(-(eps**2*r2)) * p
 
 # Constant matrix
 def anisotropic_diffusion_phi_gauss(p,A,eps=0.5):
@@ -390,7 +395,8 @@ def anisotropic_diffusion_phi_gauss(p,A,eps=0.5):
     float
         The value of `div(A grad phi)` at `p`.
     """
-        
+     
+    r2 = np.dot(p, p)  
     result = 2 * eps**2 * np.dot(p, A @ p) - np.trace(A)    
     
-    return 2*eps**2*phi_gauss(p,eps)*result
+    return 2*eps**2*np.exp(-(eps**2*r2))*result

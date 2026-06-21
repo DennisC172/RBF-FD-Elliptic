@@ -84,7 +84,7 @@ def local_weights_solve(context, i):
         
         b = np.concatenate([
             b,
-            np.zeros(pdim)
+            rbf.anisotropic_diffusion_poly(P[i], context.A)
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
@@ -160,7 +160,7 @@ def local_weights_ls(context, i):
         
         b = np.concatenate([
             b,
-            np.zeros(pdim)
+            rbf.anisotropic_diffusion_poly(P[i], context.A)
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")

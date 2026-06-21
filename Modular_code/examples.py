@@ -489,7 +489,7 @@ def example_7(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     g : list of callables
         Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
     btype : list of str
-        Boundary condition types (all Dirichlet).
+        Boundary condition types.
     u_exact : callable
         Exact solution :math:`u(x,y)`.
     """
@@ -539,7 +539,7 @@ def example_8(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     g : list of callables
         Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
     btype : list of str
-        Boundary condition types (all Dirichlet).
+        Boundary condition types.
     u_exact : callable
         Exact solution :math:`u(x,y)`.
     """
@@ -589,7 +589,7 @@ def example_9(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     g : list of callables
         Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
     btype : list of str
-        Boundary condition types (all Dirichlet).
+        Boundary condition types.
     u_exact : callable
         Exact solution :math:`u(x,y)`.
     """
@@ -606,9 +606,9 @@ def example_9(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     
     g = [
         lambda x: np.tanh(-1/2*L/np.sqrt(A[1,1])), #y=0
-        lambda y: 0.0,                    #x=L
+        lambda y: 0.0,                             #x=L
         lambda x: np.tanh(1/2*L/np.sqrt(A[1,1])),  #y=L
-        lambda y: 0.0                     #x=0
+        lambda y: 0.0                              #x=0
     ]
     
     btype = [
@@ -626,9 +626,10 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
 
     Exact solution:
         .. math::
-            u(x,y) = c(y)\,a(x)\,b(x),
+            u(x,y) = c(y)*a(x)*b(x),
 
-        where a(x) are Gaussian bumps, b(x)=x^2(L-x)^2, and c(y)=2\,Amp\,y.
+        where a(x) are Gaussian bumps, b(x)=x^2*(L-x)^2,
+        and c(y)=2*Amp*sqrt(y+L/2).
 
     Boundary conditions:
         Dirichlet on y=0,L; 0-Neumann on x=0,L.
@@ -640,26 +641,27 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     g : list of callables
         Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
     btype : list of str
-        Boundary condition types (all Dirichlet).
+        Boundary condition types.
     u_exact : callable
         Exact solution :math:`u(x,y)`.
     """
     
     alpha = 0.01*L
     beta  = L-alpha
-    eps   = A[0,0]
+    delta   = A[0,0]
         
     def a(x):
-        return (np.exp(-(x-alpha)**2/eps)+
-                np.exp(-(x- beta)**2/eps))
+        return (np.exp(-(x-alpha)**2/delta)+
+                np.exp(-(x- beta)**2/delta))
     
     def a_d(x):
-        return (-2/eps*((x-alpha)*np.exp(-(x-alpha)**2/eps)+
-                       (x- beta)*np.exp(-(x- beta)**2/eps)))
+        return (-2/delta*((x-alpha)*np.exp(-(x-alpha)**2/delta)+
+                       (x- beta)*np.exp(-(x- beta)**2/delta)))
     
     def a_dd(x):
-        return (-2/eps*a(x) + 4/eps**2*((x-alpha)**2*np.exp(-(x-alpha)**2/eps)+
-                                       (x- beta)**2*np.exp(-(x- beta)**2/eps)))
+        return (-2/delta*a(x)+4/delta**2*
+                ((x-alpha)**2*np.exp(-(x-alpha)**2/delta)+
+                 (x- beta)**2*np.exp(-(x- beta)**2/delta)))
     
     def b(x):
         return x**2*(L-x)**2
@@ -671,13 +673,13 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
         return 2*L-12*x*L+12*x**2
     
     def c(y):
-        return 2.0*Amp*np.sqrt(y+L)
+        return 2.0*Amp*np.sqrt(y+L/2)
     
     def c_d(y):
-        return 1.0*Amp/np.sqrt(y+L)
+        return 1.0*Amp/np.sqrt(y+L/2)
     
     def c_dd(y):
-        return -1.0*Amp/2/np.sqrt(y+L)**3
+        return -1.0*Amp/2/np.sqrt(y+L/2)**3
         
     def u_xx(p):
         x,y = p
@@ -696,7 +698,7 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
         return c(y)*a(x)*b(x)
     
     def f(p):
-        return eps*u_xx(p)+2*A[0,1]*u_xy(p)+A[1,1]*u_yy(p)
+        return delta*u_xx(p)+2*A[0,1]*u_xy(p)+A[1,1]*u_yy(p)
     
     g = [
         lambda x: c(0.0)*a(x)*b(x),     #y=0

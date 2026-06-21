@@ -181,20 +181,20 @@ if __name__ == "__main__":
     L = 1.0
     shape = 'square'
     
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 50)
+    P, num_int = geometry.uniform_int_square(L, Nx, Ny)
     
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
     eig_1 = 1e0
-    eig_2 = 2.5e-3
+    eig_2 = 5e-3
     rad24 = 12.0
     A = coeff_matrix(eig_1, eig_2, rad24)
     print("Coefficient Matrix:\n" + str(A))
     
     # Forcing term parameters
-    Amp = 1e4
+    Amp = 1e3
     modes = [1.0,2.0]
     
     # -----------------------------
