@@ -172,7 +172,7 @@ P, num_int = geometry.uniform_int_square(L=1.0, Nx_int=40, Ny_int=40, Nb=80)
 %==============================================================
 
 For each node $\bx_i$, \texttt{stencils.knn\_list(P, k\_s)} finds the
-$num_stencil_nodes$ nearest neighbors of $\bx_i$ (including itself) by Euclidean
+$num\_stencil\_nodes$ nearest neighbors of $\bx_i$ (including itself) by Euclidean
 distance, and returns a list \texttt{stencils[i]} of their indices in
 $P$. This list is the only thing that determines which other nodal
 values can contribute to the discrete operator at $\bx_i$.

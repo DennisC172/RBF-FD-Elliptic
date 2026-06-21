@@ -209,7 +209,10 @@ around $\bx_i$ (typically more centers than stencil nodes, $K > n$):
   \min_{\bw}
   \left\|
     \underbrace{\big[\varphi(\bc_k - \bx_j)\big]_{k,j}}_{=:M \in
-    \R^{K\times n}} \bw
+    \R^{K\times n}} \mathbf{w}
+    \;+\;
+    \underbrace{\big[p_\ell(\bx_j)\big]_{l,j}}_{=:P^T \in
+    \R^{m\times n}} \mathbf{v}
     \;-\;
     \underbrace{\big[(\mathcal{L}\varphi)(\bx_i - \bc_k)\big]_k}_{=:\mathbf{b}
     \in \R^{K}}
@@ -217,15 +220,13 @@ around $\bx_i$ (typically more centers than stencil nodes, $K > n$):
   \label{eq:ls-system}
 \end{equation}
 subject to the same polynomial reproduction constraints
-\eqref{eq:augment-constraint} enforced exactly (as equality rows
-appended to the system, rather than penalized in the least-squares
-objective). The motivation for this variant is robustness: anchoring
+\eqref{eq:augment-constraint} penalized in the least squares objective. The motivation for this variant is robustness: anchoring
 the fit to a denser, more uniformly distributed cloud of auxiliary
 points reduces sensitivity to clustering or anisotropy in the stencil
 node positions themselves.
 
 The auxiliary centers $\{\bc_k\}$ are generated as a near-uniform
-polar grid of $num_rings$ concentric rings (spacing $h = r/num_rings$, with $r$ the
+polar grid of $num\_rings$ concentric rings (spacing $h = r/num\_rings$, with $r$ the
 stencil radius) plus a center point, with the number of angular
 samples per ring chosen so that the arc-length spacing on each ring is
 approximately $h$ as well:
@@ -250,7 +251,7 @@ approximately $h$ as well:
         the least-squares system \eqref{eq:ls-system} is controlled by
         \texttt{context.center\_rings}: \texttt{None} selects the
         direct solve, any integer value selects the least-squares
-        variant with that many rings $num_rings$.
+        variant with that many rings $num\_rings$.
 \end{itemize}
 
 %==============================================================
@@ -473,7 +474,7 @@ discrete $L^2$ norm:
 \end{equation}
 together with the condition number $\kappa(W) =
 \|W\|\,\|W^{-1}\|$ as a diagnostic for ill-conditioning of the
-assembled system (which tends to grow as stencils shrink or as $num_rings$,
+assembled system (which tends to grow as stencils shrink or as $num\_rings$,
 $\varepsilon$, or node spacing are pushed to extremes).
 
 \paragraph{Code correspondence.}
