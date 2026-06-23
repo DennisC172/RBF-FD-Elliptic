@@ -1,0 +1,30 @@
+# -------------------------
+# Ignore the entire unwanted folder
+# -------------------------
+
+
+# -------------------------
+# Python compiled/cache stuff
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.so
+
+# If you have build/compile folder inside code
+code/build/
+code/compiled/
+build/
+
+# -------------------------
+# LaTeX junk files (keep tex + pdf)
+# -------------------------
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# explicitly keep:
+!latex/*.tex
+!latex/*.pdf

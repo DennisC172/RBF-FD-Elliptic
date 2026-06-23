@@ -302,9 +302,6 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
         `||p|| < tol`.
     """
     
-    if A is None:
-        A = np.identity(len(p))
-    
     r = np.sqrt(np.dot(p, p))
     
     if r < tol:

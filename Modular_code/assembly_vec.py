@@ -9,9 +9,11 @@ Provides the assembly methods to solve FD Methods
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
 from domain import PDEDomainContext
 import stencils
-import rbf
+import rbf_vec as rbf
 import boundary
 
 def local_weights_solve(context, i):
@@ -60,23 +62,18 @@ def local_weights_solve(context, i):
     if context.augmentation:
         pdim = len(rbf.poly_basis(P[0]))
 
-    b = np.zeros(num_nodes)
-    M = np.zeros((num_nodes, num_nodes))
+    # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
+    Ps = P[s]
+    diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
+    M = context.phi(diff_M)                     # (num_nodes, num_nodes)
 
-    for k in range(num_nodes):
-        b[k] = context.laplacian_phi(P[i]-P[s[k]])
-        M[k,k] = context.phi(np.zeros(P[s[k]].shape))
-        
-        for j in range(k+1, num_nodes):
-            M[j,k] = context.phi(P[s[j]]-P[s[k]])
-            M[k,j] = M[j,k]
-            
+    # b: laplacian_phi(P[i] - P[s[k]]) for all k, one vectorized call
+    diff_b = P[i][None, :] - Ps                  # (num_nodes, dim)
+    b = context.laplacian_phi(diff_b)             # (num_nodes,)
+
     if context.augmentation:
-        Pmat = np.zeros((num_nodes, pdim))
+        Pmat = rbf.poly_basis(Ps)                 # (num_nodes, pdim)
 
-        for j in range(num_nodes):
-            Pmat[j, :] = rbf.poly_basis(P[s[j]])
-             
         M = np.block([
             [M, Pmat],
             [Pmat.T, np.zeros((pdim,pdim))]
@@ -125,33 +122,24 @@ def local_weights_ls(context, i):
     P = context.nodes
     s = context.stencils[i]
     num_nodes = len(s)
+    Ps = P[s]
     
-    r = np.max(np.linalg.norm(P[s] - P[i], axis=1))
+    r = np.max(np.linalg.norm(Ps - P[i], axis=1))
     k = context.center_rings
 
     points = rbf.generate_grid_2d(r, k)
-    num_centers = len(points)
     c = P[i] + points
 
-    # Augmentation form
-    pdim = 0    
-    if context.augmentation:
-        pdim = len(rbf.poly_basis(P[0]))
+    # M: phi(P[s[j]] - c[k]) for all (k,j), one vectorized call
+    diff_M = Ps[None, :, :] - c[:, None, :]   # (num_centers, num_nodes, dim)
+    M = context.phi(diff_M)                    # (num_centers, num_nodes)
 
-    M = np.zeros((num_centers, num_nodes))
-    b = np.zeros(num_centers)
-    
-    for k in range(num_centers):
-        b[k] = context.laplacian_phi(P[i]-c[k])
-        
-        for j in range(num_nodes):
-            M[k,j] = context.phi(P[s[j]]-c[k])
-              
+    # b: laplacian_phi(P[i] - c[k]) for all k, one vectorized call
+    diff_b = P[i][None, :] - c                  # (num_centers, dim)
+    b = context.laplacian_phi(diff_b)            # (num_centers,)
+
     if context.augmentation:        
-        Pmat = np.zeros((num_nodes,   pdim))
-
-        for j in range(num_nodes):
-            Pmat[j, :] = rbf.poly_basis(P[s[j]])
+        Pmat = rbf.poly_basis(Ps)                # (num_nodes, pdim)
                 
         M = np.block([
             [M],
@@ -200,29 +188,23 @@ def local_grad_solve(context, i):
     num_nodes = len(s)
     
     P = context.nodes
-    dim = len(P[0])
 
     # Augmentation form
     pdim = 0
     if context.augmentation:
         pdim = len(rbf.poly_basis(P[0]))
 
-    b_grad = np.zeros((num_nodes,dim))    
-    M = np.zeros((num_nodes, num_nodes))
+    Ps = P[s]
+    # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
+    diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
+    M = context.phi(diff_M)                     # (num_nodes, num_nodes)
 
-    for k in range(num_nodes):
-        b_grad[k,:] = context.grad_phi(P[i]-P[s[k]])        
-        M[k,k] = context.phi(np.zeros(P[s[k]].shape))
-        
-        for j in range(k+1, num_nodes):
-            M[j,k] = context.phi(P[s[j]]-P[s[k]])
-            M[k,j] = M[j,k]
-            
+    # b_grad: grad_phi(P[i] - P[s[k]]) for all k, one vectorized call
+    diff_b = P[i][None, :] - Ps                  # (num_nodes, dim)
+    b_grad = context.grad_phi(diff_b)             # (num_nodes, dim)
+
     if context.augmentation:
-        Pmat = np.zeros((num_nodes, pdim))
-
-        for j in range(num_nodes):
-            Pmat[j, :] = rbf.poly_basis(P[s[j]])
+        Pmat = rbf.poly_basis(Ps)                 # (num_nodes, pdim)
        
         M = np.block([
             [M, Pmat],
@@ -272,34 +254,24 @@ def local_grad_ls(context, i):
     num_nodes = len(s)
     
     P = context.nodes    
-    dim = len(P[0])
+    Ps = P[s]
     
-    r = np.max(np.linalg.norm(P[s] - P[i], axis=1))
+    r = np.max(np.linalg.norm(Ps - P[i], axis=1))
     k = context.center_rings
     
     points = rbf.generate_grid_2d(r, k)
-    num_centers = len(points)
     c = P[i] + points
-
-    # Augmentation form
-    pdim = 0    
-    if context.augmentation:
-        pdim = len(rbf.poly_basis(P[0]))
-
-    M = np.zeros((num_centers, num_nodes))
-    b_grad = np.zeros((num_centers, dim))
     
-    for k in range(num_centers):
-        b_grad[k,:] = context.grad_phi(P[i]-c[k])
-        
-        for j in range(num_nodes):
-            M[k,j] = context.phi(P[s[j]]-c[k])
+    # M: phi(P[s[j]] - c[k]) for all (k,j), one vectorized call
+    diff_M = Ps[None, :, :] - c[:, None, :]   # (num_centers, num_nodes, dim)
+    M = context.phi(diff_M)                    # (num_centers, num_nodes)
+
+    # b_grad: grad_phi(P[i] - c[k]) for all k, one vectorized call
+    diff_b = P[i][None, :] - c                  # (num_centers, dim)
+    b_grad = context.grad_phi(diff_b)            # (num_centers, dim)
               
     if context.augmentation:        
-        Pmat = np.zeros((num_nodes, pdim))
-
-        for j in range(num_nodes):
-            Pmat[j, :] = rbf.poly_basis(P[s[j]])
+        Pmat = rbf.poly_basis(Ps)                # (num_nodes, pdim)
                 
         M = np.block([
             [M],
@@ -411,11 +383,126 @@ def global_weights(context, in_boundary=None, normal_vec=None):
             
     return W
 
+def global_weights_sparse(context, in_boundary=None, normal_vec=None):
+    """
+    Assemble the global RBF-FD differentiation (Laplacian) matrix in
+    sparse (CSR) format, optionally applying boundary rows directly.
+
+    Sparse counterpart of `global_weights`. Each row of the global
+    weight matrix has only `len(context.stencils[i])` nonzero entries
+    out of `num_nodes` columns -- for a typical stencil size (e.g. 50)
+    on a mesh of several thousand nodes, the dense matrix is over 99%
+    zeros. This function accumulates the per-node local weights as
+    `global_weights` does, but scatters them directly into COO triplet
+    arrays and builds a `scipy.sparse.csr_matrix` instead of a dense
+    `numpy.ndarray`, avoiding both the `O(num_nodes^2)` memory
+    footprint and the wasted "store/manipulate zeros" cost of the
+    dense path.
+
+    Parameters
+    ----------
+    context : PDEDomainContext
+        Domain context providing `nodes`, `stencils`, and
+        `center_rings`, used to dispatch to the direct or least-squares
+        local weight routines.
+    in_boundary : callable or None, optional
+        Function mapping a node coordinate to a boundary-type label
+        ('interior', 'dirichlet', 'neumann', ...). If provided (along
+        with `normal_vec`), boundary nodes are assembled with their
+        final Dirichlet/Neumann row directly -- the interior Laplacian
+        stencil is never computed for those nodes in the first place
+        (it would only be discarded or overwritten), so this avoids
+        the wasted `local_weights_solve`/`local_weights_ls` call that
+        `global_weights`/`boundary_to_weights` perform-then-discard
+        for every boundary node. If `None` (the default), every node
+        gets its interior Laplacian row regardless of boundary
+        status, matching the original behavior -- callers can then
+        apply boundary rows afterward via `boundary_to_weights_sparse`.
+    normal_vec : callable or None, optional
+        Function mapping a boundary node coordinate to its outward
+        unit normal vector, used for Neumann rows. Required if
+        `in_boundary` is provided; ignored (and may be left `None`) if
+        `in_boundary` is `None`.
+
+    Returns
+    -------
+    scipy.sparse.csr_matrix, shape (num_nodes, num_nodes)
+        Sparse global weight matrix. If `in_boundary`/`normal_vec`
+        were provided, boundary rows already hold their final
+        Dirichlet/Neumann form; otherwise every row holds the interior
+        differential operator, prior to applying boundary conditions.
+
+    Notes
+    -----
+    The local weight computation itself (`local_weights_solve` /
+    `local_weights_ls` for interior rows, `local_grad_solve` /
+    `local_grad_ls` for Neumann rows) is unchanged and still dense
+    (each stencil's local system is small, e.g. 50x50, so a dense
+    local solve is appropriate); only the *global* scatter-assembly
+    step switches to a sparse representation. Converting from COO
+    (good for incremental construction) to CSR (good for arithmetic
+    and solves) is done once at the end via `tocsr()`, rather than
+    repeatedly during assembly.
+
+    Passing `in_boundary`/`normal_vec` here is an optional
+    optimization, not a replacement for `boundary_to_weights_sparse`:
+    if the same mesh/stencils will later be re-stamped with *different*
+    boundary conditions (e.g. the reconstruction workflow in
+    `reconstruction.py`, which reuses one assembled context across
+    several example problems with different `btype`/`g_bound`), build
+    `W` once with `in_boundary=None` here and call
+    `boundary_to_weights_sparse` separately for each set of boundary
+    conditions, rather than re-running this function from scratch each
+    time.
+    """
+
+    P = context.nodes
+    num_nodes = len(P)
+    
+    S = context.stencils
+    k = context.center_rings
+    
+    rows = []
+    cols = []
+    vals = []
+    
+    for i,s in enumerate(S):
+        node_type = in_boundary(P[i]) if in_boundary is not None else 'interior'
+
+        if node_type == 'dirichlet':
+            rows.append(i)
+            cols.append(i)
+            vals.append(1.0)
+        elif node_type == 'neumann':
+            if k is None:
+                w_grad = local_grad_solve(context, i)
+            else:
+                w_grad = local_grad_ls(context, i)
+
+            n_v = normal_vec(P[i])
+            dir_derv = w_grad @ n_v
+
+            rows.extend([i]*len(s))
+            cols.extend(s)
+            vals.extend(dir_derv)
+        else:
+            if k is None:
+                w = local_weights_solve(context, i)
+            else:
+                w = local_weights_ls(context, i)
+
+            rows.extend([i]*len(s))
+            cols.extend(s)
+            vals.extend(w)
+            
+    W = sp.coo_matrix((vals, (rows, cols)), shape=(num_nodes, num_nodes))
+    return W.tocsr()
+
 def boundary_to_weights(W, context, in_boundary, normal_vec):
     """
     Overwrite global weight matrix rows for boundary nodes in place.
  
-    For every node classified as non-interior by `is_boundary`, the
+    For every node classified as non-interior by `in_boundary`, the
     corresponding row of `W` is replaced:
  
     - Dirichlet nodes: the row is zeroed out and set to the identity
@@ -437,7 +524,7 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
     context : PDEDomainContext
         Domain context providing `nodes`, `stencils`, and
         `center_rings`.
-    is_boundary : callable
+    in_boundary : callable
         Function mapping a node coordinate to a boundary-type label
         ('interior', 'dirichlet', 'neumann', ...).
     normal_vec : callable
@@ -479,6 +566,73 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
                     
     return W_b
 
+def boundary_to_weights_sparse(W, context, in_boundary, normal_vec):
+    """
+    Overwrite global sparse weight matrix rows for boundary nodes.
+
+    Sparse counterpart of `boundary_to_weights`. Row-by-row
+    replacement on a `csr_matrix` is expensive (each assignment can
+    trigger an internal re-sort/re-index of that row's nonzero
+    pattern), so this function first converts `W` to `lil_matrix`
+    format (which supports efficient row-wise mutation), performs the
+    same Dirichlet/Neumann row replacements as `boundary_to_weights`,
+    and converts the result back to `csr_matrix` for the downstream
+    sparse solve.
+
+    Parameters
+    ----------
+    W : scipy.sparse.csr_matrix, shape (num_nodes, num_nodes)
+        Global sparse weight matrix (as produced by
+        `global_weights_sparse`). Not modified in place -- a
+        `lil_matrix` copy is mutated internally and a new `csr_matrix`
+        is returned, mirroring `anchor_system`'s copy-rather-than-
+        mutate convention (unlike the dense `boundary_to_weights`,
+        which does mutate `W` in place; this asymmetry exists because
+        in-place row replacement is the efficient option for a dense
+        `numpy.ndarray` but not for a `csr_matrix`).
+    context : PDEDomainContext
+        Domain context providing `nodes`, `stencils`, and
+        `center_rings`.
+    in_boundary : callable
+        Function mapping a node coordinate to a boundary-type label
+        ('interior', 'dirichlet', 'neumann', ...).
+    normal_vec : callable
+        Function mapping a boundary node coordinate to its outward
+        unit normal vector, used for Neumann rows.
+
+    Returns
+    -------
+    scipy.sparse.csr_matrix, shape (num_nodes, num_nodes)
+        New sparse matrix with boundary rows imposed.
+    """
+
+    P = context.nodes
+    S = context.stencils
+    k = context.center_rings
+
+    W_lil = W.tolil()
+
+    for i,s in enumerate(S):
+        node_type = in_boundary(P[i])
+
+        if node_type != 'interior':
+            if node_type == 'dirichlet':
+                W_lil.rows[i] = [i]
+                W_lil.data[i] = [1.0]
+            elif node_type == 'neumann':
+                if k is None:
+                    w_grad = local_grad_solve(context, i)
+                else:
+                    w_grad = local_grad_ls(context, i)
+
+                n_v = normal_vec(P[i])
+                dir_derv = w_grad @ n_v
+
+                W_lil.rows[i] = list(s)
+                W_lil.data[i] = list(dir_derv)
+
+    return W_lil.tocsr()
+
 def right_hand_side(context, f, g, in_boundary):
     """
     Assemble the global right-hand-side vector for the linear system.
@@ -498,7 +652,7 @@ def right_hand_side(context, f, g, in_boundary):
     g : callable
         Boundary data function, called as `g(p)` for boundary node
         coordinates `p`.
-    is_boundary : callable
+    i_boundary : callable
         Function mapping a node coordinate to a boundary-type label;
         used only to decide whether `f` or `g` is evaluated at each
         node.
@@ -632,6 +786,80 @@ def anchor_system(W, f, method="mean"):
 
     return W, f
 
+def anchor_system_sparse(W, f, method="mean"):
+    """
+    Regularize a singular pure-Neumann sparse system so it has a
+    unique solution.
+
+    Sparse counterpart of `anchor_system`, supporting the `'mean'` and
+    `'pin'` strategies (see `anchor_system` for their definitions).
+    `'project'` is intentionally not supported here: the projector
+    `P = I - (1/n) * ones @ ones.T` is a dense rank-1 update, and
+    `P @ W @ P` is generically a fully dense matrix even when `W` is
+    sparse, since the projector mixes every row and column together.
+    Silently densifying defeats the purpose of the sparse path, so
+    `'project'` raises rather than falling back to a dense computation
+    the caller didn't ask for.
+
+    Parameters
+    ----------
+    W : scipy.sparse.csr_matrix, shape (n, n)
+        Global sparse weight matrix to anchor. Not modified in place;
+        a copy is used internally.
+    f : numpy.ndarray, shape (n,)
+        Right-hand-side vector to anchor. Not modified in place; a
+        copy is used internally.
+    method : {'mean', 'pin'}, optional
+        Anchoring strategy to apply (default `'mean'`). See
+        `anchor_system` for the definitions of `'mean'` and `'pin'`;
+        both are implemented identically here, just via sparse row
+        assignment instead of dense.
+
+    Returns
+    -------
+    W : scipy.sparse.csr_matrix, shape (n, n)
+        The anchored sparse weight matrix.
+    f : numpy.ndarray, shape (n,)
+        The anchored right-hand-side vector.
+
+    Raises
+    ------
+    ValueError
+        If `method` is `'project'` (unsupported for the sparse path;
+        see Notes) or anything other than `'mean'`/`'pin'`.
+    """
+
+    f = f.copy()
+    n = W.shape[0]
+    W_lil = W.tolil()
+
+    if method == "mean":
+        # enforce sum(u)=0 -- note this row is fully dense (all ones),
+        # so the resulting matrix is no longer sparse in that one row,
+        # but this is unavoidable for this anchoring strategy and is
+        # still far cheaper than densifying the entire matrix.
+        W_lil.rows[-1] = list(range(n))
+        W_lil.data[-1] = [1.0]*n
+        f[-1] = 0.0
+
+    elif method == "pin":
+        W_lil.rows[0] = [0]
+        W_lil.data[0] = [1.0]
+        f[0] = 0.0
+
+    elif method == "project":
+        raise ValueError(
+            "'project' anchoring is not supported for the sparse path: "
+            "the projector is a dense rank-1 update and would silently "
+            "densify the whole matrix. Use 'mean' or 'pin' instead, or "
+            "use the dense anchor_system if 'project' is required."
+        )
+
+    else:
+        raise ValueError("Unknown anchoring method")
+
+    return W_lil.tocsr(), f
+
 def set_rbf_func(num_rings, basis, augmentation, A, eps, tol, context):
     """
     Configure a domain context with the chosen RBF kernel and operator.
@@ -759,7 +987,8 @@ def set_boundary_func(g_bound, btype, shape, L, context):
     return g, in_boundary, normal_vec
 
 def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
-                  num_rings, augmentation=False, A=None, eps=3.0, tol=1e-12):
+                  num_rings, augmentation=False, A=None, eps=3.0, tol=1e-12,
+                  sparse=False, anchor_method="mean"):
     """
     Build the full RBF-FD linear system for a (possibly anisotropic) PDE.
  
@@ -803,14 +1032,28 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     tol : float, optional
         Tolerance parameter for the cubic RBF anisotropic Laplacian
         (default `1e-12`).
+    sparse : bool, optional
+        If `True`, assemble and store `context.W` as a
+        `scipy.sparse.csr_matrix` (via `global_weights_sparse` and
+        `boundary_to_weights_sparse`) instead of a dense
+        `numpy.ndarray`. Use `rbf_fd_solve_sparse` (not
+        `rbf_fd_solve`) to solve the resulting system. Default `False`
+        preserves the original dense behavior for existing callers.
+    anchor_method : str, optional
+        Anchoring strategy passed to `anchor_system`
+        (`sparse=False`) or `anchor_system_sparse` (`sparse=True`) if
+        the problem is pure Neumann (default `"mean"`). Note
+        `anchor_system_sparse` does not support `"project"` (see its
+        docstring); pass `sparse=False` if that method is required.
  
     Returns
     -------
     PDEDomainContext
         Fully populated domain context, with `A`, the global weight
-        matrix `W`, and the right-hand-side vector stored on it (via
-        `set_A`, `set_W`, `set_rhs`), ready to be passed to
-        `rbf_fd_solve`.
+        matrix `W` (dense or sparse depending on `sparse`), and the
+        right-hand-side vector stored on it (via `set_A`, `set_W`,
+        `set_rhs`), ready to be passed to `rbf_fd_solve` or
+        `rbf_fd_solve_sparse` accordingly.
  
     Notes
     -----
@@ -828,16 +1071,22 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     
-    W = global_weights(context)
+    if sparse:
+        W = global_weights_sparse(context, in_boundary, normal_vec)
+    else:
+        W = global_weights(context, in_boundary, context)
     print('3) Weight Matrix Generated.')
-    
+            
     f_vec = right_hand_side(context, f, g, in_boundary)
     print('4) RHS vector Generated.')
     
     if is_pure_neumann(context, in_boundary):
-        W, f_vec = anchor_system(W, f_vec)
+        if sparse:
+            W, f_vec = anchor_system_sparse(W, f_vec, method=anchor_method)
+        else:
+            W, f_vec = anchor_system(W, f_vec, method=anchor_method)
     print('5) Pure neumann condition checked and updated.')
-
+    
     context.set_W(W)
     context.set_rhs(f_vec)
     print('6) Context Finished.')
@@ -866,6 +1115,48 @@ def rbf_fd_solve(W, f_vec):
     """
 
     return np.linalg.solve(W, f_vec)
+
+def rbf_fd_solve_sparse(W, f_vec):
+    """
+    Solve the assembled sparse RBF-FD linear system for the nodal
+    solution.
+
+    Sparse counterpart of `rbf_fd_solve`, using
+    `scipy.sparse.linalg.spsolve` (a sparse LU factorization) instead
+    of `numpy.linalg.solve`. For a problem with `n` nodes and stencils
+    of size `k << n`, `W` has only `O(n*k)` nonzero entries rather than
+    `O(n^2)`; a sparse direct solve exploits this structure to run in
+    far less time and memory than the dense path, particularly as `n`
+    grows (the dense path's `numpy.linalg.solve` is `O(n^3)` and its
+    memory is `O(n^2)` regardless of how sparse the underlying physics
+    is, whereas a sparse LU factorization's cost scales with the
+    matrix's actual nonzero/fill-in structure).
+
+    Parameters
+    ----------
+    W : scipy.sparse.csr_matrix (or other scipy.sparse format), shape (n, n)
+        Global sparse weight matrix (with boundary conditions imposed,
+        and anchored if pure Neumann), as produced by `rbf_fd_system`
+        with `sparse=True`.
+    f_vec : numpy.ndarray, shape (n,)
+        Right-hand-side vector corresponding to `W`.
+
+    Returns
+    -------
+    numpy.ndarray, shape (n,)
+        Nodal solution vector `u` satisfying `W @ u = f_vec`.
+
+    Notes
+    -----
+    `spsolve` expects CSC or CSR input; if `W` is some other sparse
+    format (e.g. the `lil_matrix` intermediate used internally by
+    `boundary_to_weights_sparse`/`anchor_system_sparse` before their
+    final `.tocsr()` conversion), convert it to CSR first -- the
+    functions in this module already return CSR, so this is only a
+    concern for callers building `W` by other means.
+    """
+
+    return spla.spsolve(W.tocsr(), f_vec)
 
 if __name__ == "__main__":
     import geometry

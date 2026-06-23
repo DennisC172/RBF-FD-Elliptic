@@ -261,8 +261,8 @@ covers the whole boundary circle.
 
 For each node, \texttt{local\_weights\_solve} (or, if
 \texttt{context.center\_rings} is set, \texttt{local\_weights\_ls})
-computes the row of differentiation weights for that node's stencil.
-\texttt{local\_grad\_solve} / \texttt{local\_grad\_ls} do the same for
+computes the row of differentiation weights.
+\texttt{local\_grad\_solve}/\texttt{local\_grad\_ls} do the same for
 the gradient, needed only at Neumann boundary nodes. These four
 functions are the computational core of the method; everything else
 in \texttt{assembly.py} is bookkeeping around them.

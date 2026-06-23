@@ -14,11 +14,12 @@ import scipy.integrate as integrate
 # Solution for an isotropic PDE with forcing term and boundary conditions
 def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
     """
-    Poisson problem on the unit square.
+    Poisson problem on the unit square. 
+    ISOTROPIC Problem.
     
     PDE:
         .. math::
-            -\\Delta u = f \quad \text{in } \Omega = [0,1]^2.
+            \\Delta u = f \quad \text{in } \Omega = [0,1]^2.
     
     Boundary conditions:
         .. math::
@@ -143,7 +144,7 @@ def example_2(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
 
     PDE:
         .. math::
-            -\\nabla \\cdot (A \\nabla u) = f
+            \\nabla \\cdot (A \\nabla u) = f
             \quad \text{in } [0,L]^2,
 
         where A is a symmetric positive definite diffusion tensor.
@@ -234,7 +235,7 @@ def example_3(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
 
     PDE:
         .. math::
-            -\\nabla\\cdot(A\\nabla u) = f
+            \\nabla\\cdot(A\\nabla u) = f
             \quad \text{in } [0,L]^2.
 
     Exact solution:
@@ -335,7 +336,7 @@ def example_4(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
 
     PDE:
         .. math::
-            -\\Delta u = 1.
+            \\nabla\\cdot(A\\nabla u) = 0.0.
 
     Exact solution:
         .. math::
@@ -353,7 +354,7 @@ def example_4(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
         return np.ones(p.shape[-1])
     
     def f(p):
-       return 1.0
+       return 0.0
     
     g = [
         lambda x: 1.0,   # y=0
@@ -548,7 +549,7 @@ def example_8(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
         return np.exp(np.linalg.norm(p,axis=0)**2)
     
     def f(p):
-        return (2*np.trace(A)+4*np.dot(p, A @p)
+        return ((2*np.trace(A)+4*np.dot(p, A @p))
                 *np.exp(np.linalg.norm(p,axis=0)**2))
     
     g = [
@@ -724,7 +725,7 @@ def example_0(Amp=None,modes=None,A=None, R=1.0):
 
     PDE:
         .. math::
-            -\\Delta u = -2\\pi^2 \sin(\\pi x)\sin(\\pi y).
+            \\Delta u = -2\\pi^2 \sin(\\pi x)\sin(\\pi y).
 
     Exact solution:
         Particular solution minus a Fourier-series homogeneous correction

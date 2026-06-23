@@ -10,10 +10,10 @@ RBF-FD Implementation
 import numpy as np
 import matplotlib.pyplot as plt
 import geometry
-import assembly
+import assembly_vec as assembly
 import examples
 
-def report_and_graph(context, u_exact):
+def report_and_graph(context, u_exact, sparse=False):
     """
     Report solution-quality metrics and plot the RBF-FD solution, exact
     solution, and pointwise error.
@@ -53,7 +53,12 @@ def report_and_graph(context, u_exact):
     A = context.A
     W = context.W
     F = context.F
-    u_soln = assembly.rbf_fd_solve(W, F)
+    
+    if sparse:
+        u_soln = assembly.rbf_fd_solve_sparse(W, F)
+    else:
+        u_soln = assembly.rbf_fd_solve(W, F)
+        print(f"Condition:    {np.linalg.cond(W): e}")
         
     u_ex = u_exact(P.T)
     error = np.abs(u_soln - u_ex)
@@ -66,7 +71,6 @@ def report_and_graph(context, u_exact):
     a2 = A[1,1]
     
     # Provide error analysis from expected result
-    print(f"Condition:    {np.linalg.cond(W): e}")
     print('Maximum weight:' + str(W.max()))
     print('Minimum weight:' + str(W.min()))
     print("Max error =", np.max(error))
@@ -87,8 +91,10 @@ def report_and_graph(context, u_exact):
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,u_soln,cmap='viridis', edgecolor='none', alpha=0.9)
+    ax.set_zlim(u_ex.min(), u_ex.max())
     plt.title(rf"""RBF-FD Approximate Solution:
     $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
+    
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
     plt.show()
@@ -97,6 +103,7 @@ def report_and_graph(context, u_exact):
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,u_ex,cmap='viridis', edgecolor='none', alpha=0.9)
+    ax.set_zlim(u_ex.min(), u_ex.max())
     plt.title(rf"""Exact Solution:
     $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
     plt.xlabel("x-direction")
@@ -106,7 +113,7 @@ def report_and_graph(context, u_exact):
     # Plot a 3D graph of the error  
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(X,Y,error,cmap='viridis', edgecolor='none', alpha=0.9)
+    ax.plot_trisurf(X,Y,np.log10(np.maximum(error, 1e-16)),cmap='viridis', edgecolor='none', alpha=0.9)
     plt.title(rf"""RBF-FD Approximate Error:
     $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
     plt.xlabel("x-direction")
@@ -159,13 +166,14 @@ if __name__ == "__main__":
     # -----------------------------
     # PARAMETERS
     # -----------------------------
+    sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 50
+    num_stencil_nodes = 150
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let k_c := None
-    num_rings = 10
+    num_rings = 15
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'cubic'
@@ -176,8 +184,8 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 50
-    Ny = 50
+    Nx = 200
+    Ny = 200
     L = 1.0
     shape = 'square'
     
@@ -195,19 +203,18 @@ if __name__ == "__main__":
     
     # Forcing term parameters
     Amp = 1e3
-    modes = [1.0,2.0]
+    modes = [1.0,3.0]
     
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    
     f, g, btype, u_exact = examples.example_10(Amp, modes, A)
        
     # Solve the PDE exactly and with RBF-FD
     context = assembly.rbf_fd_system(f, g, btype, P,
-                                     rbf_shape, shape, L, num_stencil_nodes,
-                                     num_rings, augmentation=augmentation,
-                                     A=A, eps=eps, tol=tol)
+                                 rbf_shape, shape, L, num_stencil_nodes,
+                                 num_rings, augmentation=augmentation,
+                                 A=A, eps=eps, tol=tol, sparse=sparse)
     
     # Display reesults
-    report_and_graph(context, u_exact)
+    report_and_graph(context, u_exact, sparse)
