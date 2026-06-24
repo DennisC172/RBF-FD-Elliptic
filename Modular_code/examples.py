@@ -19,12 +19,12 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
     
     PDE:
         .. math::
-            \\Delta u = f \quad \text{in } \Omega = [0,1]^2.
+            \\Delta u = f \quad \text{in } \Omega = [0,L]^2.
     
     Boundary conditions:
         .. math::
             u(x,0) = v(x), \quad
-            u(0,y) = y - y^2, \quad
+            u(0,y) = y - y^2 / L, \quad
             u = 0 \text{ on the remaining sides}.
     
         where the sharp-hat function on y=0 is
@@ -32,8 +32,8 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
         .. math::
             v(x) =
             \\begin{cases}
-                x, & x \le 1/2, \\\\
-                1-x, & x > 1/2.
+                x, & x \le L/2, \\\\
+                L-x, & x > L/2.
             \\end{cases}
     
     Exact solution:
@@ -45,7 +45,7 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
         .. math::
             u_p(x,y) =
             \\frac{A}{\\alpha^2 + \\beta^2}
-            \sin(\alpha\pi x)\sin(\beta\pi y),
+            \sin(\alpha\pi x / L)\sin(\beta\pi y / L),
     
         and u_h constructed from a Fourier series to enforce the
         non-trivial boundary data on x=0 and y=0.
@@ -55,20 +55,20 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
     f : callable
         Right-hand side function f(x,y).
     g : list of callables
-        Boundary condition functions ordered as [y=0, x=1, y=1, x=0].
+        Boundary condition functions ordered as [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types (all Dirichlet in this example).
     u_exact : callable
         Exact solution u(x,y).
     """
-    
+        
     def evaluate_sharp_hat(x):
         """Computes the sharp hat boundary condition at y=0 safely."""
-        # Ensure input stays inside the analytical boundaries [0, 1]            
-        if x <= 0.5:
+        # Ensure input stays inside the analytical boundaries [0, L]            
+        if x <= L/2:
             return x
         else:
-            return 1.0 - x
+            return L - x
     
     def u_exact(p, fourier_terms=100):
         """
@@ -80,36 +80,36 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
     
         # 2. Particular solution segment evaluation        
         A_coef = Amp / (alpha**2 + beta**2)
-        u_particular = A_coef * np.sin(alpha*np.pi*x) * np.sin(beta*np.pi*y)
+        u_particular = A_coef*np.sin(alpha*np.pi*x/L)*np.sin(beta*np.pi*y/L)
         
         # 3. Homogeneous Fourier Series evaluation for the boundaries
-        # Evaluates the boundary mappings g(y) = y-y^2 and the sharp hat fnc
+        # Evaluates the boundary mappings g(y) = y-y^2/L and the sharp hat fnc
         u_homogeneous = 0.0
         
         for n in range(1, fourier_terms + 1):
             # Fourier coefficients for g(y) = y - y^2
-            # Integral calculation: 2 * over_domain( (y-y^2) * sin(n*pi*y) )
+            # Integral calculation: 2 * over_domain( (y-y^2/L) * sin(n*pi*y/L))
             if n % 2 == 0:
                 a_n = 0 # Even terms cancel out due to symmetry
             else:
-                a_n = 8 / ((n * np.pi) ** 3)
+                a_n = 8 * L / ((n * np.pi) ** 3)
                 
-            # Fourier coefficients for the sharp hat function with height 1/2
+            # Fourier coefficients for the sharp hat function with height L/2
             if n % 2 == 0:
                 b_n = 0
             else:
                 # Alternate signs for peak convergence
                 k = (n - 1) // 2
-                b_n = (4 / ((n * np.pi) ** 2)) * ((-1) ** k)
+                b_n = (4 * L / ((n * np.pi) ** 2)) * ((-1) ** k)
     
             # Build stable hyperbolic scaling arrays for boundary matching
             # Mapping the x=0 boundary data across the x-axis
-            u_homogeneous += a_n*(np.sinh(n*np.pi*(1-x))/np.sinh(n*np.pi)*
-                                  np.sin(n * np.pi * y))
+            u_homogeneous += a_n*(np.sinh(n*np.pi*(L-x)/L)/np.sinh(n*np.pi)*
+                                  np.sin(n * np.pi * y / L))
             
             # Mapping the y=0 sharp hat boundary data across the y-axis
-            u_homogeneous += b_n*(np.sinh(n*np.pi*(1-y))/np.sinh(n*np.pi)*
-                                  np.sin(n * np.pi * x))
+            u_homogeneous += b_n*(np.sinh(n*np.pi*(L-y)/L)/np.sinh(n*np.pi)*
+                                  np.sin(n * np.pi * x / L))
     
         return u_particular + u_homogeneous
     
@@ -118,13 +118,14 @@ def example_1(Amp=2.0, modes=[1.0,1.0], A=None, L=1.0):
         x, y = p
         alpha, beta = modes
         
-        return - Amp*np.pi**2*np.sin(alpha*np.pi*x)*np.sin(beta*np.pi*y)
+        return - (Amp*np.pi**2/L**2*np.sin(alpha*np.pi*x/L)*
+                                    np.sin(beta*np.pi*y/L))
     
     # Boundary condition
-    g = [lambda x: x if 0<=x<=1/2 else 1-x,
+    g = [lambda x: x if 0<=x<=L/2 else L-x,
+         lambda y: 0.0,
          lambda x: 0.0,
-         lambda x: 0.0,
-         lambda x: x-x**2
+         lambda y: y-y**2/L
          ]
     
     btype = [
@@ -358,8 +359,8 @@ def example_4(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     
     g = [
         lambda x: 1.0,   # y=0
-        lambda y: 1.0,   # x=1
-        lambda x: 1.0,   # y=1
+        lambda y: 1.0,   # x=L
+        lambda x: 1.0,   # y=L
         lambda y: 1.0    # x=0
     ]
     
@@ -392,7 +393,7 @@ def example_5(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types (all Dirichlet).
     u_exact : callable
@@ -441,7 +442,7 @@ def example_6(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types (all Dirichlet).
     u_exact : callable
@@ -488,7 +489,7 @@ def example_7(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types.
     u_exact : callable
@@ -538,7 +539,7 @@ def example_8(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types.
     u_exact : callable
@@ -640,7 +641,7 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types.
     u_exact : callable
@@ -671,7 +672,7 @@ def example_10(Amp=1.0,modes=[1.0,1.0],A=np.array([[1.0,0.0],[0.0,1.0]]),L=1.0):
         return 2*x*(L**2-3*x*L+2*x**2)
     
     def b_dd(x):
-        return 2*L-12*x*L+12*x**2
+        return 2*L**2-12*x*L+12*x**2
     
     def c(y):
         return 2.0*Amp*np.sqrt(y+L/2)
