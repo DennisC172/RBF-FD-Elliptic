@@ -372,14 +372,14 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                 
                 for j in range(num_stencil_nodes):
                     W[i,s[j]] = dir_derv[j]
-        
-        if k is None:
-            w = local_weights_solve(context, i)
         else:
-            w = local_weights_ls(context, i)
-
-        for j in range(num_stencil_nodes):
-            W[i,s[j]] = w[j]
+            if k is None:
+                w = local_weights_solve(context, i)
+            else:
+                w = local_weights_ls(context, i)
+    
+            for j in range(num_stencil_nodes):
+                W[i,s[j]] = w[j]
             
     return W
 
@@ -497,6 +497,125 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             
     W = sp.coo_matrix((vals, (rows, cols)), shape=(num_nodes, num_nodes))
     return W.tocsr()
+
+def global_grads(context):
+    """
+    Assemble the global RBF-FD differentiation (Gradient) Tensor.
+ 
+    Loops over every node in the domain, computes its local stencil
+    weights (via `local_grads_solve` if `context.center_rings` is
+    `None`, otherwise via `local_grads_ls`), and scatters them into
+    the corresponding row/columns of a dense global matrix `W` such
+    that `W @ u` approximates `grad u` (or the operator encoded
+    by `context.grad_phi`) at every node
+ 
+    Parameters
+    ----------
+    context : PDEDomainContext
+        Domain context providing `nodes`, `stencils`, and
+        `center_rings`, used to dispatch to the direct or least-squares
+        local weight routines.
+ 
+    Returns
+    -------
+    numpy.ndarray, shape (num_nodes, num_nodes, dim)
+        Dense global weight matrix discretizing the gradient
+        operator at every node.
+    """
+
+    P = context.nodes
+    num_nodes = len(P)  
+    dim = len(P[0])
+    
+    S = context.stencils
+    k = context.center_rings
+    
+    W = np.zeros((num_nodes, num_nodes, dim))
+    
+    for i,s in enumerate(S):
+        num_stencil_nodes = len(s)
+        
+        if k is None:
+            w_grad = local_grad_solve(context, i)
+        else:
+            w_grad = local_grad_ls(context, i) 
+            
+        for j in range(num_stencil_nodes):
+            for l in range(dim):
+                W[i,s[j],l] = w_grad[j,l]
+            
+    return W
+
+def global_grads_sparse(context):
+    """
+    Assemble the global RBF-FD differentiation (Gradient) operator in
+    sparse (CSR) format, as a list of per-dimension matrices.
+
+    Sparse counterpart of `global_grads`. Since `scipy.sparse` has no
+    3D sparse tensor type, the dense `(num_nodes, num_nodes, dim)`
+    tensor produced by `global_grads` is represented here as a list
+    of `dim` separate `(num_nodes, num_nodes)` CSR matrices, one per
+    spatial direction -- `W_list[l] @ u` approximates `d(u)/dx_l` at
+    every node, matching `global_grads(context)[:, :, l] @ u`. Each
+    row of `W_list[l]` has only `len(context.stencils[i])` nonzero
+    entries out of `num_nodes` columns, so for typical stencil sizes
+    on meshes of several thousand nodes this avoids the same
+    `O(num_nodes^2)` memory cost that `global_weights_sparse` avoids
+    for the Laplacian.
+
+    Parameters
+    ----------
+    context : PDEDomainContext
+        Domain context providing `nodes`, `stencils`, and
+        `center_rings`, used to dispatch to the direct or
+        least-squares local gradient-weight routines.
+
+    Returns
+    -------
+    list of scipy.sparse.csr_matrix, length dim
+        `W_list[l]` is the sparse global weight matrix discretizing
+        `d/dx_l` at every node, for `l = 0, ..., dim-1`.
+
+    Notes
+    -----
+    The local weight computation (`local_grad_solve` / `local_grad_ls`)
+    is unchanged and still dense -- only the global scatter-assembly
+    switches to sparse. COO triplet lists are accumulated per
+    dimension during the loop and each converted to CSR once at the
+    end via `tocsr()`, rather than repeatedly during assembly.
+    """
+
+    P = context.nodes
+    num_nodes = len(P)
+    dim = len(P[0])
+
+    S = context.stencils
+    k = context.center_rings
+
+    rows = []
+    cols = [[] for _ in range(dim)]
+    vals = [[] for _ in range(dim)]
+
+    for i, s in enumerate(S):
+        num_stencil_nodes = len(s)
+
+        if k is None:
+            w_grad = local_grad_solve(context, i)
+        else:
+            w_grad = local_grad_ls(context, i)
+
+        rows.extend([i] * num_stencil_nodes)
+
+        for l in range(dim):
+            cols[l].extend(s)
+            vals[l].extend(w_grad[:, l])
+
+    W_list = [
+        sp.coo_matrix((vals[l], (rows, cols[l])), shape=(num_nodes, num_nodes)).tocsr()
+        for l in range(dim)
+    ]
+
+    return W_list
 
 def boundary_to_weights(W, context, in_boundary, normal_vec):
     """
@@ -1074,7 +1193,7 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     if sparse:
         W = global_weights_sparse(context, in_boundary, normal_vec)
     else:
-        W = global_weights(context, in_boundary, context)
+        W = global_weights(context, in_boundary, normal_vec)
     print('3) Weight Matrix Generated.')
             
     f_vec = right_hand_side(context, f, g, in_boundary)

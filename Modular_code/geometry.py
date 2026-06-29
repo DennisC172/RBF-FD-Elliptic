@@ -119,7 +119,6 @@ def uniform_int_square(L, Nx_int, Ny_int, Nb=100):
     boundary = np.unique(boundary, axis=0)
     return np.vstack((interior, boundary)), len(interior)
 
-
 def cheby_square(L, Nx, Ny):
     """
     Generate a tensor-product Chebyshev-Gauss-Lobatto grid over a

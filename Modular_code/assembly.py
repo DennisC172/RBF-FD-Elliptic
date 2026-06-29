@@ -400,14 +400,62 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                 
                 for j in range(num_stencil_nodes):
                     W[i,s[j]] = dir_derv[j]
+        else:
+            if k is None:
+                w = local_weights_solve(context, i)
+            else:
+                w = local_weights_ls(context, i)
+    
+            for j in range(num_stencil_nodes):
+                W[i,s[j]] = w[j]
+            
+    return W
+
+def global_grads(context):
+    """
+    Assemble the global RBF-FD differentiation (Gradient) Tensor.
+ 
+    Loops over every node in the domain, computes its local stencil
+    weights (via `local_grads_solve` if `context.center_rings` is
+    `None`, otherwise via `local_grads_ls`), and scatters them into
+    the corresponding row/columns of a dense global matrix `W` such
+    that `W @ u` approximates `grad u` (or the operator encoded
+    by `context.grad_phi`) at every node
+ 
+    Parameters
+    ----------
+    context : PDEDomainContext
+        Domain context providing `nodes`, `stencils`, and
+        `center_rings`, used to dispatch to the direct or least-squares
+        local weight routines.
+ 
+    Returns
+    -------
+    numpy.ndarray, shape (num_nodes, num_nodes, dim)
+        Dense global weight matrix discretizing the gradient
+        operator at every node.
+    """
+
+    P = context.nodes
+    num_nodes = len(P)  
+    dim = len(P[0])
+    
+    S = context.stencils
+    k = context.center_rings
+    
+    W = np.zeros((num_nodes, num_nodes, dim))
+    
+    for i,s in enumerate(S):
+        num_stencil_nodes = len(s)
         
         if k is None:
-            w = local_weights_solve(context, i)
+            w_grad = local_grad_solve(context, i)
         else:
-            w = local_weights_ls(context, i)
-
+            w_grad = local_grad_ls(context, i) 
+            
         for j in range(num_stencil_nodes):
-            W[i,s[j]] = w[j]
+            for l in range(dim):
+                W[i,s[j],l] = w_grad[j,l]
             
     return W
 
@@ -828,7 +876,7 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     
-    W = global_weights(context)
+    W = global_weights(context, in_boundary, normal_vec)
     print('3) Weight Matrix Generated.')
     
     f_vec = right_hand_side(context, f, g, in_boundary)

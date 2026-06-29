@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import geometry
 import assembly_vec as assembly
+import error_analysis
 import examples
 
 def report_and_graph(context, u_exact, sparse=False):
@@ -59,10 +60,14 @@ def report_and_graph(context, u_exact, sparse=False):
     else:
         u_soln = assembly.rbf_fd_solve(W, F)
         print(f"Condition:    {np.linalg.cond(W): e}")
-        
+
     u_ex = u_exact(P.T)
     error = np.abs(u_soln - u_ex)
-    
+    err_max = error_analysis.max_error_relative(u_soln, u_ex)
+    err_l2 = error_analysis.l2_error_relative(u_soln, u_ex)
+    err_energy = error_analysis.energy_error_delaunay_relative(context, u_soln,
+                                                               u_ex,sparse)
+        
     # -----------------------------
     # REPORT ERRORS AND PLOT
     # -----------------------------
@@ -73,8 +78,9 @@ def report_and_graph(context, u_exact, sparse=False):
     # Provide error analysis from expected result
     print('Maximum weight:' + str(W.max()))
     print('Minimum weight:' + str(W.min()))
-    print("Max error =", np.max(error))
-    print("L2 error  =", np.linalg.norm(error)/np.sqrt(len(P)))
+    print("Max error Rel    = ", np.max(err_max))
+    print("L2 error Rel     = ", err_l2)
+    print("Energy error Rel = ", err_energy)
     
     # Plot a contour for the approximated solution
     plt.figure(figsize=(8, 6))
@@ -169,11 +175,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 150
+    num_stencil_nodes = 100
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let k_c := None
-    num_rings = 15
+    num_rings = 10
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'cubic'
@@ -184,8 +190,8 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 200
-    Ny = 200
+    Nx = 50
+    Ny = 50
     L = 1.0
     shape = 'square'
     
@@ -202,7 +208,7 @@ if __name__ == "__main__":
     print("Coefficient Matrix:\n" + str(A))
     
     # Forcing term parameters
-    Amp = 1e3
+    Amp = 1e0
     modes = [1.0,3.0]
     
     # -----------------------------

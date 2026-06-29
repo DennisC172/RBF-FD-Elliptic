@@ -9,6 +9,17 @@ Checks and provides the boundary conditions
 
 import numpy as np
 
+def square_corners(p, L, tol=1e-6):
+    x,y = p
+    
+    if ((abs(x) < tol and abs(y) < tol) or
+        (abs(x) < tol and abs(y-L) < tol) or
+        (abs(x-L) < tol and abs(y) < tol) or
+        (abs(x-L) < tol and abs(y-L) < tol)):
+        return True
+    
+    return False
+
 # Check whether node falls within square boundary
 def in_square_boundary(p, L, btype, tol=1e-6):
     """
