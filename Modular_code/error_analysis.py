@@ -271,10 +271,14 @@ if __name__ == "__main__":
     example_num = 2
     example = eval('examples.example_'+str(example_num))
     
+    # -----------------------------
+    # PRACTICE RUN: CHECK COMPILE
+    # -----------------------------
     print('=======================Code Compiling Study=======================')    
     rbf_shape = 'cubic'
     augmentation = True
     
+    # Provide whether the solve is sparse or dense
     sparse = True
     
     N_int = 30
