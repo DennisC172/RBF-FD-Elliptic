@@ -190,10 +190,17 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 50
-    Ny = 50
+    Nx = 100
+    Ny = 200
     L = 1.0
     shape = 'square'
+    
+    print(f'Sparse Solve: {sparse}')
+    print(f'Nx = {Nx}, Ny = {Ny}')
+    print(f'Number of Stencils Nodes = {num_stencil_nodes}')
+    print(f'Number of Rings          = {num_rings}')
+    print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
+    print(f'Domain shape: {shape}')
     
     P, num_int = geometry.uniform_int_square(L, Nx, Ny)
     

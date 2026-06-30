@@ -88,8 +88,8 @@ def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, spa
         idx = np.array([in_boundary(p) == 'interior' for p in P])  
         res_max    = error_analysis.max_error_relative(Lu_approx[idx], F[idx])
         res_l2     = error_analysis.l2_error_relative(Lu_approx[idx], F[idx])
-        res_energy = error_analysis.energy_functional_delaunay_relative(context, u_ex,
-                                                                        F, sparse)
+        res_energy = error_analysis.energy_functional_delaunay(context, u_ex,
+                                                               F, sparse)
         print("Max L_h u_exact-f Error Rel          = ", res_max)
         print("L2  L_h u_exact-f Error Rel          = ", res_l2)
         print("Energy Q(u_exact,u_exact)-F(u_exact) = ", res_energy)

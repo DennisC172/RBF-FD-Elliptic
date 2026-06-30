@@ -9,8 +9,12 @@ Error Analysis
 
 import numpy as np
 import geometry
+import examples
 import assembly_vec as assembly
+import os
 from scipy.spatial import Delaunay
+import openpyxl
+from openpyxl.utils import get_column_letter
 
 def delaunay_lumped_weights(points, tri):
     """
@@ -33,10 +37,10 @@ def delaunay_lumped_weights(points, tri):
     for simplex in tri.simplices:
         p0, p1, p2 = points[simplex]
 
-        area = 0.5 * abs(
-            np.cross(p1 - p0, p2 - p0)
-        )
-
+        v1 = p1 - p0
+        v2 = p2 - p0
+        
+        area = 0.5 * abs(v1[0] * v2[1] - v1[1] * v2[0])
         weights[simplex] += area / 3.0
 
     return weights
@@ -94,7 +98,6 @@ def energy_error_delaunay_relative(context, u_soln, u_ex, sparse=False):
     P = context.nodes
     tri = Delaunay(P)
     weights = delaunay_lumped_weights(P, tri)
-    #print(weights.sum())
     
     energy_err = energy_error(context, weights, u_soln, u_ex, sparse)
     dirichlet_energy = energy_error(context, weights, u_ex,
@@ -132,7 +135,6 @@ def energy_functional_delaunay(context, u_soln, f_vec, sparse=False):
     P = context.nodes
     tri = Delaunay(P)
     weights = delaunay_lumped_weights(P, tri)
-    #print(weights.sum())
     
     return energy_functional(context, weights, u_soln, f_vec, sparse)
 
@@ -177,19 +179,11 @@ def coeff_matrix(eig_1, eig_2, rad24):
     
     return V @ D @ V.T  
 
-def pde_context_provider(N_int, eig_2, rad24, example_problem):
-    sparse = True
+def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
+                         num_rings, rbf_shape, augmentation,
+                         rad24, example_problem, sparse=False):
     
-    # Define the nodes per stencil
-    num_stencil_nodes = 150
-    
-    # Define the number of rings with quasi-uniform nodes
-    # For Square solve, let k_c := None
-    num_rings = 15
-    
-    # Define the shape and parameters of the radial basis function
-    rbf_shape = 'cubic'
-    augmentation = True
+    # Define the parameters of the radial basis function
     eps = 3.0
     tol = 1e-12
 
@@ -202,12 +196,11 @@ def pde_context_provider(N_int, eig_2, rad24, example_problem):
     shape = 'square'
     
     P, num_int = geometry.uniform_int_square(L, Nx, Ny)
-    
+        
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    eig_1 = 1e0
     A = coeff_matrix(eig_1, eig_2, rad24)
     print("Coefficient Matrix:\n" + str(A))
     
@@ -235,8 +228,223 @@ def pde_context_provider(N_int, eig_2, rad24, example_problem):
         u_soln = assembly.rbf_fd_solve(W, F)
         print(f"Condition:    {np.linalg.cond(W): e}")
         
-    u_ex = u_exact(P.T)
-    error_l2 = l2_error(u_soln, u_ex)
-    error_energy = energy_error_delaunay(context, u_soln, u_ex)
+    u_ex = u_exact(P.T)    
+    return context, u_soln, u_ex
+
+def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1, eig_2,
+                   augmentation, rad24, context, u_soln, u_ex, sparse=False):
+    W = context.W
+    F = context.F
     
-    return context, u_soln, u_ex, error_l2, error_energy
+    print(f'Sparse Solve: {sparse}')
+    print(f'Nx = {Nx}, Ny = {Ny}')
+    print(f'Number of Stencils Nodes = {num_stencil_nodes}')
+    print(f'Number of Rings          = {num_rings}')
+    print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
+    
+    Lu_approx = W @ u_ex
+    
+    res_max    = max_error_relative(Lu_approx, F)
+    res_l2     = l2_error_relative(Lu_approx, F)
+    res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, sparse)
+    print("Max L_h u_exact-f Error Rel = ", res_max)
+    print("L2  L_h u_exact-f Error Rel = ", res_l2)
+    print("Energy Error Rel            = ", res_energy)
+    print()
+    
+    return {
+    'Nx': Nx,
+    'Ny': Ny,
+    'num_stencil_nodes': num_stencil_nodes,
+    'num_rings': num_rings,
+    'eigenvalue 1': eig_1,
+    'eigenvalue 2': eig_2,
+    'radian = r/24': rad24,
+    'augmentation': augmentation,
+    'sparse': sparse,
+    'max_error_rel': res_max,
+    'l2_error_rel': res_l2,
+    'energy_error_rel': res_energy,
+    }
+
+if __name__ == "__main__":
+    example = examples.example_2
+    
+    print('=======================Code Compiling Study========================')    
+    rbf_shape = 'cubic'
+    augmentation = True
+    
+    sparse = True
+    
+    N_int = 30
+    eig_1 = 1e0
+    eig_2 = 5e-3
+    rad24 = 12.0    
+    num_stencil_nodes = 15
+    num_rings = 5
+    
+    context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                 num_stencil_nodes,
+                                                 num_rings, rbf_shape, augmentation,
+                                                 rad24, example, sparse)
+    error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                   eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+    
+    # -----------------------------
+    # BASELINE PARAMETERS FOR EACH STUDY
+    # (mirrors the values each TEST block set before its loop in the
+    # original sequential script)
+    # -----------------------------
+    N_ints = [20, 30, 50, 75, 100, 150]
+    N_S_N = [15, 25, 25, 50, 65, 75, 85, 100, 115, 130, 150]
+    N_C_R = [5, 6, 7, 8, 9, 10, 11, 12]
+    Eig_R_2 = [1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5]
+    Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
+    
+    results = {}  # sheet_name -> list of row dicts
+    rows = []
+    
+    # -----------------------------
+    # TEST 1: INTERIOR GRID SIZE
+    # -----------------------------
+    print('=================1: Interior Grid Size Study======================')
+    #N_ints = [25]    
+    rows = []
+    
+    for N_int in N_ints:
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+        row['varied_param'] = 'N_int'
+        row['varied_value'] = N_int
+        rows.append(row)
+    results['Grid Size'] = rows
+    
+    # -----------------------------
+    # TEST 2: NUMBER STENCIL NODES
+    # -----------------------------
+    print('================2: Number of Stencil Nodes Study==================')
+    N_S_N = [15]
+    N_int = 25
+    
+    rows = []
+    
+    for num_stencil_nodes in N_S_N:
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+        row['varied_param'] = 'num_stencil_nodes'
+        row['varied_value'] = num_stencil_nodes
+        rows.append(row)
+    results['Stencil Nodes'] = rows
+    
+    # -----------------------------
+    # TEST 3: NUMBER CENTER RINGS
+    # -----------------------------
+    print('=================3: Number of Center Rings Study==================')
+    #N_C_R = [5]
+    num_stencil_nodes = 15    
+    rows = []
+    
+    for num_rings in N_C_R:
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+        row['varied_param'] = 'num_rings'
+        row['varied_value'] = num_rings
+        rows.append(row)
+    results['Center Rings'] = rows
+    
+    # -----------------------------
+    # TEST 4: EIGENVALUE RATIO
+    # -----------------------------
+    print('====================4: Eigenvalue Ratio Study=====================')
+    #Eig_R_2 = [5e-3]
+    num_rings = 5    
+    rows = []
+    
+    for eig_2 in Eig_R_2:
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+        row['varied_param'] = 'eig_2'
+        row['varied_value'] = eig_2
+        rows.append(row)
+    results['Eigenvalue Ratio'] = rows
+
+    # -----------------------------
+    # TEST 5: EIGENVECTOR ANGLE
+    # -----------------------------
+    print('===================5: Eigenvector Radian Study====================')
+    #Eig_RAD_24 = [12.0]
+    eig_2 = 5e-3    
+    rows = []
+    
+    for rad24 in Eig_RAD_24:
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+        row['varied_param'] = 'rad24'
+        row['varied_value'] = rad24
+        rows.append(row)
+    results['Eigenvector Angle'] = rows
+
+    # -----------------------------
+    # WRITE TO EXCEL
+    # -----------------------------
+    def write_results_to_excel(results_dict, filepath):
+        """
+        results_dict: {sheet_name: [row_dict, row_dict, ...]}
+        Each row_dict should have the same keys within a sheet.
+        """
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)  # remove default empty sheet
+    
+        for sheet_name, rows in results_dict.items():
+            ws = wb.create_sheet(title=sheet_name[:31])  # Excel sheet name limit
+            if not rows:
+                continue
+            headers = list(rows[0].keys())
+            ws.append(headers)
+            for row in rows:
+                ws.append([row[h] for h in headers])
+    
+            # auto-width columns (rough heuristic)
+            for i, header in enumerate(headers, start=1):
+                col_letter = get_column_letter(i)
+                max_len = max(
+                    [len(str(header))] + [len(str(row[header])) for row in rows]
+                )
+                ws.column_dimensions[col_letter].width = max_len + 2
+    
+        wb.save(filepath)
+        print(f"Saved results to {filepath}")
+    
+   
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    results_dir = os.path.join(parent_dir, 'Results')
+    os.makedirs(results_dir, exist_ok=True)
+    
+    output_path = os.path.join(results_dir, 'rbf_fd_parameter_study.xlsx')
+    write_results_to_excel(results, output_path)
