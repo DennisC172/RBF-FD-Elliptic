@@ -268,9 +268,10 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1, eig_2,
     }
 
 if __name__ == "__main__":
-    example = examples.example_2
+    example_num = 2
+    example = eval('examples.example_'+str(example_num))
     
-    print('=======================Code Compiling Study========================')    
+    print('=======================Code Compiling Study=======================')    
     rbf_shape = 'cubic'
     augmentation = True
     
@@ -285,8 +286,9 @@ if __name__ == "__main__":
     
     context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                  num_stencil_nodes,
-                                                 num_rings, rbf_shape, augmentation,
-                                                 rad24, example, sparse)
+                                                 num_rings, rbf_shape,
+                                                 augmentation, rad24,
+                                                 example, sparse)
     error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
     
@@ -312,6 +314,7 @@ if __name__ == "__main__":
     rows = []
     
     for N_int in N_ints:
+        print(f'---------------------N_int = {N_int}-------------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
@@ -328,12 +331,13 @@ if __name__ == "__main__":
     # TEST 2: NUMBER STENCIL NODES
     # -----------------------------
     print('================2: Number of Stencil Nodes Study==================')
-    N_S_N = [15]
+    #N_S_N = [15]
     N_int = 25
     
     rows = []
     
     for num_stencil_nodes in N_S_N:
+        print(f'----------num_stencil_nodes = {num_stencil_nodes}------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
@@ -355,6 +359,7 @@ if __name__ == "__main__":
     rows = []
     
     for num_rings in N_C_R:
+        print(f'-----------------num_rings = {num_rings}---------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
@@ -376,6 +381,7 @@ if __name__ == "__main__":
     rows = []
     
     for eig_2 in Eig_R_2:
+        print(f'--------------------eig_2 = {eig_2}--------------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
@@ -397,6 +403,7 @@ if __name__ == "__main__":
     rows = []
     
     for rad24 in Eig_RAD_24:
+        print(f'-----------------radian=rad24/24 = {rad24}-------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
@@ -421,7 +428,7 @@ if __name__ == "__main__":
         wb.remove(wb.active)  # remove default empty sheet
     
         for sheet_name, rows in results_dict.items():
-            ws = wb.create_sheet(title=sheet_name[:31])  # Excel sheet name limit
+            ws = wb.create_sheet(title=sheet_name[:31])# Excel sheet name limit
             if not rows:
                 continue
             headers = list(rows[0].keys())
@@ -433,7 +440,7 @@ if __name__ == "__main__":
             for i, header in enumerate(headers, start=1):
                 col_letter = get_column_letter(i)
                 max_len = max(
-                    [len(str(header))] + [len(str(row[header])) for row in rows]
+                    [len(str(header))]+[len(str(row[header])) for row in rows]
                 )
                 ws.column_dimensions[col_letter].width = max_len + 2
     
@@ -446,5 +453,6 @@ if __name__ == "__main__":
     results_dir = os.path.join(parent_dir, 'Results')
     os.makedirs(results_dir, exist_ok=True)
     
-    output_path = os.path.join(results_dir, 'rbf_fd_parameter_study.xlsx')
+    output_path = os.path.join(results_dir, 
+                               f'rbf_fd_parameter_study_{example_num}.xlsx')
     write_results_to_excel(results, output_path)
