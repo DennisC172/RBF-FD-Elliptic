@@ -270,28 +270,6 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1, eig_2,
 # -----------------------------
 # WRITE TO EXCEL
 # -----------------------------
-def write_results_to_excel(results_dict, filepath):
-    """
-    results_dict: {sheet_name: [row_dict, row_dict, ...]}
-    Each row_dict should have the same keys within a sheet.
-    """
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)  # remove default empty sheet
-
-    for row in rows:
-        ws.append([row[h] for h in headers])
-
-    # auto-width columns (rough heuristic)
-    for i, header in enumerate(headers, start=1):
-        col_letter = get_column_letter(i)
-        max_len = max(
-            [len(str(header))]+[len(str(row[header])) for row in rows]
-        )
-        ws.column_dimensions[col_letter].width = max_len + 2
-
-    wb.save(filepath)
-    print(f"Saved results to {filepath}")
-
 def append_sheet_to_excel(sheet_name, rows, filepath):
     import os
     import openpyxl
@@ -348,9 +326,9 @@ if __name__ == "__main__":
     
     N_int = 30
     eig_1 = 1e0
-    eig_2 = 5e-3
-    rad24 = 12.0    
-    num_stencil_nodes = 10
+    eig_2 = 1e0
+    rad24 = 0.0    
+    num_stencil_nodes = 25
     num_rings = 5
     
     context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
@@ -372,26 +350,31 @@ if __name__ == "__main__":
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
     
-    rows = []
-    
+    N_int = 100
+    eig_1 = 1e0
+    eig_2 = 5e-3
+    rad24 = 12.0    
+    num_stencil_nodes = 100
+    num_rings = 10
+
     # -----------------------------
     # TEST 1: INTERIOR GRID SIZE
     # -----------------------------
     print('=================1: Interior Grid Size Study======================')
-    N_ints = [25]    
+    #N_ints = [30]
     rows = []
     
-    for N_int in N_ints:
-        print(f'---------------------N_int = {N_int}-------------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+    for x in N_ints:
+        print(f'---------------------N_int = {x}-------------------------')
+        context, u_soln, u_ex = pde_context_provider(x, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      augmentation,
                                                      rad24, example, sparse)
-        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+        row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
                     eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
-        row['varied_value'] = N_int
+        row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Grid Size', rows, output_path)
  
@@ -399,22 +382,20 @@ if __name__ == "__main__":
     # TEST 2: NUMBER STENCIL NODES
     # -----------------------------
     print('================2: Number of Stencil Nodes Study==================')
-    N_S_N = [15]
-    #N_int = 100
-    
+    #N_S_N = [25]   
     rows = []
     
-    for num_stencil_nodes in N_S_N:
-        print(f'----------num_stencil_nodes = {num_stencil_nodes}------------')
+    for x in N_S_N:
+        print(f'----------num_stencil_nodes = {x}------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
-                                                     num_stencil_nodes,
+                                                     x,
                                                      num_rings, rbf_shape,
                                                      augmentation,
                                                      rad24, example, sparse)
-        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+        row = error_analysis(N_int, N_int, x, num_rings, eig_1,
                     eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
         row['varied_param'] = 'num_stencil_nodes'
-        row['varied_value'] = num_stencil_nodes
+        row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Stencil Nodes', rows, output_path)
     
@@ -422,21 +403,20 @@ if __name__ == "__main__":
     # TEST 3: NUMBER CENTER RINGS
     # -----------------------------
     print('=================3: Number of Center Rings Study==================')
-    N_C_R = [5]
-    #num_stencil_nodes = 100  
+    #N_C_R = [5]
     rows = []
     
-    for num_rings in N_C_R:
-        print(f'-----------------num_rings = {num_rings}---------------------')
+    for x in N_C_R:
+        print(f'-----------------num_rings = {x}---------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
-                                                     num_rings, rbf_shape,
+                                                     x, rbf_shape,
                                                      augmentation,
                                                      rad24, example, sparse)
-        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+        row = error_analysis(N_int, N_int, num_stencil_nodes, x, eig_1,
                     eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
         row['varied_param'] = 'num_rings'
-        row['varied_value'] = num_rings
+        row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Center Rings', rows, output_path)
     
@@ -444,21 +424,20 @@ if __name__ == "__main__":
     # TEST 4: EIGENVALUE RATIO
     # -----------------------------
     print('====================4: Eigenvalue Ratio Study=====================')
-    Eig_R_2 = [5e-3]
-    #num_rings = 10 
+    #Eig_R_2 = [1e0]
     rows = []
     
-    for eig_2 in Eig_R_2:
-        print(f'--------------------eig_2 = {eig_2}--------------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+    for x in Eig_R_2:
+        print(f'--------------------eig_2 = {x}--------------------------')
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, x,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                    x, augmentation, rad24, context, u_soln, u_ex, sparse)
         row['varied_param'] = 'eig_2'
-        row['varied_value'] = eig_2
+        row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Eigenvalue Ratio', rows, output_path)
 
@@ -466,20 +445,19 @@ if __name__ == "__main__":
     # TEST 5: EIGENVECTOR ANGLE
     # -----------------------------
     print('===================5: Eigenvector Radian Study====================')
-    Eig_RAD_24 = [12.0]
-    #eig_2 = 5e-3    
+    #Eig_RAD_24 = [0.0] 
     rows = []
     
-    for rad24 in Eig_RAD_24:
-        print(f'-----------------radian=rad24/24 = {rad24}-------------------')
+    for x in Eig_RAD_24:
+        print(f'-----------------radian=rad24/24 = {x}-------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      augmentation,
-                                                     rad24, example, sparse)
+                                                     x, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                    eig_2, augmentation, x, context, u_soln, u_ex, sparse)
         row['varied_param'] = 'rad24'
-        row['varied_value'] = rad24
+        row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)
