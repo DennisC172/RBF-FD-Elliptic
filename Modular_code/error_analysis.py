@@ -267,10 +267,75 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1, eig_2,
     'energy_error_rel': res_energy,
     }
 
+# -----------------------------
+# WRITE TO EXCEL
+# -----------------------------
+def write_results_to_excel(results_dict, filepath):
+    """
+    results_dict: {sheet_name: [row_dict, row_dict, ...]}
+    Each row_dict should have the same keys within a sheet.
+    """
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # remove default empty sheet
+
+    for row in rows:
+        ws.append([row[h] for h in headers])
+
+    # auto-width columns (rough heuristic)
+    for i, header in enumerate(headers, start=1):
+        col_letter = get_column_letter(i)
+        max_len = max(
+            [len(str(header))]+[len(str(row[header])) for row in rows]
+        )
+        ws.column_dimensions[col_letter].width = max_len + 2
+
+    wb.save(filepath)
+    print(f"Saved results to {filepath}")
+
+def append_sheet_to_excel(sheet_name, rows, filepath):
+    import os
+    import openpyxl
+
+    if os.path.exists(filepath):
+        wb = openpyxl.load_workbook(filepath)
+    else:
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        sheet_is_new = False
+    else:
+        ws = wb.create_sheet(title=sheet_name[:31])
+        sheet_is_new = True
+
+    if not rows:
+        wb.save(filepath)
+        return
+
+    headers = list(rows[0].keys())
+
+    if sheet_is_new or ws.max_row == 1 and ws.cell(1, 1).value is None:
+        ws.append(headers)
+
+    for row in rows:
+        ws.append([row[h] for h in headers])
+
+    wb.save(filepath)
+    print(f"Saved results to {filepath}")
+
 if __name__ == "__main__":
     example_num = 3
     example = eval('examples.example_'+str(example_num))
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    results_dir = os.path.join(parent_dir, 'Results')
+    os.makedirs(results_dir, exist_ok=True)
     
+    output_path = os.path.join(results_dir, 
+                               f'rbf_fd_parameter_study_{example_num}.xlsx')
+
     # -----------------------------
     # PRACTICE RUN: CHECK COMPILE
     # -----------------------------
@@ -285,8 +350,8 @@ if __name__ == "__main__":
     eig_1 = 1e0
     eig_2 = 5e-3
     rad24 = 12.0    
-    num_stencil_nodes = 100
-    num_rings = 10
+    num_stencil_nodes = 10
+    num_rings = 5
     
     context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                  num_stencil_nodes,
@@ -307,14 +372,13 @@ if __name__ == "__main__":
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
     
-    results = {}  # sheet_name -> list of row dicts
     rows = []
     
     # -----------------------------
     # TEST 1: INTERIOR GRID SIZE
     # -----------------------------
     print('=================1: Interior Grid Size Study======================')
-    #N_ints = [25]    
+    N_ints = [25]    
     rows = []
     
     for N_int in N_ints:
@@ -329,14 +393,14 @@ if __name__ == "__main__":
         row['varied_param'] = 'N_int'
         row['varied_value'] = N_int
         rows.append(row)
-    results['Grid Size'] = rows
-    
+    append_sheet_to_excel('Grid Size', rows, output_path)
+ 
     # -----------------------------
     # TEST 2: NUMBER STENCIL NODES
     # -----------------------------
     print('================2: Number of Stencil Nodes Study==================')
-    #N_S_N = [15]
-    N_int = 100
+    N_S_N = [15]
+    #N_int = 100
     
     rows = []
     
@@ -352,14 +416,14 @@ if __name__ == "__main__":
         row['varied_param'] = 'num_stencil_nodes'
         row['varied_value'] = num_stencil_nodes
         rows.append(row)
-    results['Stencil Nodes'] = rows
+    append_sheet_to_excel('Stencil Nodes', rows, output_path)
     
     # -----------------------------
     # TEST 3: NUMBER CENTER RINGS
     # -----------------------------
     print('=================3: Number of Center Rings Study==================')
-    #N_C_R = [5]
-    num_stencil_nodes = 100  
+    N_C_R = [5]
+    #num_stencil_nodes = 100  
     rows = []
     
     for num_rings in N_C_R:
@@ -374,14 +438,14 @@ if __name__ == "__main__":
         row['varied_param'] = 'num_rings'
         row['varied_value'] = num_rings
         rows.append(row)
-    results['Center Rings'] = rows
+    append_sheet_to_excel('Center Rings', rows, output_path)
     
     # -----------------------------
     # TEST 4: EIGENVALUE RATIO
     # -----------------------------
     print('====================4: Eigenvalue Ratio Study=====================')
-    #Eig_R_2 = [5e-3]
-    num_rings = 10 
+    Eig_R_2 = [5e-3]
+    #num_rings = 10 
     rows = []
     
     for eig_2 in Eig_R_2:
@@ -396,14 +460,14 @@ if __name__ == "__main__":
         row['varied_param'] = 'eig_2'
         row['varied_value'] = eig_2
         rows.append(row)
-    results['Eigenvalue Ratio'] = rows
+    append_sheet_to_excel('Eigenvalue Ratio', rows, output_path)
 
     # -----------------------------
     # TEST 5: EIGENVECTOR ANGLE
     # -----------------------------
     print('===================5: Eigenvector Radian Study====================')
-    #Eig_RAD_24 = [12.0]
-    eig_2 = 5e-3    
+    Eig_RAD_24 = [12.0]
+    #eig_2 = 5e-3    
     rows = []
     
     for rad24 in Eig_RAD_24:
@@ -418,45 +482,4 @@ if __name__ == "__main__":
         row['varied_param'] = 'rad24'
         row['varied_value'] = rad24
         rows.append(row)
-    results['Eigenvector Angle'] = rows
-
-    # -----------------------------
-    # WRITE TO EXCEL
-    # -----------------------------
-    def write_results_to_excel(results_dict, filepath):
-        """
-        results_dict: {sheet_name: [row_dict, row_dict, ...]}
-        Each row_dict should have the same keys within a sheet.
-        """
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)  # remove default empty sheet
-    
-        for sheet_name, rows in results_dict.items():
-            ws = wb.create_sheet(title=sheet_name[:31])# Excel sheet name limit
-            if not rows:
-                continue
-            headers = list(rows[0].keys())
-            ws.append(headers)
-            for row in rows:
-                ws.append([row[h] for h in headers])
-    
-            # auto-width columns (rough heuristic)
-            for i, header in enumerate(headers, start=1):
-                col_letter = get_column_letter(i)
-                max_len = max(
-                    [len(str(header))]+[len(str(row[header])) for row in rows]
-                )
-                ws.column_dimensions[col_letter].width = max_len + 2
-    
-        wb.save(filepath)
-        print(f"Saved results to {filepath}")
-    
-   
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(script_dir)
-    results_dir = os.path.join(parent_dir, 'Results')
-    os.makedirs(results_dir, exist_ok=True)
-    
-    output_path = os.path.join(results_dir, 
-                               f'rbf_fd_parameter_study_{example_num}.xlsx')
-    write_results_to_excel(results, output_path)
+    append_sheet_to_excel('Eigenvector Angle', rows, output_path)

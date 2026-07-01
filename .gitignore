@@ -2,6 +2,16 @@
 # Ignore the entire unwanted folder
 # -------------------------
 
+# -------------------------
+# Temporary Office files (Excel/Word)
+# -------------------------
+~$*
+
+# -------------------------
+# Excel / data artifacts
+# -------------------------
+*.xlsx~
+*.xls~
 
 # -------------------------
 # Python compiled/cache stuff
