@@ -231,8 +231,9 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     u_ex = u_exact(P.T)    
     return context, u_soln, u_ex
 
-def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1, eig_2,
-                   augmentation, rad24, context, u_soln, u_ex, sparse=False):
+def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
+                   eig_2, rbf_shape, augmentation, rad24,
+                   context, u_soln, u_ex, sparse=False):
     W = context.W
     F = context.F
     
@@ -302,8 +303,7 @@ def append_sheet_to_excel(sheet_name, rows, filepath):
     wb.save(filepath)
     print(f"Saved results to {filepath}")
 
-if __name__ == "__main__":
-    example_num = 3
+def data_output(example_num):
     example = eval('examples.example_'+str(example_num))
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -337,7 +337,8 @@ if __name__ == "__main__":
                                                  augmentation, rad24,
                                                  example, sparse)
     error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                   eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                   eig_2, rbf_shape, augmentation, rad24, context,
+                   u_soln, u_ex, sparse)
     
     # -----------------------------
     # BASELINE PARAMETERS FOR EACH STUDY
@@ -372,7 +373,8 @@ if __name__ == "__main__":
                                                      augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
-                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, augmentation, rad24, context,
+                             u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
         row['varied_value'] = x
         rows.append(row)
@@ -393,7 +395,8 @@ if __name__ == "__main__":
                                                      augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, x, num_rings, eig_1,
-                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, augmentation, rad24, context,
+                             u_soln, u_ex, sparse)
         row['varied_param'] = 'num_stencil_nodes'
         row['varied_value'] = x
         rows.append(row)
@@ -414,7 +417,8 @@ if __name__ == "__main__":
                                                      augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, x, eig_1,
-                    eig_2, augmentation, rad24, context, u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, augmentation, rad24, context,
+                             u_soln, u_ex, sparse)
         row['varied_param'] = 'num_rings'
         row['varied_value'] = x
         rows.append(row)
@@ -435,7 +439,8 @@ if __name__ == "__main__":
                                                      augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                    x, augmentation, rad24, context, u_soln, u_ex, sparse)
+                             x, rbf_shape, augmentation, rad24, context,
+                             u_soln, u_ex, sparse)
         row['varied_param'] = 'eig_2'
         row['varied_value'] = x
         rows.append(row)
@@ -456,8 +461,15 @@ if __name__ == "__main__":
                                                      augmentation,
                                                      x, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                    eig_2, augmentation, x, context, u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, augmentation, x, context,
+                             u_soln, u_ex, sparse)
         row['varied_param'] = 'rad24'
         row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)
+
+if __name__ == "__main__":
+    example_nums = [10,3,5,7]
+    
+    for example_num in example_nums:
+        data_output(example_num)
