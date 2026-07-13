@@ -334,7 +334,7 @@ def data_output(example_num):
                                                  augmentation, rad24,
                                                  example, sparse)
     error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                   eig_2, rbf_shape, augmentation, rad24, context,
+                   eig_2, rbf_shape, eps, augmentation, rad24, context,
                    u_soln, u_ex, sparse)
     
     # -----------------------------
