@@ -14,7 +14,6 @@ import assembly_vec as assembly
 import os
 from scipy.spatial import Delaunay
 import openpyxl
-from openpyxl.utils import get_column_letter
 
 def delaunay_lumped_weights(points, tri):
     """
@@ -180,11 +179,10 @@ def coeff_matrix(eig_1, eig_2, rad24):
     return V @ D @ V.T  
 
 def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
-                         num_rings, rbf_shape, augmentation,
+                         num_rings, rbf_shape, eps, augmentation,
                          rad24, example_problem, sparse=False):
     
     # Define the parameters of the radial basis function
-    eps = 3.0
     tol = 1e-12
 
     # -----------------------------
@@ -232,7 +230,7 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     return context, u_soln, u_ex
 
 def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
-                   eig_2, rbf_shape, augmentation, rad24,
+                   eig_2, rbf_shape, eps, augmentation, rad24,
                    context, u_soln, u_ex, sparse=False):
     W = context.W
     F = context.F
@@ -272,9 +270,6 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
 # WRITE TO EXCEL
 # -----------------------------
 def append_sheet_to_excel(sheet_name, rows, filepath):
-    import os
-    import openpyxl
-
     if os.path.exists(filepath):
         wb = openpyxl.load_workbook(filepath)
     else:
@@ -317,9 +312,10 @@ def data_output(example_num):
     # -----------------------------
     # PRACTICE RUN: CHECK COMPILE
     # -----------------------------
-    print('=======================Code Compiling Study=======================')    
-    rbf_shape = 'cubic'
-    augmentation = True
+    print('=======================Code Compiling Study=======================')
+    eps = 3.0
+    rbf_shape = 'gaussian'
+    augmentation = False
     
     # Provide whether the solve is sparse or dense
     sparse = True
@@ -333,7 +329,7 @@ def data_output(example_num):
     
     context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                  num_stencil_nodes,
-                                                 num_rings, rbf_shape,
+                                                 num_rings, rbf_shape, eps,
                                                  augmentation, rad24,
                                                  example, sparse)
     error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
@@ -346,6 +342,7 @@ def data_output(example_num):
     # original sequential script)
     # -----------------------------
     N_ints = [20, 30, 50, 75, 100, 125, 150]
+    INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0]
     N_S_N = [15, 25, 40, 50, 65, 75, 85, 100, 115, 130, 150, 200]
     N_C_R = [5, 6, 7, 8, 9, 10, 11, 12]
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
@@ -370,7 +367,7 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(x, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
-                                                     augmentation,
+                                                     eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
                              eig_2, rbf_shape, augmentation, rad24, context,
@@ -392,7 +389,7 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      x,
                                                      num_rings, rbf_shape,
-                                                     augmentation,
+                                                     eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, x, num_rings, eig_1,
                              eig_2, rbf_shape, augmentation, rad24, context,
@@ -414,7 +411,7 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      x, rbf_shape,
-                                                     augmentation,
+                                                     eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, x, eig_1,
                              eig_2, rbf_shape, augmentation, rad24, context,
@@ -436,7 +433,7 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, x,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
-                                                     augmentation,
+                                                     eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
                              x, rbf_shape, augmentation, rad24, context,
@@ -458,7 +455,7 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
-                                                     augmentation,
+                                                     eps, augmentation,
                                                      x, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
                              eig_2, rbf_shape, augmentation, x, context,
