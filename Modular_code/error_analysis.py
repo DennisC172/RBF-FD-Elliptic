@@ -342,7 +342,7 @@ def data_output(example_num):
     # (mirrors the values each TEST block set before its loop in the
     # original sequential script)
     # -----------------------------
-    N_ints = [20, 30, 50, 75, 100, 125, 150]
+    N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250]
     INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0]
     N_S_N = [15, 25, 40, 50, 65, 75, 85, 100, 115, 130, 150, 200]
     N_C_R = [5, 6, 7, 8, 9, 10, 11, 12]
