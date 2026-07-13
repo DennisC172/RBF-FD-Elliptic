@@ -254,6 +254,7 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     return {
     'Nx': Nx,
     'Ny': Ny,
+    'eps': eps,
     'num_stencil_nodes': num_stencil_nodes,
     'num_rings': num_rings,
     'eigenvalue 1': eig_1,
@@ -370,13 +371,35 @@ def data_output(example_num):
                                                      eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
-                             eig_2, rbf_shape, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, rad24, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
         row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Grid Size', rows, output_path)
- 
+
+    # -----------------------------
+    # TEST 2: INVERSE LENGTH SCALE
+    # -----------------------------
+    print('=================1: Interior Grid Size Study======================')
+    #INV_L_S = [3.0]
+    rows = []
+    
+    for x in INV_L_S:
+        print(f'---------------Inverse Length Scale = {x}--------------------')
+        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+                                                     num_stencil_nodes,
+                                                     num_rings, rbf_shape,
+                                                     x, augmentation,
+                                                     rad24, example, sparse)
+        row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
+                             eig_2, rbf_shape, x, augmentation, rad24, context,
+                             u_soln, u_ex, sparse)
+        row['varied_param'] = 'Inverse Length Scale'
+        row['varied_value'] = x
+        rows.append(row)
+    append_sheet_to_excel('Grid Size', rows, output_path)    
+
     # -----------------------------
     # TEST 2: NUMBER STENCIL NODES
     # -----------------------------
@@ -392,7 +415,7 @@ def data_output(example_num):
                                                      eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, x, num_rings, eig_1,
-                             eig_2, rbf_shape, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, rad24, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'num_stencil_nodes'
         row['varied_value'] = x
@@ -414,7 +437,7 @@ def data_output(example_num):
                                                      eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, x, eig_1,
-                             eig_2, rbf_shape, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, rad24, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'num_rings'
         row['varied_value'] = x
@@ -436,7 +459,7 @@ def data_output(example_num):
                                                      eps, augmentation,
                                                      rad24, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                             x, rbf_shape, augmentation, rad24, context,
+                             x, rbf_shape, eps, augmentation, rad24, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'eig_2'
         row['varied_value'] = x
@@ -458,7 +481,7 @@ def data_output(example_num):
                                                      eps, augmentation,
                                                      x, example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                             eig_2, rbf_shape, augmentation, x, context,
+                             eig_2, rbf_shape, eps, augmentation, x, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'rad24'
         row['varied_value'] = x
@@ -466,7 +489,7 @@ def data_output(example_num):
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)
 
 if __name__ == "__main__":
-    example_nums = [10,3,5,7]
+    example_nums = [2, 3, 4, 5, 6, 7, 8, 9, 10]
     
     for example_num in example_nums:
         data_output(example_num)
