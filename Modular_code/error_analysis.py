@@ -329,7 +329,7 @@ def data_output(example_num):
     # PRACTICE RUN: CHECK COMPILE
     # -----------------------------
     print('=======================Code Compiling Study=======================')
-    eps = 3.0
+    eps = 4.0
     rbf_shape = 'gaussian'
     augmentation = False
     
@@ -358,9 +358,9 @@ def data_output(example_num):
     # original sequential script)
     # -----------------------------
     N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250]
-    INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0]
-    N_S_N = [15, 25, 40, 50, 65, 75, 85, 100, 115, 130, 150, 200]
-    N_C_R = [5, 6, 7, 8, 9, 10, 11, 12]
+    INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0,20.0,30.0]
+    N_S_N = [15, 25, 40, 50, 65, 75, 85, 100, 115, 130, 150, 175, 200, 250]
+    N_C_R = [5, 6, 7, 8, 9, 10, 11, 12,13,14]
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
     
@@ -368,8 +368,8 @@ def data_output(example_num):
     eig_1 = 1e0
     eig_2 = 5e-3
     rad24 = 12.0    
-    num_stencil_nodes = 100
-    num_rings = 10
+    num_stencil_nodes = 75
+    num_rings = 12
 
     # -----------------------------
     # TEST 1: INTERIOR GRID SIZE
