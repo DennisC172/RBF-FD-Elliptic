@@ -251,8 +251,11 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     
     Lu_approx = W @ u_ex
     
-    res_max    = max_error_relative(Lu_approx, F)
-    res_l2     = l2_error_relative(Lu_approx, F)
+    err_soln_max = max_error_relative(u_soln, u_ex)
+    err_soln_l2  = l2_error_relative(u_soln, u_ex)
+
+    res_op_max    = max_error_relative(Lu_approx, F)
+    res_op_l2     = l2_error_relative(Lu_approx, F)
     res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, sparse)
     print("Max L_h u_exact-f Error Rel = ", res_max)
     print("L2  L_h u_exact-f Error Rel = ", res_l2)
@@ -270,9 +273,11 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     'radian = r/24': rad24,
     'augmentation': augmentation,
     'sparse': sparse,
-    'max_error_rel': res_max,
-    'l2_error_rel': res_l2,
+    'u_exact - u max_error_rel': err_soln_max,
+    'u_exact - u l2_error_rel': err_soln_l2,
     'energy_error_rel': res_energy,
+    'Lu_exact - F max_residual_rel': res_op_max,
+    'Lu_exact - F l2_residual_rel': res_op_l2,
     }
 
 # -----------------------------
