@@ -462,17 +462,24 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     S = context.stencils
     k = context.center_rings
     
-    rows = []
-    cols = []
-    vals = []
+    max_nnz = num_nodes * context.stencils[0].shape[0]  # upper bound
+
+    rows = np.empty(max_nnz, dtype=np.int32)
+    cols = np.empty(max_nnz, dtype=np.int32)
+    vals = np.empty(max_nnz, dtype=np.float64)
+    ptr = 0
     
     for i,s in enumerate(S):
         node_type = in_boundary(P[i]) if in_boundary is not None else 'interior'
 
+        rows[ptr:ptr+n] = i
+        cols[ptr:ptr+n] = s
+
         if node_type == 'dirichlet':
-            rows.append(i)
-            cols.append(i)
-            vals.append(1.0)
+            rows[ptr] = i
+            cols[ptr] = i
+            vals[ptr] = 1.0
+            ptr += 1
         elif node_type == 'neumann':
             if k is None:
                 w_grad = local_grad_solve(context, i)
@@ -482,20 +489,25 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             n_v = normal_vec(P[i])
             dir_derv = w_grad @ n_v
 
-            rows.extend([i]*len(s))
-            cols.extend(s)
-            vals.extend(dir_derv)
+            n = len(s)
+            rows[ptr:ptr+n] = i
+            cols[ptr:ptr+n] = s
+            vals[ptr:ptr+n] = dir_derv
+            ptr += n
         else:
             if k is None:
                 w = local_weights_solve(context, i)
             else:
                 w = local_weights_ls(context, i)
 
-            rows.extend([i]*len(s))
-            cols.extend(s)
-            vals.extend(w)
+            n = len(s)
+            rows[ptr:ptr+n] = i
+            cols[ptr:ptr+n] = s
+            vals[ptr:ptr+n] = w
+            ptr += n
             
-    W = sp.coo_matrix((vals, (rows, cols)), shape=(num_nodes, num_nodes))
+    W = sp.coo_matrix((vals[:ptr], (rows[:ptr], cols[:ptr])),
+                      shape=(num_nodes, num_nodes))
     return W.tocsr()
 
 def global_grads(context):
@@ -592,26 +604,31 @@ def global_grads_sparse(context):
     S = context.stencils
     k = context.center_rings
 
-    rows = []
-    cols = [[] for _ in range(dim)]
-    vals = [[] for _ in range(dim)]
+    max_stencil = max(len(s) for s in S)
+    max_nnz = num_nodes * max_stencil
+
+    rows = np.empty(max_nnz, dtype=np.int64)
+    cols = np.empty(max_nnz, dtype=np.int64)
+    vals = np.empty((dim, max_nnz), dtype=np.float64)
+    ptr = 0
 
     for i, s in enumerate(S):
-        num_stencil_nodes = len(s)
+        n = len(s)
 
         if k is None:
             w_grad = local_grad_solve(context, i)
         else:
             w_grad = local_grad_ls(context, i)
 
-        rows.extend([i] * num_stencil_nodes)
-
+        rows[ptr:ptr+n] = i
+        cols[ptr:ptr+n] = s
         for l in range(dim):
-            cols[l].extend(s)
-            vals[l].extend(w_grad[:, l])
+            vals[l, ptr:ptr+n] = w_grad[:, l]
+        ptr += n
 
     W_list = [
-        sp.coo_matrix((vals[l], (rows, cols[l])), shape=(num_nodes, num_nodes)).tocsr()
+        sp.coo_matrix((vals[l, :ptr], (rows[:ptr], cols[:ptr])),
+                      shape=(num_nodes, num_nodes)).tocsr()
         for l in range(dim)
     ]
 

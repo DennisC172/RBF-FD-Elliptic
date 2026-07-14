@@ -58,16 +58,17 @@ def max_error(u_soln, u_ex):
 def max_error_relative(u_soln, u_ex):
     return np.max(abs(u_soln-u_ex))/np.max(u_ex)
 
-def energy_error(context, weights, u_soln, u_ex, sparse=False):
+def energy_error(context, weights, u_soln, u_ex, sparse=False, W_grads=None):
     P = context.nodes
     A = context.A
     num_nodes = len(P)
     dim = len(P[0])
 
-    if sparse:
-        W_grads = assembly.global_grads_sparse(context)
-    else:
-        W_grads = assembly.global_grads(context)
+    if W_grads is None:
+        if sparse:
+            W_grads = assembly.global_grads_sparse(context)
+        else:
+            W_grads = assembly.global_grads(context)
         
     err = u_soln-u_ex
     
@@ -98,9 +99,16 @@ def energy_error_delaunay_relative(context, u_soln, u_ex, sparse=False):
     tri = Delaunay(P)
     weights = delaunay_lumped_weights(P, tri)
     
-    energy_err = energy_error(context, weights, u_soln, u_ex, sparse)
+    if sparse:
+        W_grads = assembly.global_grads_sparse(context)
+    else:
+        W_grads = assembly.global_grads(context)
+
+    energy_err = energy_error(context, weights, u_soln, u_ex,
+                              sparse, W_grads)
     dirichlet_energy = energy_error(context, weights, u_ex,
-                                    np.zeros(u_ex.shape), sparse)
+                                    np.zeros(u_ex.shape),
+                                    sparse, W_grads)
     
     return energy_err/dirichlet_energy
 

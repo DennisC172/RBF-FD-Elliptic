@@ -8,21 +8,17 @@ Defines the stencils for the Finite Difference Approximation Scheme.
 """
 
 import numpy as np
+from scipy.spatial import cKDTree
 
-# KMeans generated for index i
-def knn(P, i, k):
-    dist = np.linalg.norm(P - P[i], axis=1)
-    idx = np.argsort(dist)
-    return idx[:k]
-
-# KMeans generated for all ndoes
 def knn_list(P, k):
-    S = []
-    
-    for i in range(len(P)):
-        S.append(knn(P,i,k))
-        
-    return S
+    tree = cKDTree(P)
+    _, idx = tree.query(P, k=k)
+    return list(idx)
+
+def knn(P, i, k):
+    tree = cKDTree(P)
+    _, idx = tree.query(P[i], k=k)
+    return idx
 
 # Check proximity of nodes radially
 def radial_proximity(P,r):
