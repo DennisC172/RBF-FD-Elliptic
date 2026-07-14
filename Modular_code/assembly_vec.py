@@ -472,9 +472,6 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     for i,s in enumerate(S):
         node_type = in_boundary(P[i]) if in_boundary is not None else 'interior'
 
-        rows[ptr:ptr+n] = i
-        cols[ptr:ptr+n] = s
-
         if node_type == 'dirichlet':
             rows[ptr] = i
             cols[ptr] = i
