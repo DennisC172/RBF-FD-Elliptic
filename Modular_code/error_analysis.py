@@ -247,7 +247,7 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
     print(f'Number of Rings          = {num_rings}')
-    print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
+    print(f'RBF: {rbf_shape}, with augmentation: {augmentation}')
     
     Lu_approx = W @ u_ex
     
@@ -257,8 +257,8 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     res_op_max    = max_error_relative(Lu_approx, F)
     res_op_l2     = l2_error_relative(Lu_approx, F)
     res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, sparse)
-    print("Max u_exact-u Error Rel = ", err_soln_max)
-    print("L2  u_exact-u Error Rel = ", err_soln_l2)
+    print("Max u_exact-u Error Rel     = ", err_soln_max)
+    print("L2  u_exact-u Error Rel     = ", err_soln_l2)
     print("Energy Error Rel            = ", res_energy)
     print("Max L_h u_exact-f Error Rel = ", res_op_max)
     print("L2  L_h u_exact-f Error Rel = ", res_op_l2)
@@ -396,7 +396,7 @@ def data_output(example_num):
     # -----------------------------
     # TEST 2: INVERSE LENGTH SCALE
     # -----------------------------
-    print('=================1: Interior Grid Size Study======================')
+    print('=================1: Inverse Length Scale Study====================')
     #INV_L_S = [3.0]
     rows = []
     
@@ -413,7 +413,7 @@ def data_output(example_num):
         row['varied_param'] = 'Inverse Length Scale'
         row['varied_value'] = x
         rows.append(row)
-    append_sheet_to_excel('Grid Size', rows, output_path)    
+    append_sheet_to_excel('Length Scale', rows, output_path)    
 
     # -----------------------------
     # TEST 2: NUMBER STENCIL NODES
@@ -489,7 +489,7 @@ def data_output(example_num):
     rows = []
     
     for x in Eig_RAD_24:
-        print(f'-----------------radian=rad24/24 = {x}-------------------')
+        print(f'--------------------radian={x}/24------------------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
