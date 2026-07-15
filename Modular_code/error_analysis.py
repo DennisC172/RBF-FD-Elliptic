@@ -340,7 +340,7 @@ def data_output(example_num):
     eig_1 = 1e0
     eig_2 = 1e0
     rad24 = 0.0    
-    num_stencil_nodes = 25
+    num_stencil_nodes = 5
     num_rings = 5
     
     context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
