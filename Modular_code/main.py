@@ -68,6 +68,10 @@ def report_and_graph(context, u_exact, sparse=False):
     err_energy = error_analysis.energy_error_delaunay_relative(context, u_soln,
                                                                u_ex,sparse)
         
+    Lu_approx = W @ u_ex
+    res_max = error_analysis.max_error_relative(Lu_approx, F)
+    res_l2 = error_analysis.l2_error_relative(Lu_approx, F)
+
     # -----------------------------
     # REPORT ERRORS AND PLOT
     # -----------------------------
@@ -76,11 +80,13 @@ def report_and_graph(context, u_exact, sparse=False):
     a2 = A[1,1]
     
     # Provide error analysis from expected result
-    print('Maximum weight:' + str(W.max()))
-    print('Minimum weight:' + str(W.min()))
-    print("Max error Rel    = ", np.max(err_max))
-    print("L2 error Rel     = ", err_l2)
-    print("Energy error Rel = ", err_energy)
+    print('Maximum weight:     ' + str(W.max()))
+    print('Minimum weight:     ' + str(W.min()))
+    print("Max error Rel     = ", np.max(err_max))
+    print("L2 error Rel      = ", err_l2)
+    print("Energy error Rel  = ", err_energy)
+    print("Res l2 Lu_ex - F  = ", res_l2)
+    print("Res Max Lu_ex - F = ", res_max)
     
     # Plot a contour for the approximated solution
     plt.figure(figsize=(8, 6))
@@ -91,7 +97,7 @@ def report_and_graph(context, u_exact, sparse=False):
     $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()
+    #plt.show()
     
     # Plot a 3D graph of the approximated solution
     fig = plt.figure(figsize=(10, 7))
@@ -103,7 +109,7 @@ def report_and_graph(context, u_exact, sparse=False):
     
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()
+    #plt.show()
     
     # Plot a 3D graph of the exact solution
     fig = plt.figure(figsize=(10, 7))
@@ -114,7 +120,7 @@ def report_and_graph(context, u_exact, sparse=False):
     $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()
+    #plt.show()
 
     # Plot a 3D graph of the error  
     fig = plt.figure(figsize=(10, 7))
@@ -175,23 +181,23 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 100
+    num_stencil_nodes = 5
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let k_c := None
-    num_rings = 10
+    num_rings = 5
     
     # Define the shape and parameters of the radial basis function
-    rbf_shape = 'cubic'
-    augmentation = True
-    eps = 3.0
+    rbf_shape = 'gaussian'
+    augmentation = False
+    eps = 4.0
     tol = 1e-12
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 200
-    Ny = 200
+    Nx = 500
+    Ny = 500
     L = 1.0
     shape = 'square'
     
@@ -202,7 +208,7 @@ if __name__ == "__main__":
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny)
+    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 50)
     
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
