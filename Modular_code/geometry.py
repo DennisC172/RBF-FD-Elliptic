@@ -53,7 +53,7 @@ def uniform_square(L, Nx, Ny):
     Y = np.ravel(YY)
     return np.column_stack((X,Y))
 
-def uniform_int_square(L, Nx_int, Ny_int, h_ratio):
+def uniform_int_square(L, Nx_int, Ny_int, h_ratio=1):
     """
     Generate a uniform grid of interior points plus a separate set of
     boundary points on the four edges of a square domain.
