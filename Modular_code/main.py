@@ -196,8 +196,8 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 500
-    Ny = 500
+    Nx = 750
+    Ny = 750
     L = 1.0
     shape = 'square'
     
@@ -208,20 +208,20 @@ if __name__ == "__main__":
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 50)
+    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 2)
     
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
     eig_1 = 1e0
-    eig_2 = 5e-3
+    eig_2 = 1e-4
     rad24 = 12.0
     A = coeff_matrix(eig_1, eig_2, rad24)
     print("Coefficient Matrix:\n" + str(A))
     
     # Forcing term parameters
-    Amp = 1e0
+    Amp = 1e3
     modes = [1.0,3.0]
     
     # -----------------------------

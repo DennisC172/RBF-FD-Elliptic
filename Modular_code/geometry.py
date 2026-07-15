@@ -53,7 +53,7 @@ def uniform_square(L, Nx, Ny):
     Y = np.ravel(YY)
     return np.column_stack((X,Y))
 
-def uniform_int_square(L, Nx_int, Ny_int, Nb=100):
+def uniform_int_square(L, Nx_int, Ny_int, h_ratio):
     """
     Generate a uniform grid of interior points plus a separate set of
     boundary points on the four edges of a square domain.
@@ -76,11 +76,11 @@ def uniform_int_square(L, Nx_int, Ny_int, Nb=100):
         Number of interior grid points along the x-direction.
     Ny_int : int
         Number of interior grid points along the y-direction.
-    Nb : int, optional
-        Number of points per side used to discretize the boundary
-        (default `100`); the four corners are shared between adjacent
+    h_ratio : float, optional
+        Ratio between interior spacing and boundary spacing
+        (default '1'); the four corners are shared between adjacent
         sides and de-duplicated, so the total number of boundary
-        points returned is `4*Nb - 4` (not `4*Nb`).
+        points returned is `h_ratio*(4*Nb - 4)` (not `h_ratio*4*Nb`).
 
     Returns
     -------
@@ -108,12 +108,15 @@ def uniform_int_square(L, Nx_int, Ny_int, Nb=100):
     y_int = np.linspace(0, L, Ny_int+2)[1:-1]
     XX, YY = np.meshgrid(x_int, y_int)
     interior = np.column_stack((XX.ravel(), YY.ravel()))
+
     # Boundary points
-    s = np.linspace(0, L, Nb)
-    bottom = np.column_stack((s, np.zeros_like(s)))
-    right  = np.column_stack((L*np.ones_like(s), s))
-    top    = np.column_stack((s, L*np.ones_like(s)))
-    left   = np.column_stack((np.zeros_like(s), s))
+    sx = np.linspace(0, L, h_ratio*(Nx_int+2))
+    sy = np.linspace(0, L, h_ratio*(Ny_int+2))
+
+    bottom = np.column_stack((sx, np.zeros_like(sx)))
+    right  = np.column_stack((L*np.ones_like(sy), sy))
+    top    = np.column_stack((sx, L*np.ones_like(sx)))
+    left   = np.column_stack((np.zeros_like(sy), sy))
     boundary = np.vstack((bottom, right, top, left))
     # Remove duplicate corners
     boundary = np.unique(boundary, axis=0)
