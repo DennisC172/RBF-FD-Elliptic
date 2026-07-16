@@ -181,11 +181,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 25
+    num_stencil_nodes = 5
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let k_c := None
-    num_rings = 10
+    num_rings = 5
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
