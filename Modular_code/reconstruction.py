@@ -15,20 +15,28 @@ import error_analysis
 
 def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
                    augmentation, eps, tol, alpha, beta,
-                   angle_ratio, Amp, modes, example, sparse=False):
+                   angle, Amp, modes, example, sparse=False):
        
     P, num_int = geometry.uniform_int_square(L, Nx, Ny)
     
     # Define the conductivity condition
-    theta = np.pi*angle_ratio
-    D = np.array([[alpha, 0.0], [0.0, beta]])
-    V = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta),
-                                                    np.cos(theta)]])
+    c = np.cos(angle(P.T))
+    s = np.sin(angle(P.T))
+    lambda1 = alpha(P.T)
+    lambda2 = beta(P.T)
+
+    n = len(P)
+    A = np.zeros((n, 2, 2))
     
-    A = V @ D @ V.T
+    A[:, 0, 0] = lambda1 * (c**2) + lambda2 * (s**2)      # Top-left (A_xx)
+    A[:, 1, 1] = lambda1 * (s**2) + lambda2 * (c**2)      # Bottom-right (A_yy)
+    
+    off_diag = (lambda1 - lambda2) * c * s
+    A[:, 0, 1] = off_diag                                 # Top-right (A_xy)
+    A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
     print("Coefficient Matrix:\n" + str(A))
     
-    f, g_bound, btype, u_exact = example(Amp, modes, A) 
+    f, g_bound, btype, u_exact = example(Amp, modes, alpha, beta, angle) 
     
     # Solve the PDE exactly and with RBF-FD
     if sparse:
@@ -65,14 +73,14 @@ def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
     
     return context
 
-def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, sparse=False):
+def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, e1, e2, angle, sparse=False):
     P = context.nodes
     A = context.A
     W = context.W
     
     for i, example in enumerate(example_problems):
         print('Example: ', str(i+3))
-        f, g_bound, btype, u_exact = example(Amp, modes, A)    
+        f, g_bound, btype, u_exact = example(Amp, modes, e1, e2, angle)    
         g, in_boundary, normal_vec = assembly.set_boundary_func(g_bound, btype,
                                                                 shape, L,
                                                                 context)
@@ -82,7 +90,7 @@ def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, spa
             W = assembly.boundary_to_weights(W, context, in_boundary, normal_vec)
             
         F = assembly.right_hand_side(context, f, g, in_boundary)
-        u_ex = u_exact(P.T)
+        u_ex = u_exact(P.T,np.transpose(A, (1, 2, 0)))
         Lu_approx = W @ u_ex
         
         idx = np.array([in_boundary(p) == 'interior' for p in P])  
@@ -126,9 +134,9 @@ if __name__ == "__main__":
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------
     # Define the conductivity condition
-    alpha = 1e0
-    beta  = 5e-3
-    angle_ratio = 12.0/24
+    alpha = lambda p: 1e0
+    beta  = lambda p: 5e-3
+    angle = lambda p: 12.0/24*np.pi
     
     # Forcing term parameters
     Amp = 1.0
@@ -151,7 +159,7 @@ if __name__ == "__main__":
     # -----------------------------
     context = training_setup(L, Nx, Ny, shape, num_stencil_nodes,
                              num_rings, rbf_shape, augmentation, eps,
-                             tol, alpha, beta, angle_ratio,
+                             tol, alpha, beta, angle,
                              Amp, modes, examples.example_2,sparse=sparse)
         
     # -----------------------------
@@ -159,4 +167,4 @@ if __name__ == "__main__":
     # -----------------------------    
     print('---------------------- Testing Problems: -------------------------')
     reconstruction_analysis(context, shape, L, Amp, modes,
-                            example_problems, sparse=sparse)
+                            example_problems, alpha, beta, angle, sparse=sparse)

@@ -82,7 +82,7 @@ def energy_error(context, weights, u_soln, u_ex, sparse=False, W_grads=None):
             grad_err[:,i] = W_grads[:,:,i] @ err
     
     for i in range(num_nodes):
-        energy_err += weights[i] * np.dot(grad_err[i,:], A @ grad_err[i,:])
+        energy_err += weights[i] * np.dot(grad_err[i,:], A[i] @ grad_err[i,:])
     
     return np.sqrt(energy_err) 
 
@@ -133,7 +133,7 @@ def energy_functional(context, weights, u_soln, f_vec, sparse=False):
             grad_u[:,i] = W_grads[:,:,i] @ u_soln
     
     for i in range(num_nodes):
-        energy += weights[i]*(np.dot(grad_u[i,:], A @ grad_u[i,:])/2
+        energy += weights[i]*(np.dot(grad_u[i,:], A[i] @ grad_u[i,:])/2
                               - f_vec[i] * u_soln[i])
     
     return energy
@@ -145,7 +145,7 @@ def energy_functional_delaunay(context, u_soln, f_vec, sparse=False):
     
     return energy_functional(context, weights, u_soln, f_vec, sparse)
 
-def coeff_matrix(eig_1, eig_2, rad24):
+def coeff_matrix(nodes, eig_1, eig_2, angle):
     """
     Build a symmetric 2x2 anisotropic diffusion tensor from eigenvalues
     and a rotation angle.
@@ -160,35 +160,48 @@ def coeff_matrix(eig_1, eig_2, rad24):
 
     Parameters
     ----------
-    eig_1 : float
-        Diffusion coefficient (eigenvalue) along the tensor's first
-        principal axis.
-    eig_2 : float
-        Diffusion coefficient (eigenvalue) along the tensor's second
-        principal axis.
-    rad24 : float
-        Rotation angle of the principal axes, in units of pi/24
-        radians (e.g. `rad24 = 1` corresponds to a 7.5-degree
-        rotation, `rad24 = 12` corresponds to 90 degrees).
+    Parameters
+    ----------
+    nodes : array_like, shape (n, 2)
+        Spatial locations at which to evaluate the diffusion tensor.
+    eig_1 : callable
+        Function of `nodes` returning the diffusion coefficient
+        (eigenvalue) along the tensor's first principal axis, shape (n,).
+    eig_2 : callable
+        Function of `nodes` returning the diffusion coefficient
+        (eigenvalue) along the tensor's second principal axis, shape (n,).
+    angle : callable
+        Function of `nodes` returning the rotation angle of the
+        principal axes, shape (n,).
 
     Returns
     -------
-    numpy.ndarray, shape (2, 2)
+    numpy.ndarray, shape (n , 2, 2)
         Symmetric positive (semi-)definite diffusion tensor `A`,
         rotated from the principal-axis frame into the standard x-y
         frame.
     """
     
-    theta = np.pi*rad24/24.0
-    D = np.array([[eig_1, 0.0], [0.0, eig_2]])
-    V = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta), np.cos(theta)]])
+    c = np.cos(angle(nodes))
+    s = np.sin(angle(nodes))
+    lambda1 = eig_1(nodes)
+    lambda2 = eig_2(nodes)
+
+    n = nodes.shape[1]
+    A = np.zeros((n, 2, 2))
     
-    return V @ D @ V.T  
+    A[:, 0, 0] = lambda1 * (c**2) + lambda2 * (s**2)      # Top-left (A_xx)
+    A[:, 1, 1] = lambda1 * (s**2) + lambda2 * (c**2)      # Bottom-right (A_yy)
+    
+    off_diag = (lambda1 - lambda2) * c * s
+    A[:, 0, 1] = off_diag                                 # Top-right (A_xy)
+    A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
+    
+    return A 
 
 def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
                          num_rings, rbf_shape, eps, augmentation,
-                         rad24, example_problem, sparse=False):
+                         angle, example_problem, sparse=False):
     
     # Define the parameters of the radial basis function
     tol = 1e-12
@@ -207,8 +220,8 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    A = coeff_matrix(eig_1, eig_2, rad24)
-    print("Coefficient Matrix:\n" + str(A))
+    A = coeff_matrix(P.T, eig_1, eig_2, angle)
+    print("Coefficient Matrix:\n" + str(A.shape))
     
     # Forcing term parameters
     Amp = 1e3
@@ -217,7 +230,7 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    f, g, btype, u_exact = example_problem(Amp, modes, A)
+    f, g, btype, u_exact = example_problem(Amp, modes, eig_1, eig_2, angle)
     
     context = assembly.rbf_fd_system(f, g, btype, P,
                                  rbf_shape, shape, L, num_stencil_nodes,
@@ -234,11 +247,11 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
         u_soln = assembly.rbf_fd_solve(W, F)
         print(f"Condition:    {np.linalg.cond(W): e}")
         
-    u_ex = u_exact(P.T)    
+    u_ex = u_exact(P.T,np.transpose(A, (1, 2, 0)))    
     return context, u_soln, u_ex
 
 def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
-                   eig_2, rbf_shape, eps, augmentation, rad24,
+                   eig_2, rbf_shape, eps, augmentation, angle,
                    context, u_soln, u_ex, sparse=False):
     W = context.W
     F = context.F
@@ -272,7 +285,7 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_rings, eig_1,
     'num_rings': num_rings,
     'eigenvalue 1': eig_1,
     'eigenvalue 2': eig_2,
-    'radian = r/24': rad24,
+    'radian = r/24': angle,
     'augmentation': augmentation,
     'sparse': sparse,
     'u_exact - u max_error_rel': err_soln_max,
@@ -337,19 +350,19 @@ def data_output(example_num):
     sparse = True
     
     N_int = 30
-    eig_1 = 1e0
-    eig_2 = 1e0
-    rad24 = 0.0    
+    eig_1 = "lambda p: 1e0"
+    eig_2 = "lambda p: 1e0"
+    angle = "lambda p: 0.0"    
     num_stencil_nodes = 5
     num_rings = 5
     
-    context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+    context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
                                                  num_stencil_nodes,
                                                  num_rings, rbf_shape, eps,
-                                                 augmentation, rad24,
+                                                 augmentation, eval(angle),
                                                  example, sparse)
     error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                   eig_2, rbf_shape, eps, augmentation, rad24, context,
+                   eig_2, rbf_shape, eps, augmentation, angle, context,
                    u_soln, u_ex, sparse)
     
     # -----------------------------
@@ -357,17 +370,17 @@ def data_output(example_num):
     # (mirrors the values each TEST block set before its loop in the
     # original sequential script)
     # -----------------------------
-    N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250, 500, 750]
+    N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250, 300, 500, 750]
     INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0,20.0,30.0]
     N_S_N = [5,7,10,15,20,25,40,50,65]#,75,85,100,115,130,150,175,200]
     N_C_R = [5, 6, 7, 8, 9, 10, 11, 12,13,14]
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
     
-    N_int = 500
-    eig_1 = 1e0
-    eig_2 = 1e-3
-    rad24 = 12.0    
+    N_int = 250
+    eig_1 = "lambda p: 1e0"
+    eig_2 = "lambda p: 1e-3"
+    angle = "lambda p: 12.0/24.0*np.pi"    
     num_stencil_nodes = 5
     num_rings = 5
 
@@ -380,13 +393,13 @@ def data_output(example_num):
     
     for x in N_ints:
         print(f'---------------------N_int = {x}-------------------------')
-        context, u_soln, u_ex = pde_context_provider(x, eig_1, eig_2,
+        context, u_soln, u_ex = pde_context_provider(x, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      eps, augmentation,
-                                                     rad24, example, sparse)
+                                                     eval(angle), example, sparse)
         row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
         row['varied_value'] = x
@@ -397,18 +410,18 @@ def data_output(example_num):
     # TEST 2: INVERSE LENGTH SCALE
     # -----------------------------
     print('=================1: Inverse Length Scale Study====================')
-    #INV_L_S = [3.0]
+    #INV_L_S = [4.0]
     rows = []
     
     for x in INV_L_S:
         print(f'---------------Inverse Length Scale = {x}--------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+        context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      x, augmentation,
-                                                     rad24, example, sparse)
+                                                     eval(angle), example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                             eig_2, rbf_shape, x, augmentation, rad24, context,
+                             eig_2, rbf_shape, x, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'Inverse Length Scale'
         row['varied_value'] = x
@@ -424,13 +437,12 @@ def data_output(example_num):
     
     for x in N_S_N:
         print(f'----------num_stencil_nodes = {x}------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
-                                                     x,
-                                                     num_rings, rbf_shape,
+        context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
+                                                     x, num_rings, rbf_shape,
                                                      eps, augmentation,
-                                                     rad24, example, sparse)
+                                                     eval(angle), example, sparse)
         row = error_analysis(N_int, N_int, x, num_rings, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'num_stencil_nodes'
         row['varied_value'] = x
@@ -446,13 +458,13 @@ def data_output(example_num):
     
     for x in N_C_R:
         print(f'-----------------num_rings = {x}---------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+        context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      x, rbf_shape,
                                                      eps, augmentation,
-                                                     rad24, example, sparse)
+                                                     eval(angle), example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, x, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, rad24, context,
+                             eig_2, rbf_shape, eps, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'num_rings'
         row['varied_value'] = x
@@ -463,18 +475,19 @@ def data_output(example_num):
     # TEST 4: EIGENVALUE RATIO
     # -----------------------------
     print('====================4: Eigenvalue Ratio Study=====================')
-    #Eig_R_2 = [1e0]
+    #Eig_R_2 = [1e-3]
     rows = []
     
-    for x in Eig_R_2:
+    for y in Eig_R_2:
+        x = f"lambda p: {y}"
         print(f'--------------------eig_2 = {x}--------------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, x,
+        context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(x),
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      eps, augmentation,
-                                                     rad24, example, sparse)
+                                                     eval(angle), example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
-                             x, rbf_shape, eps, augmentation, rad24, context,
+                             x, rbf_shape, eps, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'eig_2'
         row['varied_value'] = x
@@ -485,20 +498,21 @@ def data_output(example_num):
     # TEST 5: EIGENVECTOR ANGLE
     # -----------------------------
     print('===================5: Eigenvector Radian Study====================')
-    #Eig_RAD_24 = [0.0] 
+    #Eig_RAD_24 = [12.0] 
     rows = []
     
-    for x in Eig_RAD_24:
-        print(f'--------------------radian={x}/24------------------------')
-        context, u_soln, u_ex = pde_context_provider(N_int, eig_1, eig_2,
+    for y in Eig_RAD_24:
+        x = f"lambda p: {y}/24.0*np.pi"
+        print(f'----------------------radian={x}--------------------------')
+        context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_rings, rbf_shape,
                                                      eps, augmentation,
-                                                     x, example, sparse)
+                                                     eval(x), example, sparse)
         row = error_analysis(N_int, N_int, num_stencil_nodes, num_rings, eig_1,
                              eig_2, rbf_shape, eps, augmentation, x, context,
                              u_soln, u_ex, sparse)
-        row['varied_param'] = 'rad24'
+        row['varied_param'] = 'angle'
         row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)

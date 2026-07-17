@@ -228,7 +228,7 @@ def grad_poly(p):
     n = p.shape[0]
     return np.broadcast_to(base, (n, d+1, d))
 
-def anisotropic_diffusion_poly(p,A,tol=1e-12):
+def anisotropic_diffusion_poly(p):
     """
     Evaluate the anisotropic diffusion operator applied to the
     polynomial augmentation basis, at one or more points.
@@ -401,10 +401,7 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
     """
     
     p = np.asarray(p, dtype=float)
-    
-    if A is None:
-        A = np.identity(p.shape[-1])
-    
+        
     r = np.sqrt(np.sum(p**2, axis=-1))
     trA = np.trace(A)
     
@@ -455,7 +452,7 @@ def phi_gauss(p,eps=0.5):
     
     return np.exp(-(eps**2*r2))
 
-def grad_phi_gauss(p, eps= 0.5):  
+def grad_phi_gauss(p, eps=0.5):  
     """
     Evaluate the gradient of the Gaussian RBF kernel at one or more
     points.

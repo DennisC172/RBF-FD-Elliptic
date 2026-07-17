@@ -61,7 +61,7 @@ def report_and_graph(context, u_exact, sparse=False):
         u_soln = assembly.rbf_fd_solve(W, F)
         print(f"Condition:    {np.linalg.cond(W): e}")
 
-    u_ex = u_exact(P.T)
+    u_ex = u_exact(P.T,np.transpose(A, (1, 2, 0)))
     error = np.abs(u_soln - u_ex)
     err_max = error_analysis.max_error_relative(u_soln, u_ex)
     err_l2 = error_analysis.l2_error_relative(u_soln, u_ex)
@@ -76,8 +76,6 @@ def report_and_graph(context, u_exact, sparse=False):
     # REPORT ERRORS AND PLOT
     # -----------------------------
     X, Y = P.T
-    a1 = A[0,0]
-    a2 = A[1,1]
     
     # Provide error analysis from expected result
     print('Maximum weight:     ' + str(W.max()))
@@ -93,8 +91,7 @@ def report_and_graph(context, u_exact, sparse=False):
     contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
     cbar = plt.colorbar(contour_filled)
     cbar.set_label('U Solution Value', rotation=270, labelpad=15)
-    plt.title(rf"""RBF-FD Approximate Solution (Contour):
-    $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
+    plt.title(rf"""RBF-FD Approximate Solution (Contour):""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
     #plt.show()
@@ -104,8 +101,7 @@ def report_and_graph(context, u_exact, sparse=False):
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,u_soln,cmap='viridis', edgecolor='none', alpha=0.9)
     ax.set_zlim(u_ex.min(), u_ex.max())
-    plt.title(rf"""RBF-FD Approximate Solution:
-    $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
+    plt.title(rf"""RBF-FD Approximate Solution:""")
     
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
@@ -116,8 +112,7 @@ def report_and_graph(context, u_exact, sparse=False):
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,u_ex,cmap='viridis', edgecolor='none', alpha=0.9)
     ax.set_zlim(u_ex.min(), u_ex.max())
-    plt.title(rf"""Exact Solution:
-    $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
+    plt.title(rf"""Exact Solution:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
     #plt.show()
@@ -126,52 +121,61 @@ def report_and_graph(context, u_exact, sparse=False):
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,np.log10(np.maximum(error, 1e-16)),cmap='viridis', edgecolor='none', alpha=0.9)
-    plt.title(rf"""RBF-FD Approximate Error:
-    $A_{{11}}$={a1:.3e}, $A_{{22}}$={a2:.3e}""")
+    plt.title(rf"""RBF-FD Approximate Error:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
     plt.show()
 
-def coeff_matrix(eig_1, eig_2, rad24):
+def coeff_matrix(nodes, eig_1, eig_2, angle):
     """
     Build a symmetric 2x2 anisotropic diffusion tensor from eigenvalues
     and a rotation angle.
 
     Constructs a diagonal matrix `D = diag(eig1, eig2)` representing the
     diffusion coefficients along the tensor's principal axes, then
-    rotates it by an angle `theta = pi * rad24 / 24` (i.e. `rad24` is
-    expressed in 24ths of a half-turn, or 7.5-degree increments) via
-    `A = V @ D @ V.T`, where `V` is the 2D rotation matrix for `theta`.
+    rotates it by an 'angle' via `A = V @ D @ V.T`, where `V` is the
+    2D rotation matrix for `angle`.
     The result is the diffusion tensor `A` expressed in the original
     (unrotated) x-y coordinate frame.
 
     Parameters
     ----------
-    eig_1 : float
-        Diffusion coefficient (eigenvalue) along the tensor's first
-        principal axis.
-    eig_2 : float
-        Diffusion coefficient (eigenvalue) along the tensor's second
-        principal axis.
-    rad24 : float
-        Rotation angle of the principal axes, in units of pi/24
-        radians (e.g. `rad24 = 1` corresponds to a 7.5-degree
-        rotation, `rad24 = 12` corresponds to 90 degrees).
+    nodes : array_like, shape (n, 2)
+        Spatial locations at which to evaluate the diffusion tensor.
+    eig_1 : callable
+        Function of `nodes` returning the diffusion coefficient
+        (eigenvalue) along the tensor's first principal axis, shape (n,).
+    eig_2 : callable
+        Function of `nodes` returning the diffusion coefficient
+        (eigenvalue) along the tensor's second principal axis, shape (n,).
+    angle : callable
+        Function of `nodes` returning the rotation angle of the
+        principal axes, shape (n,).
 
     Returns
     -------
-    numpy.ndarray, shape (2, 2)
+    numpy.ndarray, shape (n , 2, 2)
         Symmetric positive (semi-)definite diffusion tensor `A`,
         rotated from the principal-axis frame into the standard x-y
         frame.
     """
     
-    theta = np.pi*rad24/24.0
-    D = np.array([[eig_1, 0.0], [0.0, eig_2]])
-    V = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta), np.cos(theta)]])
+    c = np.cos(angle(nodes))
+    s = np.sin(angle(nodes))
+    lambda1 = eig_1(nodes)
+    lambda2 = eig_2(nodes)
+
+    n = nodes.shape[1]
+    A = np.zeros((n, 2, 2))
     
-    return V @ D @ V.T    
+    A[:, 0, 0] = lambda1 * (c**2) + lambda2 * (s**2)      # Top-left (A_xx)
+    A[:, 1, 1] = lambda1 * (s**2) + lambda2 * (c**2)      # Bottom-right (A_yy)
+    
+    off_diag = (lambda1 - lambda2) * c * s
+    A[:, 0, 1] = off_diag                                 # Top-right (A_xy)
+    A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
+    
+    return A  
 
 #%% Main Setup
 if __name__ == "__main__":
@@ -214,10 +218,10 @@ if __name__ == "__main__":
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    eig_1 = 1e0
-    eig_2 = 1e-3
-    rad24 = 12.0
-    A = coeff_matrix(eig_1, eig_2, rad24)
+    eig_1 = lambda p: 1e0
+    eig_2 = lambda p: 0e-3*(p[1]*L-p[1]**2)/L**2+1e-2
+    angle = lambda p: 12.0/24.0*np.pi
+    A = coeff_matrix(P.T, eig_1, eig_2, angle)
     print("Coefficient Matrix:\n" + str(A))
     
     # Forcing term parameters
@@ -227,7 +231,7 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    f, g, btype, u_exact = examples.example_10(Amp, modes, A)
+    f, g, btype, u_exact = examples.example_10(Amp, modes, eig_1, eig_2, angle)
        
     # Solve the PDE exactly and with RBF-FD
     context = assembly.rbf_fd_system(f, g, btype, P,

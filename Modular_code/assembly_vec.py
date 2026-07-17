@@ -64,12 +64,13 @@ def local_weights_solve(context, i):
 
     # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
     Ps = P[s]
+    Ai = context.A[i]
     diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
     M = context.phi(diff_M)                     # (num_nodes, num_nodes)
 
     # b: laplacian_phi(P[i] - P[s[k]]) for all k, one vectorized call
     diff_b = P[i][None, :] - Ps                  # (num_nodes, dim)
-    b = context.laplacian_phi(diff_b)             # (num_nodes,)
+    b = context.laplacian_phi(diff_b, Ai)             # (num_nodes,)
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)                 # (num_nodes, pdim)
@@ -81,7 +82,7 @@ def local_weights_solve(context, i):
         
         b = np.concatenate([
             b,
-            rbf.anisotropic_diffusion_poly(P[i], context.A)
+            rbf.anisotropic_diffusion_poly(P[i])
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
@@ -123,6 +124,7 @@ def local_weights_ls(context, i):
     s = context.stencils[i]
     num_nodes = len(s)
     Ps = P[s]
+    Ai = context.A[i]
     
     r = np.max(np.linalg.norm(Ps - P[i], axis=1))
     k = context.center_rings
@@ -136,7 +138,7 @@ def local_weights_ls(context, i):
 
     # b: laplacian_phi(P[i] - c[k]) for all k, one vectorized call
     diff_b = P[i][None, :] - c                  # (num_centers, dim)
-    b = context.laplacian_phi(diff_b)            # (num_centers,)
+    b = context.laplacian_phi(diff_b, Ai)       # (num_centers,)
 
     if context.augmentation:        
         Pmat = rbf.poly_basis(Ps)                # (num_nodes, pdim)
@@ -148,7 +150,7 @@ def local_weights_ls(context, i):
         
         b = np.concatenate([
             b,
-            rbf.anisotropic_diffusion_poly(P[i], context.A)
+            rbf.anisotropic_diffusion_poly(P[i])
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
@@ -798,6 +800,7 @@ def right_hand_side(context, f, g, in_boundary):
     """
 
     P = context.nodes
+    A = context.A
     num_nodes = len(P)
     
     f_vec = np.zeros(num_nodes)
@@ -805,7 +808,7 @@ def right_hand_side(context, f, g, in_boundary):
     for i,p in enumerate(P):
         node_type = in_boundary(P[i])
         if node_type == 'interior':            
-            f_vec[i] = f(p)
+            f_vec[i] = f(p,A[i])
         else:
             f_vec[i] = g(p)
         
@@ -993,7 +996,7 @@ def anchor_system_sparse(W, f, method="mean"):
 
     return W_lil.tocsr(), f
 
-def set_rbf_func(num_rings, basis, augmentation, A, eps, tol, context):
+def set_rbf_func(num_rings, basis, augmentation, eps, tol, context):
     """
     Configure a domain context with the chosen RBF kernel and operator.
  
@@ -1014,9 +1017,6 @@ def set_rbf_func(num_rings, basis, augmentation, A, eps, tol, context):
         Name of the radial basis function to use.
     augmentation : bool
         Whether to augment the RBF interpolant with a polynomial basis
-    A : numpy.ndarray or None
-        Diffusion tensor used to build the anisotropic Laplacian
-        operator for the chosen basis.
     eps : float
         Shape parameter for the Gaussian RBF (used only when
         `basis == 'gaussian'`).
@@ -1046,13 +1046,13 @@ def set_rbf_func(num_rings, basis, augmentation, A, eps, tol, context):
         context.set_phi(lambda p: rbf.phi_gauss(p, eps))
         context.set_grad_phi(lambda p: rbf.grad_phi_gauss(p, eps))
         context.set_laplacian_phi(
-            lambda p: rbf.anisotropic_diffusion_phi_gauss(p, A, eps))
+            lambda p, A: rbf.anisotropic_diffusion_phi_gauss(p, A, eps))
         
     elif (basis == 'cubic'):
         context.set_phi(rbf.phi_cubic)
         context.set_grad_phi(rbf.grad_phi_cubic)
         context.set_laplacian_phi(
-            lambda p: rbf.anisotropic_diffusion_phi_cubic(p, A, tol))
+            lambda p, A: rbf.anisotropic_diffusion_phi_cubic(p, A, tol))
         
     else:
         raise ValueError(f"'{basis}' is not a correct basis")
@@ -1194,13 +1194,13 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     """
     
     if A is None:
-        A = np.eye(len(P[0]))
+        A = np.ones((len(P[0]), 1, 1)) * np.eye(len(P[0]))
 
     S = stencils.knn_list(P, num_stencil_nodes)
     context = PDEDomainContext(P, S, A)    
     print('1) Nodes and Stencils Generated.')
 
-    set_rbf_func(num_rings, basis, augmentation, A, eps, tol, context)
+    set_rbf_func(num_rings, basis, augmentation, eps, tol, context)
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     
@@ -1319,7 +1319,8 @@ if __name__ == "__main__":
     # BUILD CONTEXT
     # -----------------------------
     S = stencils.knn_list(P, num_stencil_nodes)
-    context = PDEDomainContext(P,S,np.eye(len(P[0])))
+    context = PDEDomainContext(P,S,np.ones((len(P[0]), 1, 1))
+                               *np.eye(len(P[0])))
 
     set_rbf_func(
         num_rings=num_rings,

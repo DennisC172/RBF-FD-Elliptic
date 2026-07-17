@@ -866,7 +866,7 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     """
     
     if A is None:
-        A = np.eye(len(P[0]))
+        A = np.ones((len(P[0]), 1, 1)) * np.eye(len(P[0]))
 
     S = stencils.knn_list(P, num_stencil_nodes)
     context = PDEDomainContext(P, S, A)    
@@ -943,7 +943,8 @@ if __name__ == "__main__":
     # BUILD CONTEXT
     # -----------------------------
     S = stencils.knn_list(P, num_stencil_nodes)
-    context = PDEDomainContext(P,S,np.eye(len(P[0])))
+    context = PDEDomainContext(P,S,np.ones((len(P[0]), 1, 1))
+                               *np.eye(len(P[0])))
 
     set_rbf_func(
         num_rings=num_rings,
