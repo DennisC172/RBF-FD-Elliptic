@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import geometry
 import assembly_vec as assembly
+import refinement
 import error_analysis
 import examples
 
@@ -126,57 +127,6 @@ def report_and_graph(context, u_exact, sparse=False):
     plt.ylabel("y-direction")
     plt.show()
 
-def coeff_matrix(nodes, eig_1, eig_2, angle):
-    """
-    Build a symmetric 2x2 anisotropic diffusion tensor from eigenvalues
-    and a rotation angle.
-
-    Constructs a diagonal matrix `D = diag(eig1, eig2)` representing the
-    diffusion coefficients along the tensor's principal axes, then
-    rotates it by an 'angle' via `A = V @ D @ V.T`, where `V` is the
-    2D rotation matrix for `angle`.
-    The result is the diffusion tensor `A` expressed in the original
-    (unrotated) x-y coordinate frame.
-
-    Parameters
-    ----------
-    nodes : array_like, shape (n, 2)
-        Spatial locations at which to evaluate the diffusion tensor.
-    eig_1 : callable
-        Function of `nodes` returning the diffusion coefficient
-        (eigenvalue) along the tensor's first principal axis, shape (n,).
-    eig_2 : callable
-        Function of `nodes` returning the diffusion coefficient
-        (eigenvalue) along the tensor's second principal axis, shape (n,).
-    angle : callable
-        Function of `nodes` returning the rotation angle of the
-        principal axes, shape (n,).
-
-    Returns
-    -------
-    numpy.ndarray, shape (n , 2, 2)
-        Symmetric positive (semi-)definite diffusion tensor `A`,
-        rotated from the principal-axis frame into the standard x-y
-        frame.
-    """
-    
-    c = np.cos(angle(nodes))
-    s = np.sin(angle(nodes))
-    lambda1 = eig_1(nodes)
-    lambda2 = eig_2(nodes)
-
-    n = nodes.shape[1]
-    A = np.zeros((n, 2, 2))
-    
-    A[:, 0, 0] = lambda1 * (c**2) + lambda2 * (s**2)      # Top-left (A_xx)
-    A[:, 1, 1] = lambda1 * (s**2) + lambda2 * (c**2)      # Bottom-right (A_yy)
-    
-    off_diag = (lambda1 - lambda2) * c * s
-    A[:, 0, 1] = off_diag                                 # Top-right (A_xy)
-    A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
-    
-    return A  
-
 #%% Main Setup
 if __name__ == "__main__":
     # -----------------------------
@@ -200,8 +150,8 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 150
-    Ny = 150
+    Nx = 50
+    Ny = 50
     L = 1.0
     shape = 'square'
     
@@ -219,9 +169,9 @@ if __name__ == "__main__":
     # -----------------------------    
     # Define the conductivity condition
     eig_1 = lambda p: 1e0
-    eig_2 = lambda p: 0e-3*(p[1]*L-p[1]**2)/L**2+1e-2
+    eig_2 = lambda p: 1e-3
     angle = lambda p: 12.0/24.0*np.pi
-    A = coeff_matrix(P.T, eig_1, eig_2, angle)
+    A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print("Coefficient Matrix:\n" + str(A))
     
     # Forcing term parameters
@@ -233,11 +183,17 @@ if __name__ == "__main__":
     # -----------------------------
     f, g, btype, u_exact = examples.example_10(Amp, modes, eig_1, eig_2, angle)
        
+    P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
+                                   num_stencil_nodes, num_rings, augmentation,
+                                   eig_1, eig_2, angle, eps, tol,
+                                   sparse)
+
+    A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
+
     # Solve the PDE exactly and with RBF-FD
-    context = assembly.rbf_fd_system(f, g, btype, P,
-                                 rbf_shape, shape, L, num_stencil_nodes,
-                                 num_rings, augmentation=augmentation,
-                                 A=A, eps=eps, tol=tol, sparse=sparse)
+    context = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
+                                     num_stencil_nodes, num_rings, augmentation,
+                                     A=A, eps=eps, tol=1e-8, sparse=sparse)
     
-    # Display reesults
+    # Display results
     report_and_graph(context, u_exact, sparse)

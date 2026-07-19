@@ -145,60 +145,6 @@ def energy_functional_delaunay(context, u_soln, f_vec, sparse=False):
     
     return energy_functional(context, weights, u_soln, f_vec, sparse)
 
-def coeff_matrix(nodes, eig_1, eig_2, angle):
-    """
-    Build a symmetric 2x2 anisotropic diffusion tensor from eigenvalues
-    and a rotation angle.
-
-    Constructs a diagonal matrix `D = diag(eig1, eig2)` representing the
-    diffusion coefficients along the tensor's principal axes, then
-    rotates it by an angle `theta = pi * rad24 / 24` (i.e. `rad24` is
-    expressed in 24ths of a half-turn, or 7.5-degree increments) via
-    `A = V @ D @ V.T`, where `V` is the 2D rotation matrix for `theta`.
-    The result is the diffusion tensor `A` expressed in the original
-    (unrotated) x-y coordinate frame.
-
-    Parameters
-    ----------
-    Parameters
-    ----------
-    nodes : array_like, shape (n, 2)
-        Spatial locations at which to evaluate the diffusion tensor.
-    eig_1 : callable
-        Function of `nodes` returning the diffusion coefficient
-        (eigenvalue) along the tensor's first principal axis, shape (n,).
-    eig_2 : callable
-        Function of `nodes` returning the diffusion coefficient
-        (eigenvalue) along the tensor's second principal axis, shape (n,).
-    angle : callable
-        Function of `nodes` returning the rotation angle of the
-        principal axes, shape (n,).
-
-    Returns
-    -------
-    numpy.ndarray, shape (n , 2, 2)
-        Symmetric positive (semi-)definite diffusion tensor `A`,
-        rotated from the principal-axis frame into the standard x-y
-        frame.
-    """
-    
-    c = np.cos(angle(nodes))
-    s = np.sin(angle(nodes))
-    lambda1 = eig_1(nodes)
-    lambda2 = eig_2(nodes)
-
-    n = nodes.shape[1]
-    A = np.zeros((n, 2, 2))
-    
-    A[:, 0, 0] = lambda1 * (c**2) + lambda2 * (s**2)      # Top-left (A_xx)
-    A[:, 1, 1] = lambda1 * (s**2) + lambda2 * (c**2)      # Bottom-right (A_yy)
-    
-    off_diag = (lambda1 - lambda2) * c * s
-    A[:, 0, 1] = off_diag                                 # Top-right (A_xy)
-    A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
-    
-    return A 
-
 def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
                          num_rings, rbf_shape, eps, augmentation,
                          angle, example_problem, sparse=False):
@@ -220,7 +166,7 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    A = coeff_matrix(P.T, eig_1, eig_2, angle)
+    A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print("Coefficient Matrix:\n" + str(A.shape))
     
     # Forcing term parameters

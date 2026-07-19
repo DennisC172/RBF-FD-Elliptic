@@ -30,7 +30,7 @@ class PDEDomainContext():
     stencils : list of array_like
         Per-node lists of neighbor indices defining each node's local
         RBF-FD stencil (typically produced by `stencils.knn_list`).
-    A : numpy.ndarray, shape (dim, dim)
+    A : numpy.ndarray, shape (num_nodes, dim, dim)
         Diffusion tensor for the PDE operator `div(A grad u)`. Unlike
         an earlier version of this class, `A` is now a required
         constructor argument rather than defaulting to the identity
