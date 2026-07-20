@@ -25,14 +25,14 @@ def operator_gradient_monitor(grad_u, alpha, A=None, d=2, q=2, reg=1e-10):
     is the regular gradient_monitor function
     """
     
-    M = np.eye(d)[None, :, :]
     if A is not None:
-        M *= reg
-        M += A
+        M = A + reg * np.eye(d)[None, :, :]
         M = np.linalg.inv(M)
+    else:
+        M = np.eye(d)[None, :, :]
 
     Ainv_gu = np.einsum('nij,nj->ni', M, grad_u)          # A^{-1} grad_u
-    energy_norm2 = np.einsum('ni,ni->n', grad_u, Ainv_gu)     # grad_u^T A^{-1} grad_u
+    energy_norm2 = np.einsum('ni,ni->n', grad_u, Ainv_gu) # grad_u^T A^{-1} grad_u
 
     prefac = (1 + alpha * energy_norm2) ** (-1.0 / (d + q))
     outer = np.einsum('ni,nj->nij', Ainv_gu, Ainv_gu)
@@ -67,7 +67,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     grad_u = np.column_stack([Wl @ u for Wl in assembly.global_grads_sparse(ctx_g)])
 
     # 2) monitor function from that gradient
-    M = operator_gradient_monitor(grad_u, alpha, dim)
+    M = operator_gradient_monitor(grad_u, alpha, d=dim)
     M = smooth_monitor(M, S, beta=0.5)
 
     # 3) solve coordinate PDEs, A = M, f = 0, Dirichlet = identity on boundary
@@ -104,7 +104,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     while relax > 1e-4:
         P_trial = relax * P_target + (1 - relax) * P
 
-        if min_node_spacing(P_trial) > 0.1 * spacing_old:
+        if min_node_spacing(P_trial) > 0.5 * spacing_old:
             P_solved = P_trial
             break
 
@@ -135,7 +135,7 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
 
         spacing_new = min_node_spacing(P_new, verbose=True)
 
-        if spacing_new < 0.1 * spacing_old:
+        if spacing_new < 0.5 * spacing_old:
             print("Mesh update rejected: node spacing deteriorated.")
             break
 

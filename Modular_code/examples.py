@@ -12,7 +12,7 @@ import scipy.integrate as integrate
 
 # Square domain example
 # Solution for an isotropic PDE with forcing term and boundary conditions
-def example_1(Amp=2.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_1(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
     """
     Poisson problem on the unit square. 
     ISOTROPIC Problem.
@@ -138,7 +138,7 @@ def example_1(Amp=2.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     return f, g, btype, u_exact
 
 # Solutions with anisotropy, 0 boundary and mainly the forcing term
-def example_2(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_2(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
     """
     Anisotropic diffusion problem on the square domain [0, L] × [0, L]
     with homogeneous Dirichlet boundary conditions.
@@ -230,7 +230,7 @@ def example_2(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
 
     return f, g, btype, u_exact
 
-def example_3(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_3(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
     """
     Anisotropic diffusion problem with mixed polynomial–trigonometric solution.
 
@@ -268,7 +268,7 @@ def example_3(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
 
     coeff_y_0 = 2
 
-    def u_exact(p,A):
+    def u_exact(p,A=None):
         x, y = p
         alpha, beta = modes
 
@@ -331,7 +331,7 @@ def example_3(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     return f, g, btype, u_exact
 
 
-def example_4(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_4(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
     Constant manufactured solution for the Poisson equation on [0,L]×[0,L].
 
@@ -373,7 +373,7 @@ def example_4(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     
     return f, g, btype, u_exact
 
-def example_5(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_5(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
     Quadratic manufactured solution for anisotropic diffusion on [0,L]×[0,L].
 
@@ -422,7 +422,7 @@ def example_5(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     
     return f, g, btype, u_exact
 
-def example_6(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_6(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
     Linear–quadratic manufactured solution for anisotropic diffusion.
 
@@ -472,7 +472,7 @@ def example_6(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     
     return f, g, btype, u_exact
 
-def example_7(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_7(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
     Same manufactured solution as Example 6 with mixed boundary conditions.
 
@@ -503,6 +503,19 @@ def example_7(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     def f(p,A):
         return 2*A[1,1]
     
+    def A11(x,y):
+        return (eig_1(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_2(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def A12(x,y):
+        delta_eig = eig_1(np.array([x,y]))-eig_2(np.array([x,y]))
+        return (delta_eig*np.sin(angle(np.array([x,y])))*
+                          np.cos(angle(np.array([x,y]))))
+
+    def A22(x,y):
+        return (eig_2(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+    
     g = [
         lambda x: 2*x,      #y=0
         lambda y: 2*L,      #x=L
@@ -519,7 +532,7 @@ def example_7(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     
     return f, g, btype, u_exact
 
-def example_8(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_8(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
     """
     Exponential manufactured solution for anisotropic diffusion.
 
@@ -553,11 +566,24 @@ def example_8(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
         return ((2*np.trace(A)+4*np.dot(p, A @p))
                 *np.exp(np.linalg.norm(p,axis=0)**2))
     
+    def A11(x,y):
+        return (eig_1(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_2(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def A12(x,y):
+        delta_eig = eig_1(np.array([x,y]))-eig_2(np.array([x,y]))
+        return (delta_eig*np.sin(angle(np.array([x,y])))*
+                          np.cos(angle(np.array([x,y]))))
+
+    def A22(x,y):
+        return (eig_2(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
     g = [
-        lambda x: np.exp(x**2),             #y=0
-        lambda y: 2*L*np.exp(y**2+L**2),    #x=L
-        lambda x: np.exp(x**2+L**2),        #y=L
-        lambda y: 0.0                       #x=0
+        lambda x: np.exp(x**2),                                     # y=0
+        lambda y: 2*np.exp(L**2+y**2)*(L*A11(L,y)+y*A12(L,y)),      # x=L
+        lambda x: np.exp(x**2+L**2),                                # y=L
+        lambda y: -2*y*A12(0.0,y)*np.exp(y**2)                      # x=0
     ]
     
     btype = [
@@ -569,7 +595,7 @@ def example_8(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     
     return f, g, btype, u_exact
 
-def example_9(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_9(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
     """
     Boundary-layer manufactured solution for anisotropic diffusion.
 
@@ -606,13 +632,29 @@ def example_9(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
         z = (y-1/2*L)/np.sqrt(A[1,1])
         return - 2 *np.tanh(z) / np.cosh(z)**2
     
+    def A11(x,y):
+        return (eig_1(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_2(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def A12(x,y):
+        delta_eig = eig_1(np.array([x,y]))-eig_2(np.array([x,y]))
+        return (delta_eig*np.sin(angle(np.array([x,y])))*
+                          np.cos(angle(np.array([x,y]))))
+
+    def A22(x,y):
+        return (eig_2(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def _q(x, y, sign):
+        A22v = A22(x,y)
+        z = (y-0.5*L)/np.sqrt(A22v)
+        return sign * A12(x,y) / (np.cosh(z)**2 * np.sqrt(A22v))
+
     g = [
-        lambda x: np.tanh(-1/2*L/np.sqrt(eig_2(np.array([x,L]))*(np.cos(angle(np.array([x,L])))**2)
-                           +eig_1(np.array([x,L]))*(np.sin(angle(np.array([x,L])))**2))), #y=0
-        lambda y: 0.0,                             #x=L
-        lambda x: np.tanh(1/2*L/np.sqrt(eig_2(np.array([x,L]))*(np.cos(angle(np.array([x,L])))**2)
-                           +eig_1(np.array([x,L]))*(np.sin(angle(np.array([x,L])))**2))),  #y=L
-        lambda y: 0.0                              #x=0
+        lambda x: np.tanh(-0.5*L/np.sqrt(A22(x,0.0))),  # y=0  Dirichlet
+        lambda y: _q(L, y, +1.0),                        # x=L  Neumann
+        lambda x: np.tanh(0.5*L/np.sqrt(A22(x,L))),      # y=L  Dirichlet
+        lambda y: _q(0.0, y, -1.0)                        # x=0  Neumann
     ]
     
     btype = [
@@ -624,7 +666,7 @@ def example_9(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
 
     return f, g, btype, u_exact
 
-def example_10(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
+def example_10(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
     """
     Spike-like manufactured solution with anisotropy and mixed BCs.
 
@@ -705,13 +747,24 @@ def example_10(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
         delta = A[0,0]
         return delta*u_xx(p,delta)+2*A[0,1]*u_xy(p,delta)+A[1,1]*u_yy(p,delta)
     
+    def A11(x,y):
+        return (eig_1(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_2(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def A12(x,y):
+        delta_eig = eig_1(np.array([x,y]))-eig_2(np.array([x,y]))
+        return (delta_eig*np.sin(angle(np.array([x,y])))*
+                          np.cos(angle(np.array([x,y]))))
+
+    def A22(x,y):
+        return (eig_2(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
     g = [
-        lambda x: c(0.0)*a(x,eig_1(np.array([x,0.0]))*(np.cos(angle(np.array([x,0.0])))**2)
-                           +eig_2(np.array([x,0.0]))*(np.sin(angle(np.array([x,0.0])))**2))*b(x), #y=0
-        lambda y: 0.0,                    #x=L
-        lambda x: c(L)*a(x,eig_1(np.array([x,L]))*(np.cos(angle(np.array([x,L])))**2)
-                         +eig_2(np.array([x,L]))*(np.sin(angle(np.array([x,L])))**2))*b(x),   #y=L
-        lambda y: 0.0                     #x=0
+        lambda x: c(0.0)*a(x,A11(x,0.0))*b(x), #y=0
+        lambda y: 0.0,                         #x=L
+        lambda x: c(L)*a(x,A11(x,L))*b(x),     #y=L
+        lambda y: 0.0                          #x=0
     ]
     
     btype = [
@@ -725,7 +778,7 @@ def example_10(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
 
 # Radial Domain
 # Solution with 0-Dritichlet and forcing term (no nodes, matrices)
-def example_0(Amp=None,modes=None,eig_1=None,eig_2=None,angle=None,R=1.0):
+def example_0(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
     Poisson problem on the unit disk with zero Dirichlet boundary conditions.
 

@@ -176,7 +176,7 @@ def pde_context_provider(N_int, eig_1, eig_2, num_stencil_nodes,
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    f, g, btype, u_exact = example_problem(Amp, modes, eig_1, eig_2, angle)
+    f, g, btype, u_exact = example_problem(eig_1, eig_2, angle, Amp, modes)
     
     context = assembly.rbf_fd_system(f, g, btype, P,
                                  rbf_shape, shape, L, num_stencil_nodes,

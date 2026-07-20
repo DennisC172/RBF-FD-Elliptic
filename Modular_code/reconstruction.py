@@ -36,7 +36,7 @@ def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
     A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
     print("Coefficient Matrix:\n" + str(A))
     
-    f, g_bound, btype, u_exact = example(Amp, modes, alpha, beta, angle) 
+    f, g_bound, btype, u_exact = example(alpha, beta, angle, Amp, modes) 
     
     # Solve the PDE exactly and with RBF-FD
     if sparse:
@@ -80,7 +80,7 @@ def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, e1,
     
     for i, example in enumerate(example_problems):
         print('Example: ', str(i+3))
-        f, g_bound, btype, u_exact = example(Amp, modes, e1, e2, angle)    
+        f, g_bound, btype, u_exact = example(e1, e2, angle, Amp, modes)    
         g, in_boundary, normal_vec = assembly.set_boundary_func(g_bound, btype,
                                                                 shape, L,
                                                                 context)
