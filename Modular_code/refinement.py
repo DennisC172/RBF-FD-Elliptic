@@ -3,45 +3,41 @@ import assembly_vec as assembly
 import error_analysis
 import stencils
 from domain import PDEDomainContext
-from scipy.spatial.distance import pdist
 from scipy.spatial import KDTree
 import matplotlib.pyplot as plt
 
-def min_node_spacing(P):
+def min_node_spacing(P, verbose=False):
     tree = KDTree(P)
     dists, idx = tree.query(P, k=2)   # first neighbor is the point itself
-    
-    i = np.argmin(dists[:,1])
-    j = idx[i,1]
 
-    print("Closest nodes:", i, j)
-    print("Distance:", dists[i,1])
-    print(P[i], P[j])
+    if verbose:
+        i = np.argmin(dists[:, 1])
+        j = idx[i, 1]
+        print("Closest nodes:", i, j, "distance:", dists[i, 1])
+        print(P[i], P[j])
     
     return np.min(dists[:, 1])
 
-def gradient_monitor(grad_u, alpha, d=2, q=2):
-    gnorm2 = np.einsum('ij,ij->i', grad_u, grad_u)
-    prefac = (1 + alpha * gnorm2) ** (-1.0 / (d + q))
-    outer = np.einsum('ni,nj->nij', grad_u, grad_u)
-    I = np.eye(d)
-    return prefac[:, None, None] * (I[None] + alpha * outer)   # (N, d, d)
-
-def operator_gradient_monitor(grad_u, A, alpha, d=2, q=2, reg=1e-10):
+def operator_gradient_monitor(grad_u, alpha, A=None, d=2, q=2, reg=1e-10):
     """
     Monitor combining physical operator A with solution gradient,
-    measured in the A^{-1}-energy norm.
+    measured in the A^{-1}-energy norm. If A  is None, then this
+    is the regular gradient_monitor function
     """
-    A_reg = A + reg * np.eye(d)[None, :, :]        # guard near-singular A
-    A_inv = np.linalg.inv(A_reg)                   # (N, d, d)
+    
+    M = np.eye(d)[None, :, :]
+    if A is not None:
+        M *= reg
+        M += A
+        M = np.linalg.inv(M)
 
-    Ainv_gu = np.einsum('nij,nj->ni', A_inv, grad_u)          # A^{-1} grad_u
+    Ainv_gu = np.einsum('nij,nj->ni', M, grad_u)          # A^{-1} grad_u
     energy_norm2 = np.einsum('ni,ni->n', grad_u, Ainv_gu)     # grad_u^T A^{-1} grad_u
 
     prefac = (1 + alpha * energy_norm2) ** (-1.0 / (d + q))
     outer = np.einsum('ni,nj->nij', Ainv_gu, Ainv_gu)
 
-    return prefac[:, None, None] * (A_inv + alpha * outer)
+    return prefac[:, None, None] * (M + alpha * outer)
 
 def smooth_monitor(M, S, beta=0.25):
     """
@@ -56,16 +52,8 @@ def smooth_monitor(M, S, beta=0.25):
     beta : float
         Smoothing strength.
     """
-    M_sm = M.copy()
-
-    for i in range(len(M)):
-        neigh = S[i]
-
-        avg = np.mean(M[neigh], axis=0)
-
-        M_sm[i] = (1-beta)*M[i] + beta*avg
-
-    return M_sm
+    avg = M[S].mean(axis=1)
+    return (1 - beta) * M + beta * avg
 
 def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
                         shape, L, btype_all_dirichlet, augmentation,
@@ -79,23 +67,23 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     grad_u = np.column_stack([Wl @ u for Wl in assembly.global_grads_sparse(ctx_g)])
 
     # 2) monitor function from that gradient
-    M = operator_gradient_monitor(grad_u, A, alpha, dim)
+    M = operator_gradient_monitor(grad_u, alpha, dim)
     M = smooth_monitor(M, S, beta=0.5)
 
     # 3) solve coordinate PDEs, A = M, f = 0, Dirichlet = identity on boundary
     f_zero = lambda p, A: 0.0
     g_x = [
         lambda x: x,   # y=0: x varies
-        lambda x: L,      # x=L: x fixed
+        lambda x: L,   # x=L: x fixed
         lambda x: x,   # y=L: x varies
-        lambda x: 0.0     # x=0: x fixed
+        lambda x: 0.0  # x=0: x fixed
     ]
 
     g_y = [
-        lambda y: 0.0,   # y=0
-        lambda y: y,  # x=L
-        lambda y: L,     # y=L
-        lambda y: y   # x=0
+        lambda y: 0.0, # y=0
+        lambda y: y,   # x=L
+        lambda y: L,   # y=L
+        lambda y: y    # x=0
     ]
 
     ctx_x = assembly.rbf_fd_system(f_zero, g_x, btype_all_dirichlet, P, basis, shape, L,
@@ -108,11 +96,13 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     f_vec_y = assembly.right_hand_side(ctx_x, f_zero, g, in_boundary)
     y_new = assembly.rbf_fd_solve_sparse(ctx_x.W, f_vec_y)
 
-    P_solved = np.column_stack([x_new, y_new])
+    P_target = np.column_stack([x_new, y_new])
     spacing_old = min_node_spacing(P)
 
+    P_solved = P.copy()
+
     while relax > 1e-4:
-        P_trial = relax * P_solved + (1 - relax) * P
+        P_trial = relax * P_target + (1 - relax) * P
 
         if min_node_spacing(P_trial) > 0.1 * spacing_old:
             P_solved = P_trial
@@ -120,7 +110,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
 
         relax *= 0.5
 
-    return P_solved # under-relax to avoid overshoot/tangling
+    return P_solved, spacing_old # under-relax to avoid overshoot/tangling
 
 def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
                     num_rings, augmentation, eig_1, eig_2, angle, eps, tol,
@@ -138,12 +128,12 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
         u = assembly.rbf_fd_solve_sparse(ctx.W, ctx.F)
 
         print("Solving P:")
-        P_new = redistribute_nodes(P, u, num_stencil_nodes, num_rings, rbf_shape,
-                                   shape, L, btype_all_dirichlet, augmentation,
+        P_new, spacing_old = redistribute_nodes(P, u, num_stencil_nodes,
+                                   num_rings, rbf_shape, shape, L,
+                                   btype_all_dirichlet, augmentation,
                                    A, 1e-4, eps, tol, sparse, relax=0.10)
 
-        spacing_old = min_node_spacing(P)
-        spacing_new = min_node_spacing(P_new)
+        spacing_new = min_node_spacing(P_new, verbose=True)
 
         if spacing_new < 0.1 * spacing_old:
             print("Mesh update rejected: node spacing deteriorated.")
@@ -156,8 +146,6 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
             break
         
         P = P_new   # stencils get rebuilt next iteration automatically
-
-        print("Min spacing:", np.min(pdist(P)))
         print()
 
     plt.scatter(P[:,0], P[:,1], s=1)

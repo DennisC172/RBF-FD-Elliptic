@@ -589,7 +589,7 @@ def example_9(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
     f : callable
         Right-hand side :math:`f(x,y)`.
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
     btype : list of str
         Boundary condition types.
     u_exact : callable
@@ -607,9 +607,11 @@ def example_9(Amp=1.0,modes=[1.0,1.0],eig_1=None,eig_2=None,angle=None,L=1.0):
         return - 2 *np.tanh(z) / np.cosh(z)**2
     
     g = [
-        lambda x: np.tanh(-1/2*L/np.sqrt(A[1,1])), #y=0
+        lambda x: np.tanh(-1/2*L/np.sqrt(eig_2(np.array([x,L]))*(np.cos(angle(np.array([x,L])))**2)
+                           +eig_1(np.array([x,L]))*(np.sin(angle(np.array([x,L])))**2))), #y=0
         lambda y: 0.0,                             #x=L
-        lambda x: np.tanh(1/2*L/np.sqrt(A[1,1])),  #y=L
+        lambda x: np.tanh(1/2*L/np.sqrt(eig_2(np.array([x,L]))*(np.cos(angle(np.array([x,L])))**2)
+                           +eig_1(np.array([x,L]))*(np.sin(angle(np.array([x,L])))**2))),  #y=L
         lambda y: 0.0                              #x=0
     ]
     
