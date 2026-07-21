@@ -274,14 +274,12 @@ def example_3(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
 
         # Polynomial part scaled for [0,L]^2
         poly = (
-            (L - x) * (y - y**2 / L)
+            (1 - x/L) * (y - y**2 / L)
             + coeff_y_0 * (L - y) * x * (L - x) / L
         )
 
-        # Trigonometric part with correct scaling
         kx = alpha * np.pi / L
         ky = beta  * np.pi / L
-
         trig = Amp * np.sin(kx * x) * np.sin(ky * y)
 
         return poly + trig
@@ -300,17 +298,15 @@ def example_3(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
         # Polynomial Laplacian terms (scaled for L)
         poly_term = (
             -coeff_y_0*2*A11*(L-y)/L
-            +2*A12*(coeff_y_0*2*x/L+2*y/L-(coeff_y_0+1)/L)
-            - 2*A22*(L-x)/L
+            + 2*A12*(coeff_y_0*2*x/L + 2*y/L**2 - coeff_y_0 - 1/L)
+            - 2*A22*(L-x)/L**2
         )
 
-        # Trigonometric Laplacian
         trig_term = (
             -Amp*(A11*kx**2+A22*ky**2)
             *np.sin(kx*x)*np.sin(ky*y)
         )
 
-        # Mixed derivative term
         mixed_term = (
             2*Amp*A12*kx*ky
             *np.cos(kx*x)*np.cos(ky*y)
@@ -329,7 +325,6 @@ def example_3(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
     btype = ['dirichlet'] * 4
 
     return f, g, btype, u_exact
-
 
 def example_4(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
     """
@@ -805,7 +800,7 @@ def example_0(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
         Exact solution :math:`u(x,y)`.
     """
     
-    def u_exact(p, max_modes=12):
+    def u_exact(p, A=None, max_modes=12):
         """
         Corrected analytical solution for Delta u = -2pi^2 sin(pi x) sin(pi y)
         on a unit circle with 0-Dirichlet using a Sine Fourier Expansion.
@@ -838,7 +833,7 @@ def example_0(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
         return u_particular - u_homogeneous
     
     # RHS function
-    def f(p):
+    def f(p,A=None):
         x,y = p
         
         return - 2 * np.pi**2 * np.sin(np.pi * x) * np.sin(np.pi * y)

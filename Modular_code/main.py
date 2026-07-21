@@ -135,7 +135,7 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 5
+    num_stencil_nodes = 250
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let k_c := None
@@ -162,15 +162,16 @@ if __name__ == "__main__":
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 1)
+    P, num_int = geometry.uniform_int_square(L, Nx, Ny,1)
+    print(P)
     
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
     eig_1 = lambda p: 1e0
-    eig_2 = lambda p: 1e-1
-    angle = lambda p: 0.0/24.0*np.pi
+    eig_2 = lambda p: 1e-3
+    angle = lambda p: 12.0/24.0*np.pi
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print("Coefficient Matrix:\n" + str(A))
     
@@ -181,12 +182,12 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    f, g, btype, u_exact = examples.example_9(eig_1, eig_2, angle, Amp, modes)
+    f, g, btype, u_exact = examples.example_10(eig_1, eig_2, angle, Amp, modes)
        
-    P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
+    '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_rings, augmentation,
                                    eig_1, eig_2, angle, eps, tol,
-                                   sparse)
+                                   sparse)'''
 
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
 
