@@ -139,7 +139,7 @@ if __name__ == "__main__":
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_rings := None
-    num_rings = 5
+    num_rings = None
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     L = 1.0
     shape = 'square'
     
-    eps = 3
+    eps = 0.5*np.sqrt(Nx)
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
