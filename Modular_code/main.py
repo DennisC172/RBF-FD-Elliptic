@@ -135,26 +135,27 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 250
+    num_stencil_nodes = 10
     
     # Define the number of rings with quasi-uniform nodes
-    # For Square solve, let k_c := None
+    # For Square solve, let num_rings := None
     num_rings = 5
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = 4.0
-    tol = 1e-12
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 50
-    Ny = 50
+    Nx = 100
+    Ny = 100
     L = 1.0
     shape = 'square'
     
+    eps = 3
+    tol = 1e-12
+
     print(f'Sparse Solve: {sparse}')
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')

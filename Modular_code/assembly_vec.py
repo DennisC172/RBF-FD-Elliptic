@@ -90,7 +90,7 @@ def local_weights_solve(context, i):
     return w[:num_nodes]
 
 ### Least Squares
-def local_weights_ls(context, i):
+def local_weights_ls(context, i, lam=1e-16):
     """
     Compute RBF-FD differentiation weights for node i via least squares.
  
@@ -101,8 +101,7 @@ def local_weights_ls(context, i):
     weights are obtained as the least-squares solution that best
     reproduces the Laplacian of the kernel at those auxiliary centers
     using only the values at the stencil nodes. Polynomial augmentation
-    constraints (if enabled) are enforced as exact equality rows rather
-    than least-squares rows.
+    constraints (if enabled) are least-squares rows.
  
     Parameters
     ----------
@@ -132,29 +131,27 @@ def local_weights_ls(context, i):
     points = rbf.generate_grid_2d(r, k)
     c = P[i] + points
 
-    # M: phi(P[s[j]] - c[k]) for all (k,j), one vectorized call
-    diff_M = Ps[None, :, :] - c[:, None, :]   # (num_centers, num_nodes, dim)
-    M = context.phi(diff_M)                    # (num_centers, num_nodes)
+    diff_M = Ps[None, :, :] - c[:, None, :]     # (num_centers, num_nodes, dim)
+    M = context.phi(diff_M)                     # (num_centers, num_nodes)
 
-    # b: laplacian_phi(P[i] - c[k]) for all k, one vectorized call
     diff_b = P[i][None, :] - c                  # (num_centers, dim)
-    b = context.laplacian_phi(diff_b, Ai)       # (num_centers,)
+    b = context.laplacian_phi(diff_b, Ai)       # (num_centers, dim)
 
-    if context.augmentation:        
-        Pmat = rbf.poly_basis(Ps)                # (num_nodes, pdim)
-                
+    if context.augmentation:
+        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         M = np.block([
             [M],
             [Pmat.T]
         ])
-        
         b = np.concatenate([
             b,
-            rbf.anisotropic_diffusion_poly(P[i])
+            rbf.grad_poly(P[i])                 # (pdim, dim)
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
-    w = np.linalg.lstsq(M, b, rcond=None)[0]
+    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    filt = S / (S**2 + lam)
+    w = Vt.T @ (filt * (U.T @ b))
     return w[:num_nodes]
     
 def local_grad_solve(context, i):
@@ -222,7 +219,7 @@ def local_grad_solve(context, i):
     w_grad = np.linalg.solve(M, b_grad)
     return w_grad[:num_nodes,:]
 
-def local_grad_ls(context, i):
+def local_grad_ls(context, i, lam=1e-16):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -232,7 +229,7 @@ def local_grad_ls(context, i):
     least-squares solution that best reproduces the gradient of the
     kernel (`context.grad_phi`) at those centers using only the stencil
     node values. Polynomial augmentation constraints (if enabled) are
-    enforced as exact equality rows.
+    least-squares rows.
  
     Parameters
     ----------
@@ -263,31 +260,29 @@ def local_grad_ls(context, i):
     
     points = rbf.generate_grid_2d(r, k)
     c = P[i] + points
-    
-    # M: phi(P[s[j]] - c[k]) for all (k,j), one vectorized call
-    diff_M = Ps[None, :, :] - c[:, None, :]   # (num_centers, num_nodes, dim)
-    M = context.phi(diff_M)                    # (num_centers, num_nodes)
 
-    # b_grad: grad_phi(P[i] - c[k]) for all k, one vectorized call
+    diff_M = Ps[None, :, :] - c[:, None, :]     # (num_centers, num_nodes, dim)
+    M = context.phi(diff_M)                     # (num_centers, num_nodes)
+
     diff_b = P[i][None, :] - c                  # (num_centers, dim)
-    b_grad = context.grad_phi(diff_b)            # (num_centers, dim)
-              
-    if context.augmentation:        
-        Pmat = rbf.poly_basis(Ps)                # (num_nodes, pdim)
-                
+    b_grad = context.grad_phi(diff_b)           # (num_centers, dim)
+
+    if context.augmentation:
+        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         M = np.block([
             [M],
             [Pmat.T]
         ])
-        
         b_grad = np.concatenate([
             b_grad,
-            rbf.grad_poly(P[i])
+            rbf.grad_poly(P[i])                 # (pdim, dim)
         ])
 
-    #print(f"Conditioning {np.linalg.cond(M): e}\n")   
-    w_grad = np.linalg.lstsq(M, b_grad, rcond=None)[0]
-    return w_grad[:num_nodes,:]
+    #print(f"Conditioning: {np.linalg.cond(M): e}")
+    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    filt = S / (S**2 + lam)
+    w = Vt.T @ (filt[:, None] * (U.T @ b_grad))
+    return w[:num_nodes,:]
 
 # .2 Assembles the global Weights.
 def global_weights(context, in_boundary=None, normal_vec=None):
