@@ -90,7 +90,7 @@ def local_weights_solve(context, i):
     return w[:num_nodes]
 
 ### Least Squares
-def local_weights_ls(context, i, lam=1e-16):
+def local_weights_ls(context, i, lam=0.0):
     """
     Compute RBF-FD differentiation weights for node i via least squares.
  
@@ -118,23 +118,25 @@ def local_weights_ls(context, i, lam=1e-16):
         Least-squares RBF-FD weights for the Laplacian operator at
         node `i`, one weight per node in `context.stencils[i]`.
     """
-    
-    P = context.nodes
+
     s = context.stencils[i]
+    c = context.centers[i]
     num_nodes = len(s)
-    Ps = P[s]
+
     Ai = context.A[i]
-    
-    r = np.max(np.linalg.norm(Ps - P[i], axis=1))
-    k = context.center_rings
+    P = context.nodes    
+    Ps = P[s] 
+    Cs = P[s]
 
-    points = rbf.generate_grid_2d(r, k)
-    c = P[i] + points
+    #k = context.centers
+    #r = np.max(np.linalg.norm(Ps - P[i], axis=1))
+    #points = rbf.generate_grid_2d(r, k)
+    #c = P[i] + points
 
-    diff_M = Ps[None, :, :] - c[:, None, :]     # (num_centers, num_nodes, dim)
+    diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
     M = context.phi(diff_M)                     # (num_centers, num_nodes)
 
-    diff_b = P[i][None, :] - c                  # (num_centers, dim)
+    diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b = context.laplacian_phi(diff_b, Ai)       # (num_centers, dim)
 
     if context.augmentation:
@@ -219,7 +221,7 @@ def local_grad_solve(context, i):
     w_grad = np.linalg.solve(M, b_grad)
     return w_grad[:num_nodes,:]
 
-def local_grad_ls(context, i, lam=1e-16):
+def local_grad_ls(context, i, lam=0.0):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -250,21 +252,22 @@ def local_grad_ls(context, i, lam=1e-16):
     """
        
     s = context.stencils[i]
+    c = context.centers[i]
     num_nodes = len(s)
     
     P = context.nodes    
-    Ps = P[s]
-    
-    r = np.max(np.linalg.norm(Ps - P[i], axis=1))
-    k = context.center_rings
-    
-    points = rbf.generate_grid_2d(r, k)
-    c = P[i] + points
+    Ps = P[s] 
+    Cs = P[c]
 
-    diff_M = Ps[None, :, :] - c[:, None, :]     # (num_centers, num_nodes, dim)
+    #k = context.centers
+    #r = np.max(np.linalg.norm(Ps - P[i], axis=1))
+    #points = rbf.generate_grid_2d(r, k)
+    #c = P[i] + points
+
+    diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
     M = context.phi(diff_M)                     # (num_centers, num_nodes)
 
-    diff_b = P[i][None, :] - c                  # (num_centers, dim)
+    diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b_grad = context.grad_phi(diff_b)           # (num_centers, dim)
 
     if context.augmentation:
@@ -346,7 +349,7 @@ def global_weights(context, in_boundary=None, normal_vec=None):
     num_nodes = len(P)    
     
     S = context.stencils
-    k = context.center_rings
+    k = context.centers
     
     W = np.zeros((num_nodes, num_nodes))
     
@@ -457,7 +460,7 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     num_nodes = len(P)
     
     S = context.stencils
-    k = context.center_rings
+    k = context.centers
     
     max_nnz = num_nodes * context.stencils[0].shape[0]  # upper bound
 
@@ -991,7 +994,7 @@ def anchor_system_sparse(W, f, method="mean"):
 
     return W_lil.tocsr(), f
 
-def set_rbf_func(num_rings, basis, augmentation, eps, tol, context):
+def set_rbf_func(basis, augmentation, eps, tol, context):
     """
     Configure a domain context with the chosen RBF kernel and operator.
  
@@ -1033,9 +1036,6 @@ def set_rbf_func(num_rings, basis, augmentation, eps, tol, context):
     """
 
     context.set_augmentation(augmentation) 
-    
-    if num_rings is not None:
-        context.set_centers(num_rings)
         
     if (basis == 'gaussian'):
         context.set_phi(lambda p: rbf.phi_gauss(p, eps))
@@ -1115,7 +1115,7 @@ def set_boundary_func(g_bound, btype, shape, L, context):
     return g, in_boundary, normal_vec
 
 def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
-                  num_rings, augmentation=False, A=None, eps=3.0, tol=1e-12,
+                  num_center_nodes, augmentation=False, A=None, eps=3.0, tol=1e-12,
                   sparse=False, anchor_method="mean"):
     """
     Build the full RBF-FD linear system for a (possibly anisotropic) PDE.
@@ -1192,10 +1192,11 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
         A = np.ones((len(P[0]), 1, 1)) * np.eye(len(P[0]))
 
     S = stencils.knn_list(P, num_stencil_nodes)
-    context = PDEDomainContext(P, S, A)    
+    C = stencils.knn_list(P, num_center_nodes)
+    context = PDEDomainContext(P, S, C, A)    
     print('1) Nodes and Stencils Generated.')
 
-    set_rbf_func(num_rings, basis, augmentation, eps, tol, context)
+    set_rbf_func(basis, augmentation, eps, tol, context)
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     

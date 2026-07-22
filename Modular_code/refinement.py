@@ -55,7 +55,7 @@ def smooth_monitor(M, S, beta=0.25):
     avg = M[S].mean(axis=1)
     return (1 - beta) * M + beta * avg
 
-def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
+def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
                         shape, L, btype_all_dirichlet, augmentation,
                         A, alpha, eps, tol, sparse, relax=1.0):
     dim = P.shape[1]
@@ -63,7 +63,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     # 1) gradient of current solution on current nodes
     S = stencils.knn_list(P, num_stencil_nodes)
     ctx_g = PDEDomainContext(P, S, A)
-    assembly.set_rbf_func(num_rings, basis, augmentation, eps, tol, context=ctx_g)
+    assembly.set_rbf_func(num_centers, basis, augmentation, eps, tol, context=ctx_g)
     grad_u = np.column_stack([Wl @ u for Wl in assembly.global_grads_sparse(ctx_g)])
 
     # 2) monitor function from that gradient
@@ -87,7 +87,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_rings, basis,
     ]
 
     ctx_x = assembly.rbf_fd_system(f_zero, g_x, btype_all_dirichlet, P, basis, shape, L,
-                                   num_stencil_nodes, num_rings, augmentation,
+                                   num_stencil_nodes, num_centers, augmentation,
                                    M, eps, tol, sparse)
     x_new = assembly.rbf_fd_solve_sparse(ctx_x.W, ctx_x.F)
 

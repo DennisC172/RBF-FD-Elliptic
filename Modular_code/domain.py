@@ -83,7 +83,7 @@ class PDEDomainContext():
     `A` with `None` if called that way.
     """
         
-    def __init__(self, nodes, stencils, A):
+    def __init__(self, nodes, stencils, centers, A):
         """
         Initialize the context from nodes, stencils, and a diffusion
         tensor.
@@ -100,6 +100,8 @@ class PDEDomainContext():
             Coordinates of every node in the discretization.
         stencils : list of array_like
             Per-node stencil index lists.
+        centers : list of array_like
+            Per-node stencil index lists.
         A : numpy.ndarray, shape (dim, dim)
             Diffusion tensor for the PDE operator.
     
@@ -110,7 +112,7 @@ class PDEDomainContext():
         
         self.nodes = nodes
         self.stencils = stencils
-        self.center_rings = None
+        self.centers = centers
         self.phi = None
         self.grad_phi = None
         self.laplacian_phi = None
@@ -118,46 +120,6 @@ class PDEDomainContext():
         self.A = A
         self.W = None
         self.F = None
-           
-    def set_stencils(self, stencils):
-        """
-        Replace the per-node stencil index lists.
-    
-        Parameters
-        ----------
-        stencils : list of array_like
-            `stencils[i]` is the list/array of node indices forming the
-            local stencil for node `i`.
-    
-        Returns
-        -------
-        None
-        """
-        
-        self.stencils = stencils
-        
-    def set_centers(self, center_rings):
-        """
-        Set the number of auxiliary center rings for least-squares
-        stencil weight computation.
-        
-        When set to a non-`None` value, RBF-FD weight routines that
-        check `context.center_rings` (e.g. `assembly.global_weights`,
-        `assembly.boundary_to_weights`) dispatch to the least-squares
-        variants (`local_weights_ls`, `local_grad_ls`) instead of the
-        direct-collocation variants.
-        
-        Parameters
-        ----------
-        center_rings : int
-            Number of concentric rings of auxiliary centers to
-            generate around each stencil (see `rbf.generate_grid_2d`).
-        
-        Returns
-        -------
-        None
-        """
-        self.center_rings = center_rings
         
     def set_phi(self, phi):
         """

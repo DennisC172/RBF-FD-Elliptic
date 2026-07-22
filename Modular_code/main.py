@@ -55,19 +55,21 @@ def report_and_graph(context, u_exact, sparse=False):
     A = context.A
     W = context.W
     F = context.F
-    
+
+    print('----------------------Solve Matrix Equation:----------------------')
     if sparse:
         u_soln = assembly.rbf_fd_solve_sparse(W, F)
     else:
         u_soln = assembly.rbf_fd_solve(W, F)
         print(f"Condition:    {np.linalg.cond(W): e}")
 
+    print('------------------------Calculate Errors:-------------------------')
     u_ex = u_exact(P.T,np.transpose(A, (1, 2, 0)))
     error = np.abs(u_soln - u_ex)
     err_max = error_analysis.max_error_relative(u_soln, u_ex)
     err_l2 = error_analysis.l2_error_relative(u_soln, u_ex)
-    err_energy = error_analysis.energy_error_delaunay_relative(context, u_soln,
-                                                               u_ex,sparse)
+    #err_energy = error_analysis.energy_error_delaunay_relative(context, u_soln,
+    #                                                           u_ex,sparse)
         
     Lu_approx = W @ u_ex
     res_max = error_analysis.max_error_relative(Lu_approx, F)
@@ -76,6 +78,7 @@ def report_and_graph(context, u_exact, sparse=False):
     # -----------------------------
     # REPORT ERRORS AND PLOT
     # -----------------------------
+    print('---------------------------Report:--------------------------------')
     X, Y = P.T
     
     # Provide error analysis from expected result
@@ -83,11 +86,12 @@ def report_and_graph(context, u_exact, sparse=False):
     print('Minimum weight:     ' + str(W.min()))
     print("Max error Rel     = ", np.max(err_max))
     print("L2 error Rel      = ", err_l2)
-    print("Energy error Rel  = ", err_energy)
+    #print("Energy error Rel  = ", err_energy)
     print("Res l2 Lu_ex - F  = ", res_l2)
     print("Res Max Lu_ex - F = ", res_max)
-    
-    # Plot a contour for the approximated solution
+
+    print('--------------------------Graphics:--------------------------------')
+    '''# Plot a contour for the approximated solution
     plt.figure(figsize=(8, 6))
     contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
     cbar = plt.colorbar(contour_filled)
@@ -125,21 +129,22 @@ def report_and_graph(context, u_exact, sparse=False):
     plt.title(rf"""RBF-FD Approximate Error:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()
+    plt.show()'''
 
 #%% Main Setup
 if __name__ == "__main__":
     # -----------------------------
     # PARAMETERS
     # -----------------------------
+    print('========================Define Parameters:========================')
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 10
+    num_stencil_nodes = 20
     
     # Define the number of rings with quasi-uniform nodes
-    # For Square solve, let num_rings := None
-    num_rings = 5
+    # For Square solve, let num_centers := None
+    num_centers = 15
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
@@ -148,8 +153,8 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 100
-    Ny = 100
+    Nx = 500
+    Ny = 500
     L = 1.0
     shape = 'square'
     
@@ -159,12 +164,12 @@ if __name__ == "__main__":
     print(f'Sparse Solve: {sparse}')
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
-    print(f'Number of Rings          = {num_rings}')
+    print(f'Number of Rings          = {num_centers}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
     P, num_int = geometry.uniform_int_square(L, Nx, Ny,1)
-    print(P)
+    print("Node array shape: "+str(P.shape))
     
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
@@ -174,7 +179,7 @@ if __name__ == "__main__":
     eig_2 = lambda p: 1e-3
     angle = lambda p: 12.0/24.0*np.pi
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
-    print("Coefficient Matrix:\n" + str(A))
+    print("Coefficient Matrix shape:\n" + str(A.shape))
     
     # Forcing term parameters
     Amp = 1e3
@@ -183,6 +188,7 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
+    print('====================Define Example and Refine:====================')
     f, g, btype, u_exact = examples.example_10(eig_1, eig_2, angle, Amp, modes)
        
     '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
@@ -190,12 +196,17 @@ if __name__ == "__main__":
                                    eig_1, eig_2, angle, eps, tol,
                                    sparse)'''
 
+    print('Nodes Refined.')
+
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
+    print('Diffusion Tensor Redefined.')
 
     # Solve the PDE exactly and with RBF-FD
+    print('========================Assemble System:==========================')
     context = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
-                                     num_stencil_nodes, num_rings, augmentation,
+                                     num_stencil_nodes, num_centers, augmentation,
                                      A=A, eps=eps, tol=1e-8, sparse=sparse)
     
     # Display results
+    print('===============Solve, Report and Graph Results:===================')
     report_and_graph(context, u_exact, sparse)

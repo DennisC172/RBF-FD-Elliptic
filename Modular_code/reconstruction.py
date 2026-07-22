@@ -110,11 +110,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 100
+    num_stencil_nodes = 10
     
     # Define the number of rings with quasi-uniform nodes
-    # For Square solve, let k_c := None
-    num_rings = 10
+    # For Square solve, let num_centers := None
+    num_centers = 10
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'cubic'
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # BUILD TRAIN CASE AND REPORT
     # -----------------------------
     context = training_setup(L, Nx, Ny, shape, num_stencil_nodes,
-                             num_rings, rbf_shape, augmentation, eps,
+                             num_centers, rbf_shape, augmentation, eps,
                              tol, alpha, beta, angle,
                              Amp, modes, examples.example_2,sparse=sparse)
         
