@@ -139,7 +139,7 @@ if __name__ == "__main__":
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_rings := None
-    num_rings = None
+    num_rings = 5
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
