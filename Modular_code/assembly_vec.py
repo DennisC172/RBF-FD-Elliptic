@@ -599,7 +599,7 @@ def global_grads_sparse(context):
     dim = len(P[0])
 
     S = context.stencils
-    k = context.center_rings
+    k = context.centers
 
     max_stencil = max(len(s) for s in S)
     max_nnz = num_nodes * max_stencil
@@ -1192,7 +1192,11 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
         A = np.ones((len(P[0]), 1, 1)) * np.eye(len(P[0]))
 
     S = stencils.knn_list(P, num_stencil_nodes)
-    C = stencils.knn_list(P, num_center_nodes)
+    C = None
+    
+    if num_center_nodes is not None:
+        C = stencils.knn_list(P, num_center_nodes)
+    
     context = PDEDomainContext(P, S, C, A)    
     print('1) Nodes and Stencils Generated.')
 

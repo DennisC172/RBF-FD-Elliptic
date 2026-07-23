@@ -326,9 +326,10 @@ def data_output(example_num):
     N_int = 250
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e-3"
-    angle = "lambda p: 12.0/24.0*np.pi"    
-    num_stencil_nodes = 5
-    num_rings = 5
+    angle = "lambda p: 12.0/24.0*np.pi"
+    eps = np.sqrt(N_int)/5  
+    num_stencil_nodes = 10
+    num_centers = 5
 
     # -----------------------------
     # TEST 1: INTERIOR GRID SIZE
@@ -338,14 +339,15 @@ def data_output(example_num):
     rows = []
     
     for x in N_ints:
+        epsx = 0.5*np.sqrt(x)
         print(f'---------------------N_int = {x}-------------------------')
         context, u_soln, u_ex = pde_context_provider(x, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
-                                                     num_rings, rbf_shape,
-                                                     eps, augmentation,
+                                                     num_centers, rbf_shape,
+                                                     epsx, augmentation,
                                                      eval(angle), example, sparse)
-        row = error_analysis(x, x, num_stencil_nodes, num_rings, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, angle, context,
+        row = error_analysis(x, x, num_stencil_nodes, num_centers, eig_1,
+                             eig_2, rbf_shape, epsx, augmentation, angle, context,
                              u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
         row['varied_value'] = x
@@ -384,7 +386,7 @@ def data_output(example_num):
     for x in N_S_N:
         print(f'----------num_stencil_nodes = {x}------------')
         context, u_soln, u_ex = pde_context_provider(N_int, eval(eig_1), eval(eig_2),
-                                                     x, num_rings, rbf_shape,
+                                                     x, num_centers, rbf_shape,
                                                      eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(N_int, N_int, x, num_centers, eig_1,
