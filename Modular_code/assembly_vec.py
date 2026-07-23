@@ -562,9 +562,9 @@ def global_grads(context):
         num_stencil_nodes = len(s)
         
         if k is None:
-            w_grad = local_grad_solve(context, i)
+            w_grad, _ = local_grad_solve(context, i)
         else:
-            w_grad = local_grad_ls(context, i) 
+            w_grad, _ = local_grad_ls(context, i) 
             
         for j in range(num_stencil_nodes):
             for l in range(dim):
@@ -630,9 +630,9 @@ def global_grads_sparse(context):
         n = len(s)
 
         if k is None:
-            w_grad = local_grad_solve(context, i)
+            w_grad, _ = local_grad_solve(context, i)
         else:
-            w_grad = local_grad_ls(context, i)
+            w_grad, _ = local_grad_ls(context, i)
 
         rows[ptr:ptr+n] = i
         cols[ptr:ptr+n] = s
