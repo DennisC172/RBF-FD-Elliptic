@@ -206,6 +206,7 @@ def error_analysis(Nx, Ny, num_stencil_nodes, num_centers, eig_1,
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
     print(f'Number of centers        = {num_centers}')
+    print(f'Inverse length scale     = {eps}')
     print(f'RBF: {rbf_shape}, with augmentation: {augmentation}')
     
     Lu_approx = W @ u_ex
@@ -323,12 +324,12 @@ def data_output(example_num):
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
     
-    N_int = 250
+    N_int = 500
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e-3"
     angle = "lambda p: 12.0/24.0*np.pi"
     eps = 3.0
-    num_stencil_nodes = 10
+    num_stencil_nodes = 5
     num_centers = None
 
     # -----------------------------
@@ -339,7 +340,7 @@ def data_output(example_num):
     rows = []
     
     for x in N_ints:
-        epsx = np.sqrt(x)/7
+        epsx = 3.0
         print(f'---------------------N_int = {x}-------------------------')
         context, u_soln, u_ex = pde_context_provider(x, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
