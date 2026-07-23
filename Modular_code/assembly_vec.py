@@ -89,8 +89,8 @@ def local_weights_solve(context, i):
     s = np.linalg.svd(M, compute_uv=False)
     print(s)
     print(s[-1])
-    print(np.linalg.matrix_rank(M))
-    w = np.linalg.solve(M, b)'''
+    print(np.linalg.matrix_rank(M))'''
+    w = np.linalg.solve(M, b)
     return w[:num_nodes], np.linalg.cond(M)
 
 ### Least Squares

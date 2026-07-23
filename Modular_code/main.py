@@ -158,7 +158,7 @@ if __name__ == "__main__":
     L = 1.0
     shape = 'square'
     
-    eps = np.sqrt(Nx)/5
+    eps = 3.0
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')

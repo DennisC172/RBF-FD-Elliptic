@@ -327,7 +327,7 @@ def data_output(example_num):
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e-3"
     angle = "lambda p: 12.0/24.0*np.pi"
-    eps = np.sqrt(N_int)/5
+    eps = 3.0
     num_stencil_nodes = 10
     num_centers = None
 
@@ -339,7 +339,7 @@ def data_output(example_num):
     rows = []
     
     for x in N_ints:
-        epsx = np.sqrt(x)/5
+        epsx = np.sqrt(x)/7
         print(f'---------------------N_int = {x}-------------------------')
         context, u_soln, u_ex = pde_context_provider(x, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
