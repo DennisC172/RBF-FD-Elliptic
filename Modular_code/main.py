@@ -140,11 +140,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 20
+    num_stencil_nodes = 5
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 15
+    num_centers = None
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
@@ -153,18 +153,19 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 250
-    Ny = 250
+    Nx = 500
+    Ny = 500
     L = 1.0
     shape = 'square'
     
-    eps = 0.5*np.sqrt(Nx)
+    eps = np.sqrt(Nx)/5
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
-    print(f'Number of Rings          = {num_centers}')
+    print(f'Number of Centers        = {num_centers}')
+    print(f'eps  =  {eps}, and  tol  = {tol}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
@@ -189,7 +190,7 @@ if __name__ == "__main__":
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
     print('====================Define Example and Refine:====================')
-    f, g, btype, u_exact = examples.example_10(eig_1, eig_2, angle, Amp, modes)
+    f, g, btype, u_exact = examples.example_2(eig_1, eig_2, angle, Amp, modes)
        
     '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_rings, augmentation,

@@ -85,9 +85,13 @@ def local_weights_solve(context, i):
             rbf.anisotropic_diffusion_poly(P[i])
         ])
 
-    #print(f"Conditioning: {np.linalg.cond(M): e}")
-    w = np.linalg.solve(M, b)
-    return w[:num_nodes]
+    '''print(f"Conditioning: {np.linalg.cond(M): e}, ({M.shape}) at idx = {i}")
+    s = np.linalg.svd(M, compute_uv=False)
+    print(s)
+    print(s[-1])
+    print(np.linalg.matrix_rank(M))
+    w = np.linalg.solve(M, b)'''
+    return w[:num_nodes], np.linalg.cond(M)
 
 ### Least Squares
 def local_weights_ls(context, i, lam=0.0):
@@ -154,7 +158,7 @@ def local_weights_ls(context, i, lam=0.0):
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
     w = Vt.T @ (filt * (U.T @ b))
-    return w[:num_nodes]
+    return w[:num_nodes], np.linalg.cond(M)
     
 def local_grad_solve(context, i):
     """
@@ -219,7 +223,7 @@ def local_grad_solve(context, i):
 
     #print(f"Conditioning {np.linalg.cond(M): e}")
     w_grad = np.linalg.solve(M, b_grad)
-    return w_grad[:num_nodes,:]
+    return w_grad[:num_nodes,:], np.linalg.cond(M)
 
 def local_grad_ls(context, i, lam=0.0):
     """
@@ -285,7 +289,7 @@ def local_grad_ls(context, i, lam=0.0):
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
     w = Vt.T @ (filt[:, None] * (U.T @ b_grad))
-    return w[:num_nodes,:]
+    return w[:num_nodes,:], np.linalg.cond(M)
 
 # .2 Assembles the global Weights.
 def global_weights(context, in_boundary=None, normal_vec=None):
@@ -363,9 +367,9 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                 W[i,i] = 1.0
             elif node_type == 'neumann':
                 if k is None:
-                    w_grad = local_grad_solve(context, i)
+                    w_grad, kA = local_grad_solve(context, i)
                 else:
-                    w_grad = local_grad_ls(context, i) 
+                    w_grad, kA = local_grad_ls(context, i) 
                 
                 n_v = normal_vec(P[i])                
                 dir_derv = w_grad @ n_v
@@ -374,12 +378,16 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                     W[i,s[j]] = dir_derv[j]
         else:
             if k is None:
-                w = local_weights_solve(context, i)
+                w, kA = local_weights_solve(context, i)
             else:
-                w = local_weights_ls(context, i)
+                w, kA = local_weights_ls(context, i)
     
             for j in range(num_stencil_nodes):
                 W[i,s[j]] = w[j]
+
+        if kA > cond_A:
+            idx_c = i
+            cond_A = kA
             
     return W
 
@@ -468,6 +476,9 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     cols = np.empty(max_nnz, dtype=np.int32)
     vals = np.empty(max_nnz, dtype=np.float64)
     ptr = 0
+
+    cond_A = 0.0
+    idx_c = 0
     
     for i,s in enumerate(S):
         node_type = in_boundary(P[i]) if in_boundary is not None else 'interior'
@@ -479,9 +490,9 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             ptr += 1
         elif node_type == 'neumann':
             if k is None:
-                w_grad = local_grad_solve(context, i)
+                w_grad, kA = local_grad_solve(context, i)                
             else:
-                w_grad = local_grad_ls(context, i)
+                w_grad, kA = local_grad_ls(context, i)
 
             n_v = normal_vec(P[i])
             dir_derv = w_grad @ n_v
@@ -493,18 +504,24 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             ptr += n
         else:
             if k is None:
-                w = local_weights_solve(context, i)
+                w, kA = local_weights_solve(context, i)
             else:
-                w = local_weights_ls(context, i)
+                w, kA = local_weights_ls(context, i)
 
             n = len(s)
             rows[ptr:ptr+n] = i
             cols[ptr:ptr+n] = s
             vals[ptr:ptr+n] = w
             ptr += n
+        
+        if kA > cond_A:
+            idx_c = i
+            cond_A = kA
             
     W = sp.coo_matrix((vals[:ptr], (rows[:ptr], cols[:ptr])),
                       shape=(num_nodes, num_nodes))
+
+    print(f"Max conditioning: {cond_A: e} at {idx_c}")    
     return W.tocsr()
 
 def global_grads(context):
