@@ -57,7 +57,8 @@ def smooth_monitor(M, S, beta=0.25):
 
 def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
                         shape, L, btype_all_dirichlet, augmentation,
-                        A, alpha, eps, tol, sparse, relax=1.0):
+                        A, alpha, eps, tol, sparse, relax=1.0,
+                        tangle_frac=0.5):
     dim = P.shape[1]
 
     # 1) gradient of current solution on current nodes
@@ -106,7 +107,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     while relax > 1e-4:
         P_trial = relax * P_target + (1 - relax) * P
 
-        if min_node_spacing(P_trial) > 0.5 * spacing_old:
+        if min_node_spacing(P_trial) > spacing_r * spacing_old:
             P_solved = P_trial
             break
 
@@ -116,11 +117,12 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
 
 def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
                     num_centers, augmentation, eig_1, eig_2, angle, eps, tol,
-                    sparse=True, max_iters=20):
+                    sparse=True, relax=1.0, spacing_r=0.1, alpha=1e-2,
+                    max_iter=20, verbose=False):
     
     btype_all_dirichlet = ['dirichlet'] * 4
     
-    for it in range(max_iters):
+    for it in range(max_iter):
         print(f"Refinement iteration: {it}")
         print("Solving u:")
         A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
@@ -132,12 +134,12 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
         print("Solving P:")
         P_new, spacing_old = redistribute_nodes(P, u, num_stencil_nodes,
                                    num_centers, rbf_shape, shape, L,
-                                   btype_all_dirichlet, augmentation,
-                                   A, 1e1, eps, tol, sparse, relax=1.0)
+                                   btype_all_dirichlet, augmentation, A,
+                                   alpha, eps, tol, sparse, relax, spacing_r)
 
-        spacing_new = min_node_spacing(P_new, verbose=True)
+        spacing_new = min_node_spacing(P_new, verbose)
 
-        if spacing_new < 0.5 * spacing_old:
+        if spacing_new < spacing_r * spacing_old:
             print("Mesh update rejected: node spacing deteriorated.")
             break
 

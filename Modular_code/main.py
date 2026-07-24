@@ -90,8 +90,8 @@ def report_and_graph(context, u_exact, sparse=False):
     print("Res l2 Lu_ex - F  = ", res_l2)
     print("Res Max Lu_ex - F = ", res_max)
 
-    print('--------------------------Graphics:--------------------------------')
-    '''# Plot a contour for the approximated solution
+    print('--------------------------Graphics:-------------------------------')
+    # Plot a contour for the approximated solution
     plt.figure(figsize=(8, 6))
     contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
     cbar = plt.colorbar(contour_filled)
@@ -129,7 +129,7 @@ def report_and_graph(context, u_exact, sparse=False):
     plt.title(rf"""RBF-FD Approximate Error:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()'''
+    plt.show()
 
 #%% Main Setup
 if __name__ == "__main__":
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 5
+    num_stencil_nodes = 13
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
@@ -153,12 +153,12 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 50
-    Ny = Nx
+    Nx = 25
+    Ny = 25
     L = 1.0
     shape = 'square'
     
-    eps = 0.001*(Nx+2)
+    eps = 0.75*np.sqrt((Nx+2)*(Ny+2))/num_stencil_nodes
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # -----------------------------    
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
-    eig_2_str = "lambda p: 1e-3"
+    eig_2_str = "lambda p: 1e-4"
     angle_str = "lambda p: 12.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
@@ -197,14 +197,15 @@ if __name__ == "__main__":
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
     print('====================Define Example and Refine:====================')
-    f, g, btype, u_exact = examples.example_2(eig_1, eig_2, angle, Amp, modes)
+    f, g, btype, u_exact = examples.example_5(eig_1, eig_2, angle, Amp, modes)
        
-    P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
+    '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
                                    eig_1, eig_2, angle, eps, tol,
-                                   sparse)
+                                   sparse, max_iter=25, alpha=1e-4, tangle_frac=0.5,
+                                   relax=1.0, verbose=True)
 
-    print('Nodes Refined.')
+    print('Nodes Refined.')'''
 
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print('Diffusion Tensor Redefined.')
@@ -213,7 +214,7 @@ if __name__ == "__main__":
     print('========================Assemble System:==========================')
     context = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
                                      num_stencil_nodes, num_centers, augmentation,
-                                     A=A, eps=eps, tol=1e-8, sparse=sparse)
+                                     A=A,eps=eps, tol=1e-8, sparse=sparse)
     
     # Display results
     print('===============Solve, Report and Graph Results:===================')

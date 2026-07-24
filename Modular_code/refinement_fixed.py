@@ -196,7 +196,14 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     #    A^{-1}-energy norm instead of silently falling back to
     #    the Euclidean (isotropic) norm.
     M = operator_gradient_monitor(grad_u, alpha, A=A, d=dim)
-    M = smooth_monitor(M, S, beta=0.5)
+    #M = smooth_monitor(M, S, beta=0.5)
+
+    evals = np.linalg.eigvalsh(M)
+    lam_max = evals[:, -1]
+
+    plt.scatter(P[:,0], P[:,1], c=lam_max)
+    plt.colorbar()
+    plt.show()
 
     # 3) solve coordinate PDEs, A = M, f = 0, Dirichlet = identity on boundary
     f_zero = lambda p, A: 0.0
@@ -254,8 +261,8 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
 
 def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
                     num_centers, augmentation, eig_1, eig_2, angle, eps, tol,
-                    sparse=True, max_iters=20, alpha=None,
-                    move_tol=1e-6, relax=1.0, target_contrast=5.0):
+                    sparse=True, max_iter=20, alpha=None, tangle_frac=0.5,
+                    move_tol=1e-6, relax=1.0, target_contrast=5.0, verbose=True):
     """
     Parameters
     ----------
@@ -271,7 +278,7 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
 
     btype_all_dirichlet = ['dirichlet'] * 4
 
-    for it in range(max_iters):
+    for it in range(max_iter):
         print(f"Refinement iteration: {it}")
         print("Solving u:")
         A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
@@ -285,11 +292,12 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
                                    num_centers, rbf_shape, shape, L,
                                    btype_all_dirichlet, augmentation,
                                    A, alpha, eps, tol, sparse, relax=relax,
-                                   target_contrast=target_contrast)
+                                   target_contrast=target_contrast,
+                                   tangle_frac=tangle_frac)
 
-        spacing_new = min_node_spacing(P_new, verbose=True)
+        spacing_new = min_node_spacing(P_new, verbose=verbose)
 
-        if spacing_new < 0.9 * spacing_old:
+        if spacing_new < tangle_frac * spacing_old:
             # redistribute_nodes' internal line search already tries to
             # avoid this; if it still happens, the monitor/step is too
             # aggressive for this iterate. Stop rather than propagate
