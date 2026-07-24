@@ -62,12 +62,13 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
 
     # 1) gradient of current solution on current nodes
     S = stencils.knn_list(P, num_stencil_nodes)
-    ctx_g = PDEDomainContext(P, S, A)
-    assembly.set_rbf_func(num_centers, basis, augmentation, eps, tol, context=ctx_g)
+    C = stencils.knn_list(P, num_centers) if num_centers is not None else None
+    ctx_g = PDEDomainContext(P, S, C, A)
+    assembly.set_rbf_func(basis, augmentation, eps, tol, context=ctx_g)
     grad_u = np.column_stack([Wl @ u for Wl in assembly.global_grads_sparse(ctx_g)])
 
     # 2) monitor function from that gradient
-    M = operator_gradient_monitor(grad_u, alpha, d=dim)
+    M = operator_gradient_monitor(grad_u, alpha, A, d=dim)
     M = smooth_monitor(M, S, beta=0.5)
 
     # 3) solve coordinate PDEs, A = M, f = 0, Dirichlet = identity on boundary
@@ -89,11 +90,12 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     ctx_x = assembly.rbf_fd_system(f_zero, g_x, btype_all_dirichlet, P, basis, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
                                    M, eps, tol, sparse)
-    x_new = assembly.rbf_fd_solve_sparse(ctx_x.W, ctx_x.F)
 
     # reuse the SAME W, just a new rhs for the y-coordinate solve
     g, in_boundary, normal_vec = assembly.set_boundary_func(g_y, btype_all_dirichlet, shape, L, ctx_x)
     f_vec_y = assembly.right_hand_side(ctx_x, f_zero, g, in_boundary)
+    
+    x_new = assembly.rbf_fd_solve_sparse(ctx_x.W, ctx_x.F)
     y_new = assembly.rbf_fd_solve_sparse(ctx_x.W, f_vec_y)
 
     P_target = np.column_stack([x_new, y_new])
@@ -113,7 +115,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     return P_solved, spacing_old # under-relax to avoid overshoot/tangling
 
 def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
-                    num_rings, augmentation, eig_1, eig_2, angle, eps, tol,
+                    num_centers, augmentation, eig_1, eig_2, angle, eps, tol,
                     sparse=True, max_iters=20):
     
     btype_all_dirichlet = ['dirichlet'] * 4
@@ -123,15 +125,15 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
         print("Solving u:")
         A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
         ctx = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
-                            num_stencil_nodes, num_rings, augmentation,
+                            num_stencil_nodes, num_centers, augmentation,
                             A, eps, tol, sparse)
         u = assembly.rbf_fd_solve_sparse(ctx.W, ctx.F)
 
         print("Solving P:")
         P_new, spacing_old = redistribute_nodes(P, u, num_stencil_nodes,
-                                   num_rings, rbf_shape, shape, L,
+                                   num_centers, rbf_shape, shape, L,
                                    btype_all_dirichlet, augmentation,
-                                   A, 1e-4, eps, tol, sparse, relax=0.10)
+                                   A, 1e1, eps, tol, sparse, relax=1.0)
 
         spacing_new = min_node_spacing(P_new, verbose=True)
 

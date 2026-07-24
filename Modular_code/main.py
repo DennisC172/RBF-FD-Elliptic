@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import geometry
 import assembly_vec as assembly
-import refinement
+import refinement_fixed as refinement
 import error_analysis
 import examples
 
@@ -153,12 +153,12 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 500
-    Ny = 500
+    Nx = 50
+    Ny = Nx
     L = 1.0
     shape = 'square'
     
-    eps = 3.0
+    eps = 0.001*(Nx+2)
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
@@ -176,15 +176,22 @@ if __name__ == "__main__":
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    eig_1 = lambda p: 1e0
-    eig_2 = lambda p: 1e-3
-    angle = lambda p: 12.0/24.0*np.pi
+    eig_1_str = "lambda p: 1e0"
+    eig_2_str = "lambda p: 1e-3"
+    angle_str = "lambda p: 12.0/24.0*np.pi"
+    print(f'Eig_1 = {eig_1_str}')
+    print(f'Eig_2 = {eig_2_str}')
+    print(f'Angle = {angle_str}')
+    
+    eig_1 = eval(eig_1_str)
+    eig_2 = eval(eig_2_str)
+    angle = eval(angle_str)
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print("Coefficient Matrix shape:\n" + str(A.shape))
     
     # Forcing term parameters
     Amp = 1e3
-    modes = [1.0,3.0]
+    modes = [1.0,1.0]
     
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
@@ -192,10 +199,10 @@ if __name__ == "__main__":
     print('====================Define Example and Refine:====================')
     f, g, btype, u_exact = examples.example_2(eig_1, eig_2, angle, Amp, modes)
        
-    '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
-                                   num_stencil_nodes, num_rings, augmentation,
+    P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
+                                   num_stencil_nodes, num_centers, augmentation,
                                    eig_1, eig_2, angle, eps, tol,
-                                   sparse)'''
+                                   sparse)
 
     print('Nodes Refined.')
 

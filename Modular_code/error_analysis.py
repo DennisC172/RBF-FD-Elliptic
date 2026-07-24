@@ -56,7 +56,7 @@ def max_error(u_soln, u_ex):
     return np.max(abs(u_soln-u_ex))
 
 def max_error_relative(u_soln, u_ex):
-    return np.max(abs(u_soln-u_ex))/np.max(u_ex)
+    return np.max(abs(u_soln-u_ex))/np.max(abs(u_ex))
 
 def energy_error(context, weights, u_soln, u_ex, sparse=False, W_grads=None):
     P = context.nodes
