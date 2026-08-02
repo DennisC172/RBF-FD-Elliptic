@@ -399,7 +399,7 @@ def example_5(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
         return np.linalg.norm(p,axis=0)**2
     
     def f(p,A):
-        return 2*np.linalg.trace(A)
+        return 2*np.trace(A)
     
     g = [
         lambda x: x**2,         # y = 0
