@@ -415,7 +415,15 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
     result = 3*r*(trA + quad/r_safe**2)
     return np.where(r < tol, 0.0, result)
 
-def phi_gauss(p,eps=0.5):
+def stencil_eps(diff_P, coeff=0.10, tol=1e-12):
+    dist_M = np.linalg.norm(diff_P, axis=-1)
+    sep = dist_M[dist_M > tol].min()
+
+    dim = len(diff_P.shape)-1
+
+    return coeff/sep/np.sqrt(dim)
+
+def phi_gauss(p,eps):
     """
     Evaluate the Gaussian radial basis function at one or more points.
 
@@ -437,8 +445,8 @@ def phi_gauss(p,eps=0.5):
     p : array_like, shape (d,) or (n, d)
         Displacement vector, or batch of `n` displacement vectors,
         between two points.
-    eps : float, optional
-        Shape parameter of the Gaussian kernel (default `0.5`).
+    eps : float
+        Shape parameter of the Gaussian kernel.
 
     Returns
     -------
@@ -452,7 +460,7 @@ def phi_gauss(p,eps=0.5):
     
     return np.exp(-(eps**2*r2))
 
-def grad_phi_gauss(p, eps=0.5):  
+def grad_phi_gauss(p, eps):  
     """
     Evaluate the gradient of the Gaussian RBF kernel at one or more
     points.
@@ -473,9 +481,9 @@ def grad_phi_gauss(p, eps=0.5):
     p : array_like, shape (d,) or (n, d)
         Displacement vector, or batch of `n` displacement vectors,
         between two points.
-    eps : float, optional
+    eps : float
         Shape parameter of the Gaussian kernel, matching the value
-        used in `phi_gauss` (default `0.5`).
+        used in `phi_gauss`.
 
     Returns
     -------
@@ -494,7 +502,7 @@ def grad_phi_gauss(p, eps=0.5):
     return -2*eps**2*phi[:, None]*p
 
 # Constant matrix
-def anisotropic_diffusion_phi_gauss(p,A,eps=0.5):
+def anisotropic_diffusion_phi_gauss(p,A,eps):
     """
     Evaluate div(A grad phi) for the Gaussian RBF kernel, for constant
     A, at one or more points.
@@ -526,9 +534,9 @@ def anisotropic_diffusion_phi_gauss(p,A,eps=0.5):
         between two points.
     A : numpy.ndarray, shape (d, d),
         Constant (symmetric) diffusion tensor.
-    eps : float, optional
+    eps : float
         Shape parameter of the Gaussian kernel, matching the value
-        used in `phi_gauss` (default `0.5`).
+        used in `phi_gauss`.
 
     Returns
     -------

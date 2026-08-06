@@ -309,7 +309,13 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
     
     return 3*r*(np.trace(A) + np.dot(p, A @ p) / r**2)
 
-def phi_gauss(p,eps=0.5):
+def stencil_eps(diff_P, coeff=0.075):
+    dist_M = np.linalg.norm(diff_P, axis=-1)
+    sep = dist_M[~np.eye(dist_M.shape[0], dtype=bool)].min()
+
+    return coeff/sep
+
+def phi_gauss(p,eps):
     """
     Evaluate the Gaussian radial basis function at a point.
 
@@ -335,7 +341,7 @@ def phi_gauss(p,eps=0.5):
     
     return np.exp(-(eps**2*r2))
 
-def grad_phi_gauss(p, eps= 0.5):  
+def grad_phi_gauss(p, eps):  
     """
     Evaluate the gradient of the Gaussian RBF kernel at a point.
 
@@ -361,7 +367,7 @@ def grad_phi_gauss(p, eps= 0.5):
     return - 2 * eps **2 * np.exp(-(eps**2*r2)) * p
 
 # Constant matrix
-def anisotropic_diffusion_phi_gauss(p,A,eps=0.5):
+def anisotropic_diffusion_phi_gauss(p,A,eps):
     """
     Evaluate div(A grad phi) for the Gaussian RBF kernel, for constant A.
 

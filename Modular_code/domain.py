@@ -44,9 +44,9 @@ class PDEDomainContext():
     stencils : list of array_like
         Per-node stencil index lists, as passed to the constructor.
         Can be replaced via `set_stencils`.
-    center_rings : int or None
-        Number of auxiliary center rings used for least-squares
-        stencil weight computation (see `assembly.local_weights_ls`,
+    centers_info : int or None
+        Center indices or number of auxiliary center rings used for
+        least-squares stencil weight computation (see `assembly.local_weights_ls`,
         `rbf.generate_grid_2d`). `None` selects the direct-collocation
         weight routines instead of the least-squares ones. `None`
         until set via `set_centers`.
@@ -83,7 +83,7 @@ class PDEDomainContext():
     `A` with `None` if called that way.
     """
         
-    def __init__(self, nodes, stencils, centers, A):
+    def __init__(self, nodes, stencils, centers_info, A):
         """
         Initialize the context from nodes, stencils, and a diffusion
         tensor.
@@ -112,7 +112,7 @@ class PDEDomainContext():
         
         self.nodes = nodes
         self.stencils = stencils
-        self.centers = centers
+        self.centers_info = centers_info
         self.phi = None
         self.grad_phi = None
         self.laplacian_phi = None

@@ -9,6 +9,7 @@ RBF-FD Implementation
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.sparse.linalg as linalg
 import geometry
 import assembly_vec as assembly
 import refinement_fixed as refinement
@@ -90,7 +91,7 @@ def report_and_graph(context, u_exact, sparse=False):
     print("Res l2 Lu_ex - F  = ", res_l2)
     print("Res Max Lu_ex - F = ", res_max)
 
-    print('--------------------------Graphics:-------------------------------')
+    '''print('--------------------------Graphics:-------------------------------')
     # Plot a contour for the approximated solution
     plt.figure(figsize=(8, 6))
     contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
@@ -129,7 +130,7 @@ def report_and_graph(context, u_exact, sparse=False):
     plt.title(rf"""RBF-FD Approximate Error:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
-    plt.show()
+    plt.show()'''
 
 #%% Main Setup
 if __name__ == "__main__":
@@ -140,11 +141,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 13
+    num_stencil_nodes = 6
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = None
+    num_centers = 2
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
@@ -153,23 +154,24 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 25
-    Ny = 25
+    Nx = 100
+    Ny = 100
     L = 1.0
     shape = 'square'
     
-    eps = 0.75*np.sqrt((Nx+2)*(Ny+2))/num_stencil_nodes
+    eps = 0.075*np.sqrt((Nx+2)*(Ny+2))
+    eps = 0.951745
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
     print(f'Nx = {Nx}, Ny = {Ny}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
-    print(f'Number of Centers        = {num_centers}')
+    print(f'Number of Center Rings   = {num_centers}')
     print(f'eps  =  {eps}, and  tol  = {tol}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny,1)
+    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 1)
     print("Node array shape: "+str(P.shape))
     
     # -----------------------------
@@ -178,7 +180,7 @@ if __name__ == "__main__":
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
     eig_2_str = "lambda p: 1e-4"
-    angle_str = "lambda p: 12.0/24.0*np.pi"
+    angle_str = "lambda p: 18.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
     print(f'Angle = {angle_str}')
@@ -197,7 +199,7 @@ if __name__ == "__main__":
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
     print('====================Define Example and Refine:====================')
-    f, g, btype, u_exact = examples.example_5(eig_1, eig_2, angle, Amp, modes)
+    f, g, btype, u_exact = examples.example_2(eig_1, eig_2, angle, Amp, modes)
        
     '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,

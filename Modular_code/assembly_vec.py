@@ -66,14 +66,15 @@ def local_weights_solve(context, i):
     Ps = P[s]
     Ai = context.A[i]
     diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
-    M = context.phi(diff_M)                     # (num_nodes, num_nodes)
+    eps = rbf.stencil_eps(diff_M)
+    M = context.phi(diff_M, eps)               # (num_nodes, num_nodes)
 
     # b: laplacian_phi(P[i] - P[s[k]]) for all k, one vectorized call
-    diff_b = P[i][None, :] - Ps                  # (num_nodes, dim)
-    b = context.laplacian_phi(diff_b, Ai)             # (num_nodes,)
+    diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
+    b = context.laplacian_phi(diff_b, Ai, eps) # (num_nodes,)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)                 # (num_nodes, pdim)
+        Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
 
         M = np.block([
             [M, Pmat],
@@ -88,9 +89,11 @@ def local_weights_solve(context, i):
     '''print(f"Conditioning: {np.linalg.cond(M): e}, ({M.shape}) at idx = {i}")
     s = np.linalg.svd(M, compute_uv=False)
     print(s)
-    print(s[-1])
+    print(s[-1]).
     print(np.linalg.matrix_rank(M))'''
-    w = np.linalg.solve(M, b)
+    Q,R = np.linalg.qr(M)
+    y = Q.T @ b
+    w = np.linalg.solve(R, y)
     return w[:num_nodes], np.linalg.cond(M)
 
 ### Least Squares
@@ -99,19 +102,19 @@ def local_weights_ls(context, i, lam=0.0):
     Compute RBF-FD differentiation weights for node i via least squares.
  
     Alternative to `local_weights_solve` that avoids solving a square
-    interpolation system directly. Instead, a cloud of auxiliary
-    collocation centers is generated around node `i` (a local grid with
-    `context.center_rings` rings, scaled by the stencil radius), and the
-    weights are obtained as the least-squares solution that best
-    reproduces the Laplacian of the kernel at those auxiliary centers
-    using only the values at the stencil nodes. Polynomial augmentation
-    constraints (if enabled) are least-squares rows.
+    interpolation system directly. Instead, either extra centers or a
+    cloud of auxiliary collocation centers is generated around node `i'
+    (a local grid with `context.centers_info` rings, scaled by the stencil
+    radius), and the weights are obtained as the least-squares solution
+    that best reproduces the Laplacian of the kernel at those auxiliary
+    centers using only the values at the stencil nodes. Polynomial
+    augmentation constraints (if enabled) are least-squares rows.
  
     Parameters
     ----------
     context : PDEDomainContext
         Domain context providing `nodes`, `stencils`, `phi`,
-        `laplacian_phi`, `center_rings`, and `augmentation` settings.
+        `laplacian_phi`, `centers_info`, and `augmentation` settings.
     i : int
         Index of the node (in `context.nodes`) for which to compute
         local differentiation weights.
@@ -123,31 +126,38 @@ def local_weights_ls(context, i, lam=0.0):
         node `i`, one weight per node in `context.stencils[i]`.
     """
 
-    s = context.stencils[i]
-    c = context.centers[i]
-    num_nodes = len(s)
-
     Ai = context.A[i]
-    P = context.nodes    
-    Ps = P[s] 
-    Cs = P[s]
+    P = context.nodes
 
-    #k = context.centers
-    #r = np.max(np.linalg.norm(Ps - P[i], axis=1))
-    #points = rbf.generate_grid_2d(r, k)
-    #c = P[i] + points
+    s = context.stencils[i]
+    num_nodes = len(s)
+    Ps = P[s]
+
+    #c = context.centers_info[i]
+    #Cs = P[c]
+
+    k = context.centers_info
+    dP_norm = np.linalg.norm(Ps - P[i], axis=1)
+    r_max   = np.max(dP_norm)
+    points  = rbf.generate_grid_2d(r_max, k)
+    Cs      = P[i] + points
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
-    M = context.phi(diff_M)                     # (num_centers, num_nodes)
+    eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
+    M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
-    b = context.laplacian_phi(diff_b, Ai)       # (num_centers, dim)
+    b = context.laplacian_phi(diff_b, Ai, eps)  # (num_centers, dim)
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
+
+        pdim = Pmat.shape(1)
+
         M = np.block([
-            [M],
-            [Pmat.T]
+            [M, Cmat],
+            [Pmat.T, np.eye((pdim,pdim))]
         ])
         b = np.concatenate([
             b,
@@ -202,14 +212,15 @@ def local_grad_solve(context, i):
     Ps = P[s]
     # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
     diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
-    M = context.phi(diff_M)                     # (num_nodes, num_nodes)
+    eps = rbf.stencil_eps(diff_M)
+    M = context.phi(diff_M, eps)               # (num_nodes, num_nodes)
 
     # b_grad: grad_phi(P[i] - P[s[k]]) for all k, one vectorized call
-    diff_b = P[i][None, :] - Ps                  # (num_nodes, dim)
-    b_grad = context.grad_phi(diff_b)             # (num_nodes, dim)
+    diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
+    b_grad = context.grad_phi(diff_b, eps)     # (num_nodes, dim)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)                 # (num_nodes, pdim)
+        Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
        
         M = np.block([
             [M, Pmat],
@@ -222,7 +233,9 @@ def local_grad_solve(context, i):
         ])
 
     #print(f"Conditioning {np.linalg.cond(M): e}")
-    w_grad = np.linalg.solve(M, b_grad)
+    Q,R = np.linalg.qr(M)
+    y = Q.T @ b_grad
+    w_grad = np.linalg.solve(R, y)
     return w_grad[:num_nodes,:], np.linalg.cond(M)
 
 def local_grad_ls(context, i, lam=0.0):
@@ -255,30 +268,38 @@ def local_grad_ls(context, i, lam=0.0):
         `context.stencils[i]`.
     """
        
-    s = context.stencils[i]
-    c = context.centers[i]
-    num_nodes = len(s)
-    
-    P = context.nodes    
-    Ps = P[s] 
-    Cs = P[c]
+    Ai = context.A[i]
+    P = context.nodes
 
-    #k = context.centers
-    #r = np.max(np.linalg.norm(Ps - P[i], axis=1))
-    #points = rbf.generate_grid_2d(r, k)
-    #c = P[i] + points
+    s = context.stencils[i]
+    num_nodes = len(s)
+    Ps = P[s]
+
+    #c = context.centers_info[i]
+    #Cs = P[c]
+
+    k = context.centers_info
+    dP_norm = np.linalg.norm(Ps - P[i], axis=1)
+    r_max   = np.max(dP_norm)
+    points  = rbf.generate_grid_2d(r_max, k)
+    Cs      = P[i] + points
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
-    M = context.phi(diff_M)                     # (num_centers, num_nodes)
+    eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
+    M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
-    b_grad = context.grad_phi(diff_b)           # (num_centers, dim)
+    b_grad = context.grad_phi(diff_b, eps)      # (num_centers, dim)
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
+
+        pdim = Pmat.shape(1)
+
         M = np.block([
-            [M],
-            [Pmat.T]
+            [M, Cmat],
+            [Pmat.T, np.eye((pdim, pdim))]
         ])
         b_grad = np.concatenate([
             b_grad,
@@ -353,9 +374,12 @@ def global_weights(context, in_boundary=None, normal_vec=None):
     num_nodes = len(P)    
     
     S = context.stencils
-    k = context.centers
+    k = context.centers_info
     
     W = np.zeros((num_nodes, num_nodes))
+
+    cond_A = 0.0
+    idx_c = 0
     
     for i,s in enumerate(S):
         num_stencil_nodes = len(s)
@@ -388,7 +412,8 @@ def global_weights(context, in_boundary=None, normal_vec=None):
         if kA > cond_A:
             idx_c = i
             cond_A = kA
-            
+
+    print(f"Max conditioning: {cond_A: e} at {idx_c}")     
     return W
 
 def global_weights_sparse(context, in_boundary=None, normal_vec=None):
@@ -468,7 +493,7 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     num_nodes = len(P)
     
     S = context.stencils
-    k = context.centers
+    k = context.centers_info
     
     max_nnz = num_nodes * context.stencils[0].shape[0]  # upper bound
 
@@ -554,7 +579,7 @@ def global_grads(context):
     dim = len(P[0])
     
     S = context.stencils
-    k = context.center_rings
+    k = context.centers_info
     
     W = np.zeros((num_nodes, num_nodes, dim))
     
@@ -616,7 +641,7 @@ def global_grads_sparse(context):
     dim = len(P[0])
 
     S = context.stencils
-    k = context.centers
+    k = context.centers_info
 
     max_stencil = max(len(s) for s in S)
     max_nnz = num_nodes * max_stencil
@@ -673,7 +698,7 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
         modified in place.
     context : PDEDomainContext
         Domain context providing `nodes`, `stencils`, and
-        `center_rings`.
+        `centers_info`.
     in_boundary : callable
         Function mapping a node coordinate to a boundary-type label
         ('interior', 'dirichlet', 'neumann', ...).
@@ -690,7 +715,7 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
     P = context.nodes   
     
     S = context.stencils
-    k = context.center_rings
+    k = context.centers_info
     
     W_b = W.copy()
     
@@ -758,7 +783,7 @@ def boundary_to_weights_sparse(W, context, in_boundary, normal_vec):
 
     P = context.nodes
     S = context.stencils
-    k = context.center_rings
+    k = context.centers_info
 
     W_lil = W.tolil()
 
@@ -1011,7 +1036,7 @@ def anchor_system_sparse(W, f, method="mean"):
 
     return W_lil.tocsr(), f
 
-def set_rbf_func(basis, augmentation, eps, tol, context):
+def set_rbf_func(basis, augmentation, context, tol, eps_fixed=None):
     """
     Configure a domain context with the chosen RBF kernel and operator.
  
@@ -1024,22 +1049,19 @@ def set_rbf_func(basis, augmentation, eps, tol, context):
  
     Parameters
     ----------
-    num_rings : int or None
-        Number of auxiliary center rings to use for least-squares
-        stencil weights. If not `None`, stored on `context` via
-        `context.set_centers`.
     basis : {'gaussian', 'cubic'}
         Name of the radial basis function to use.
     augmentation : bool
         Whether to augment the RBF interpolant with a polynomial basis
-    eps : float
-        Shape parameter for the Gaussian RBF (used only when
-        `basis == 'gaussian'`).
+    context : PDEDomainContext
+        Domain context to configure in place.
     tol : float
         Tolerance parameter passed to the cubic RBF anisotropic
         Laplacian (used only when `basis == 'cubic'`).
-    context : PDEDomainContext
-        Domain context to configure in place.
+    eps_fixed : float (optional)
+        Shape parameter for the Gaussian RBF (used only when
+        `basis == 'gaussian'`). If given, eps is fixed for every
+        stencil.
  
     Returns
     -------
@@ -1053,18 +1075,24 @@ def set_rbf_func(basis, augmentation, eps, tol, context):
     """
 
     context.set_augmentation(augmentation) 
-        
+ 
     if (basis == 'gaussian'):
-        context.set_phi(lambda p: rbf.phi_gauss(p, eps))
-        context.set_grad_phi(lambda p: rbf.grad_phi_gauss(p, eps))
-        context.set_laplacian_phi(
-            lambda p, A: rbf.anisotropic_diffusion_phi_gauss(p, A, eps))
+        if eps_fixed is None:
+            context.set_phi(lambda p, eps: rbf.phi_gauss(p, eps))
+            context.set_grad_phi(lambda p, eps: rbf.grad_phi_gauss(p, eps))
+            context.set_laplacian_phi(
+                lambda p, A, eps: rbf.anisotropic_diffusion_phi_gauss(p, A, eps))
+        else:
+            context.set_phi(lambda p, eps: rbf.phi_gauss(p, eps_fixed))
+            context.set_grad_phi(lambda p, eps: rbf.grad_phi_gauss(p, eps_fixed))
+            context.set_laplacian_phi(
+                lambda p, A, eps: rbf.anisotropic_diffusion_phi_gauss(p, A, eps_fixed))
         
     elif (basis == 'cubic'):
-        context.set_phi(rbf.phi_cubic)
-        context.set_grad_phi(rbf.grad_phi_cubic)
+        context.set_phi(lambda p, eps: rbf.phi_cubic(p))
+        context.set_grad_phi(lambda p, eps: rbf.grad_phi_cubic(p))
         context.set_laplacian_phi(
-            lambda p, A: rbf.anisotropic_diffusion_phi_cubic(p, A, tol))
+            lambda p, A, eps: rbf.anisotropic_diffusion_phi_cubic(p, A, tol))
         
     else:
         raise ValueError(f"'{basis}' is not a correct basis")
@@ -1132,7 +1160,7 @@ def set_boundary_func(g_bound, btype, shape, L, context):
     return g, in_boundary, normal_vec
 
 def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
-                  num_center_nodes, augmentation=False, A=None, eps=3.0, tol=1e-12,
+                  num_centers_info, augmentation=False, A=None, eps=3.0, tol=1e-12,
                   sparse=False, anchor_method="mean"):
     """
     Build the full RBF-FD linear system for a (possibly anisotropic) PDE.
@@ -1163,9 +1191,10 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
         Characteristic size of the domain (side length or radius).
     num_stencil_nodes : int
         Number of nearest neighbors used to build each node's stencil.
-    num_rings : int or None
-        Number of auxiliary center rings for least-squares stencil
-        weights; if `None`, direct collocation is used instead.
+    num_centers_info : int or None
+        Number of auxiliary center rings or centers per stencil for
+        least-squares stencil weights; if `None`,
+        direct collocation is used instead.
     augmentation : bool, optional
         Whether to augment RBF interpolants with a polynomial basis
         (default `False`).
@@ -1211,13 +1240,14 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     S = stencils.knn_list(P, num_stencil_nodes)
     C = None
     
-    if num_center_nodes is not None:
-        C = stencils.knn_list(P, num_center_nodes)
+    if num_centers_info is not None:
+        C = num_centers_info
+        #C = stencils.knn_list(P, num_centers_info)
     
     context = PDEDomainContext(P, S, C, A)    
     print('1) Nodes and Stencils Generated.')
 
-    set_rbf_func(basis, augmentation, eps, tol, context)
+    set_rbf_func(basis, augmentation, context, tol, eps)
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     
@@ -1358,150 +1388,3 @@ def coeff_matrix(nodes, eig_1, eig_2, angle):
     A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
     
     return A
-
-if __name__ == "__main__":
-    import geometry
-    # -----------------------------
-    # PARAMETERS
-    # -----------------------------
-    num_stencil_nodes = 25
-    num_rings = 10
-
-    rbf_shape = 'cubic'
-    augmentation = True
-    eps = 3.0
-    tol = 1e-12
-
-    Nx = 50
-    Ny = 50
-    L = 1.0
-
-    shape = 'square'
-
-    # -----------------------------
-    # BUILD NODES
-    # -----------------------------
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny)
-
-    # -----------------------------
-    # BUILD CONTEXT
-    # -----------------------------
-    S = stencils.knn_list(P, num_stencil_nodes)
-    context = PDEDomainContext(P,S,np.ones((len(P[0]), 1, 1))
-                               *np.eye(len(P[0])))
-
-    set_rbf_func(
-        num_rings=num_rings,
-        basis=rbf_shape,
-        augmentation=augmentation,
-        A=None,
-        eps=eps,
-        tol=tol,
-        context=context
-    )
-
-    # boundary functions
-    g, is_boundary, normal_vec = set_boundary_func(
-        g_bound=None,
-        btype=["neumann", "neumann", "neumann", "neumann"],
-        shape=shape,
-        L=L,
-        context=context
-    )
-
-    # -----------------------------
-    # FIND NEUMANN NODES
-    # -----------------------------
-    labels = [is_boundary(P[i]) == 'neumann' for i in range(len(P))]
-
-    print("Unique boundary labels:", set(labels))
-    print("Counts:",
-          {lab: labels.count(lab) for lab in set(labels)})
-    
-    neumann_nodes = [
-        i for i in range(len(P))
-        if is_boundary(P[i]) == "neumann"
-    ]
-
-    print(f"Neumann nodes: {len(neumann_nodes)}")
-
-    # -----------------------------
-    # ERROR STORAGE
-    # -----------------------------
-    err_const = []
-    err_x = []
-    err_y = []
-
-    # -----------------------------
-    # TEST LOOP
-    # -----------------------------
-    for i in neumann_nodes:
-        s = context.stencils[i]
-        w_grad = local_grad_ls(context, i)
-
-        n = normal_vec(P[i])
-        dir_derv = w_grad @ n
-
-        # stencil values
-        ones = np.ones(len(s))
-        x_s = P[s, 0]
-        y_s = P[s, 1]
-
-        Wx = w_grad[:,0]
-        Wy = w_grad[:,1]
-
-        # -------------------------
-        # REPRODUCTION TESTS
-        # -------------------------
-        err_const.append(abs(dir_derv @ ones))
-        err_x.append(abs(dir_derv @ x_s - n[0]))
-        err_y.append(abs(dir_derv @ y_s - n[1]))           
-
-    # -----------------------------
-    # REPORT
-    # -----------------------------
-    print("Neumann reproduction errors:")
-    
-    if len(err_const) == 0:
-        print("No Neumann nodes detected!")
-    else:
-        print("max error: ", np.max(err_const))
-
-    print(f"Max x-error:        {np.max(err_x):.3e}")
-    print(f"Max y-error:        {np.max(err_y):.3e}")
-       
-    plt.scatter(
-        P[neumann_nodes,0],
-        P[neumann_nodes,1],
-        c=err_const,
-        s=15,
-        cmap='viridis'
-    )
-    
-    plt.colorbar(label='Reproduction Error')
-    plt.axis('equal')
-    plt.show()
-    
-    plt.scatter(
-        P[neumann_nodes,0],
-        P[neumann_nodes,1],
-        c=err_x,
-        s=15,
-        cmap='viridis'
-    )
-    
-    plt.colorbar(label='Reproduction Error')
-    plt.axis('equal')    
-    plt.show()
-    
-    plt.scatter(
-        P[neumann_nodes,0],
-        P[neumann_nodes,1],
-        c=err_y,
-        s=15,
-        cmap='viridis'
-    )
-
-    plt.colorbar(label='Reproduction Error')
-    plt.axis('equal')    
-    plt.show()
