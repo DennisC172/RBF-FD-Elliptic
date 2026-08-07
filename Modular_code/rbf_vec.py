@@ -415,13 +415,13 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
     result = 3*r*(trA + quad/r_safe**2)
     return np.where(r < tol, 0.0, result)
 
-def stencil_eps(diff_P, coeff=0.10, tol=1e-12):
+def stencil_eps(diff_P, coeff=0.010, tol=1e-12):
     dist_M = np.linalg.norm(diff_P, axis=-1)
     sep = dist_M[dist_M > tol].min()
 
     dim = len(diff_P.shape)-1
 
-    return coeff/sep/np.sqrt(dim)
+    return coeff/sep
 
 def phi_gauss(p,eps):
     """

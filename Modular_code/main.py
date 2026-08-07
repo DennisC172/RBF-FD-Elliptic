@@ -141,11 +141,11 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 6
+    num_stencil_nodes = 8
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 2
+    num_centers = 5
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
@@ -154,13 +154,13 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 100
-    Ny = 100
+    Nx = 500
+    Ny = 500
     L = 1.0
     shape = 'square'
     
-    eps = 0.075*np.sqrt((Nx+2)*(Ny+2))
-    eps = 0.951745
+    eps = 0.00975*np.sqrt((Nx+2)*(Ny+2))
+    eps = 3.0
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
@@ -178,8 +178,8 @@ if __name__ == "__main__":
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    eig_1_str = "lambda p: 1e0"
-    eig_2_str = "lambda p: 1e-4"
+    eig_1_str = "lambda p: 1e4"
+    eig_2_str = "lambda p: 1e-0"
     angle_str = "lambda p: 18.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
