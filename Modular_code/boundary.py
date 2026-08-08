@@ -64,6 +64,28 @@ def in_square_boundary(p, L, btype, tol=1e-6):
     """
     
     x, y = p
+
+    # Provide Dirichlet corners if found
+    if abs(y) < tol and abs(x) < tol:
+        if btype[0] == 'dirichlet':
+            return btype[0]
+        else:
+            return btype[3]
+    elif (abs(x-L) < tol and abs(y) < tol):
+        if btype[0] == 'dirichlet':
+            return btype[0]
+        else:
+            return btype[1]
+    elif (abs(x-L) < tol and abs(y-L) < tol):
+        if btype[1] == 'dirichlet':
+            return btype[1]
+        else:
+            return btype[2]
+    elif (abs(x) < tol and abs(y-L) < tol):
+        if btype[2] == 'dirichlet':
+            return btype[2]
+        else:
+            return btype[3]
     
     if abs(y) < tol:
         return btype[0]

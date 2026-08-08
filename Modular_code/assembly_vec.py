@@ -153,15 +153,15 @@ def local_weights_ls(context, i, lam=0.0):
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
 
-        pdim = Pmat.shape(1)
+        pdim = Pmat.shape[1]
 
         M = np.block([
             [M, Cmat],
-            [Pmat.T, np.eye((pdim,pdim))]
+            [Pmat.T, np.zeros((pdim,pdim))]
         ])
         b = np.concatenate([
             b,
-            rbf.grad_poly(P[i])                 # (pdim, dim)
+            rbf.anisotropic_diffusion_poly(P[i])# (pdim, dim)
         ])
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
@@ -238,7 +238,7 @@ def local_grad_solve(context, i):
     w_grad = np.linalg.solve(R, y)
     return w_grad[:num_nodes,:], np.linalg.cond(M)
 
-def local_grad_ls(context, i, lam=0.0):
+def local_grad_ls(context, i, lam=1e-12):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -295,11 +295,11 @@ def local_grad_ls(context, i, lam=0.0):
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
 
-        pdim = Pmat.shape(1)
+        pdim = Pmat.shape[1]
 
         M = np.block([
             [M, Cmat],
-            [Pmat.T, np.eye((pdim, pdim))]
+            [Pmat.T, np.zeros((pdim,pdim))]
         ])
         b_grad = np.concatenate([
             b_grad,
@@ -380,6 +380,7 @@ def global_weights(context, in_boundary=None, normal_vec=None):
 
     cond_A = 0.0
     idx_c = 0
+    node_cond = ""
     
     for i,s in enumerate(S):
         num_stencil_nodes = len(s)
@@ -412,8 +413,9 @@ def global_weights(context, in_boundary=None, normal_vec=None):
         if kA > cond_A:
             idx_c = i
             cond_A = kA
+            node_cond = node_type
 
-    print(f"Max conditioning: {cond_A: e} at {idx_c}")     
+    print(f"Max conditioning: {cond_A: e} at {idx_c} ({node_cond})")     
     return W
 
 def global_weights_sparse(context, in_boundary=None, normal_vec=None):
@@ -504,9 +506,11 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
 
     cond_A = 0.0
     idx_c = 0
+    node_cond = ""
     
     for i,s in enumerate(S):
         node_type = in_boundary(P[i]) if in_boundary is not None else 'interior'
+        kA = 0.0
 
         if node_type == 'dirichlet':
             rows[ptr] = i
@@ -542,11 +546,12 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
         if kA > cond_A:
             idx_c = i
             cond_A = kA
+            node_cond = node_type
             
     W = sp.coo_matrix((vals[:ptr], (rows[:ptr], cols[:ptr])),
                       shape=(num_nodes, num_nodes))
 
-    print(f"Max conditioning: {cond_A: e} at {idx_c}")    
+    print(f"Max conditioning: {cond_A: e} at {P[idx_c]} ({node_cond})")      
     return W.tocsr()
 
 def global_grads(context):

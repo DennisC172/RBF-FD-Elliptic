@@ -127,10 +127,84 @@ def report_and_graph(context, u_exact, sparse=False):
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(X,Y,np.log10(np.maximum(error, 1e-16)),cmap='viridis', edgecolor='none', alpha=0.9)
-    plt.title(rf"""RBF-FD Approximate Error:""")
+    plt.title(rf"""RBF-FD Approximate Log Error:""")
     plt.xlabel("x-direction")
     plt.ylabel("y-direction")
     plt.show()'''
+
+def generate_adaptive_nodes(
+    n,
+    L=1.0,
+    delta=0.01,
+    concentration=0.7,
+    sharpness=1.0,
+    seed=None,
+):
+    """
+    Generate nodes in [0,L]^2 with increased density near the
+    sharp Gaussian regions x = 0.01L and x = 0.99L.
+
+    Parameters
+    ----------
+    n : int
+        Number of nodes.
+    L : float
+        Domain size.
+    delta : float
+        Gaussian width parameter appearing in the manufactured
+        solution exp(-(x-alpha)^2 / delta).
+    concentration : float
+        Fraction of nodes concentrated near the two sharp regions.
+        0 gives uniform nodes; 1 gives only concentrated nodes.
+    sharpness : float
+        Controls how tightly concentrated the adaptive nodes are.
+    seed : int or None
+        Random seed.
+
+    Returns
+    -------
+    P : ndarray, shape (n,2)
+        Generated nodes.
+    """
+    rng = np.random.default_rng(seed)
+
+    alpha = 0.01 * L
+    beta = L - alpha
+
+    n_adapt = int(concentration * n)
+    n_uniform = n - n_adapt
+
+    # Uniform background nodes
+    x_uniform = rng.uniform(0.0, L, n_uniform)
+    y_uniform = rng.uniform(0.0, L, n_uniform)
+
+    # Split adaptive nodes between the two Gaussian regions
+    n_left = n_adapt // 2
+    n_right = n_adapt - n_left
+
+    # Gaussian width.
+    # exp(-(x-alpha)^2/delta) has characteristic width sqrt(delta).
+    sigma = np.sqrt(delta) / sharpness
+
+    x_left = alpha + sigma * rng.standard_normal(n_left)
+    x_right = beta + sigma * rng.standard_normal(n_right)
+
+    # Keep points inside the domain
+    x_left = np.clip(x_left, 0.0, L)
+    x_right = np.clip(x_right, 0.0, L)
+
+    x_adapt = np.concatenate([x_left, x_right])
+    y_adapt = rng.uniform(0.0, L, n_adapt)
+
+    x = np.concatenate([x_uniform, x_adapt])
+    y = np.concatenate([y_uniform, y_adapt])
+
+    P = np.column_stack((x, y))
+
+    # Shuffle so the concentrated nodes aren't grouped together
+    rng.shuffle(P)
+
+    return P
 
 #%% Main Setup
 if __name__ == "__main__":
@@ -141,15 +215,15 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 8
+    num_stencil_nodes = 6
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 5
+    num_centers = 2
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
-    augmentation = False
+    augmentation = True
 
     # -----------------------------
     # BUILD NODES
@@ -159,7 +233,7 @@ if __name__ == "__main__":
     L = 1.0
     shape = 'square'
     
-    eps = 0.00975*np.sqrt((Nx+2)*(Ny+2))
+    #eps = 0.075*np.sqrt((Nx+2)*(Ny+2))
     eps = 3.0
     tol = 1e-12
 
@@ -178,9 +252,9 @@ if __name__ == "__main__":
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
-    eig_1_str = "lambda p: 1e4"
-    eig_2_str = "lambda p: 1e-0"
-    angle_str = "lambda p: 18.0/24.0*np.pi"
+    eig_1_str = "lambda p: 1e0"
+    eig_2_str = "lambda p: 1e-4"
+    angle_str = "lambda p: 12.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
     print(f'Angle = {angle_str}')
@@ -198,8 +272,11 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    print('====================Define Example and Refine:====================')
-    f, g, btype, u_exact = examples.example_2(eig_1, eig_2, angle, Amp, modes)
+    example_num = "10"
+    print(f'==================Define Example {example_num} and Refine:===================')
+
+    problem_fun = eval(f"examples.example_{example_num}")
+    f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes)
        
     '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,

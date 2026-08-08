@@ -771,6 +771,116 @@ def example_10(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
 
     return f, g, btype, u_exact
 
+def example_11(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
+    """
+    Spike-like manufactured solution with anisotropy and Dirichlet boundaries.
+
+    Exact solution:
+        .. math::
+            u(x,y) = c(y)*a(x)*b(x),
+
+        where a(x) are Gaussian bumps, b(x)=x^2*(L-x)^2,
+        and c(y)=2*Amp*sqrt(y+L/2).
+
+    Boundary conditions:
+        Dirichlet on the boundary.
+
+    Returns
+    -------
+    f : callable
+        Right-hand side :math:`f(x,y)`.
+    g : list of callables
+        Dirichlet boundary data in the order [y=0, x=L, y=L, x=0].
+    btype : list of str
+        Boundary condition types.
+    u_exact : callable
+        Exact solution :math:`u(x,y)`.
+    """
+    
+    alpha = 0.01*L
+    beta  = L-alpha
+        
+    def a(x,delta):
+        return (np.exp(-(x-alpha)**2/delta)+
+                np.exp(-(x- beta)**2/delta))
+    
+    def a_d(x,delta):
+        return (-2/delta*((x-alpha)*np.exp(-(x-alpha)**2/delta)+
+                       (x- beta)*np.exp(-(x- beta)**2/delta)))
+    
+    def a_dd(x,delta):
+        return (-2/delta*a(x, delta)+4/delta**2*
+                ((x-alpha)**2*np.exp(-(x-alpha)**2/delta)+
+                 (x- beta)**2*np.exp(-(x- beta)**2/delta)))
+    
+    def b(x):
+        return x**2*(L-x)**2
+    
+    def b_d(x):
+        return 2*x*(L**2-3*x*L+2*x**2)
+    
+    def b_dd(x):
+        return 2*L**2-12*x*L+12*x**2
+    
+    def c(y):
+        return 2.0*Amp*np.sqrt(y+L/2)
+    
+    def c_d(y):
+        return 1.0*Amp/np.sqrt(y+L/2)
+    
+    def c_dd(y):
+        return -1.0*Amp/2/np.sqrt(y+L/2)**3
+        
+    def u_xx(p,delta):
+        x,y = p
+        return c(y)*(a_dd(x,delta)*b(x)+2*a_d(x,delta)*b_d(x)+a(x,delta)*b_dd(x))
+    
+    def u_xy(p,delta):
+        x,y = p
+        return c_d(y)*(a_d(x,delta)*b(x)+a(x,delta)*b_d(x))
+    
+    def u_yy(p,delta):
+        x,y = p
+        return c_dd(y)*a(x,delta)*b(x)
+    
+    def u_exact(p,A):
+        x,y = p
+        delta = A[0,0]
+        return c(y)*a(x,delta)*b(x)
+    
+    def f(p,A):
+        delta = A[0,0]
+        return delta*u_xx(p,delta)+2*A[0,1]*u_xy(p,delta)+A[1,1]*u_yy(p,delta)
+    
+    def A11(x,y):
+        return (eig_1(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_2(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    def A12(x,y):
+        delta_eig = eig_1(np.array([x,y]))-eig_2(np.array([x,y]))
+        return (delta_eig*np.sin(angle(np.array([x,y])))*
+                          np.cos(angle(np.array([x,y]))))
+
+    def A22(x,y):
+        return (eig_2(np.array([x,y]))*(np.cos(angle(np.array([x,y])))**2)+
+                eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
+
+    g = [
+        lambda x: c(0.0)*a(x,A11(x,0.0))*b(x), #y=0
+        lambda y: 0.0,                         #x=L
+        lambda x: c(L)*a(x,A11(x,L))*b(x),     #y=L
+        lambda y: 0.0                          #x=0
+    ]
+    
+    btype = [
+        'dirichlet',
+        'dirichlet',
+        'dirichlet',
+        'dirichlet'
+    ]
+
+    return f, g, btype, u_exact
+
 # Radial Domain
 # Solution with 0-Dritichlet and forcing term (no nodes, matrices)
 def example_0(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
