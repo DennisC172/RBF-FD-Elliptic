@@ -223,18 +223,18 @@ if __name__ == "__main__":
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
-    augmentation = True
+    augmentation = False
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 500
-    Ny = 500
+    Nx = 100
+    Ny = 100
     L = 1.0
     shape = 'square'
     
     #eps = 0.075*np.sqrt((Nx+2)*(Ny+2))
-    eps = 3.0
+    eps = 0.951745
     tol = 1e-12
 
     print(f'Sparse Solve: {sparse}')
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    example_num = "10"
+    example_num = "2"
     print(f'==================Define Example {example_num} and Refine:===================')
 
     problem_fun = eval(f"examples.example_{example_num}")
