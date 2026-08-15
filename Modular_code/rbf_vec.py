@@ -9,135 +9,6 @@ Radial Basis functions and their respective elliptic operated functions
 
 import numpy as np
 
-# theta is a list of angles for (n+1)-dimensions
-def rad_to_euc(r, theta):
-    """
-    Convert hyperspherical coordinates to Euclidean coordinates.
-
-    Implements the standard recursive formula for converting an
-    n-sphere's (radius, angles) representation into Cartesian
-    coordinates in (n+1)-dimensional space:
-
-        x_0 = r * cos(theta_0)
-        x_1 = r * sin(theta_0) * cos(theta_1)
-        x_2 = r * sin(theta_0) * sin(theta_1) * cos(theta_2)
-        ...
-        x_{n-1} = r * sin(theta_0) * ... * sin(theta_{n-2}) * cos(theta_{n-1})
-        x_n     = r * sin(theta_0) * ... * sin(theta_{n-2}) * sin(theta_{n-1})
-
-    At each step `i`, the "remaining radius" `rho` (the magnitude of
-    the as-yet-undistributed coordinate) is split into a cosine
-    component (which finalizes coordinate `i`) and a sine component
-    (which becomes the remaining radius carried into the next angle).
-    After processing all angles in `theta`, the final remaining radius
-    is appended as the last coordinate.
-
-    For a single angle (`len(theta) == 1`), this reduces to standard
-    2D polar-to-Cartesian conversion: `[r*cos(theta), r*sin(theta)]`.
-
-    Parameters
-    ----------
-    r : float
-        Radius (distance from the origin).
-    theta : list of float
-        Angles parameterizing the direction on the (n)-sphere, for a
-        point in (n+1)-dimensional space. `len(theta)` determines the
-        number of angles consumed; the output has `len(theta) + 1`
-        coordinates.
-
-    Returns
-    -------
-    list of float
-        Cartesian coordinates corresponding to `(r, theta)`, of length
-        `len(theta) + 1`.
-    """
-    
-    point = [r]
-    
-    for i in range(len(theta)):
-        rho = point[i]
-        point[i] *= np.cos(theta[i])
-        point.append(rho * np.sin(theta[i]))
-        
-    return point
-
-def rad_to_euc_2d(r, theta):
-    """
-    Convert 2D radial coordinates to Euclidean coordinates.
-
-    Implements the (radius, angle) representation into Cartesian
-    coordinates in 2-dimensional space:
-
-        x_0 = r * cos(theta)
-        x_1 = r * sin(theta)
-
-    Parameters
-    ----------
-    r : float
-        Radius (distance from the origin).
-    theta : float
-        Angle parameterizing the direction on the disk.
-
-    Returns
-    -------
-    list of float
-        Cartesian coordinates corresponding to `(r, theta)`, of length
-        `2`.
-    """
-            
-    return [r * np.cos(theta), r * np.sin(theta)]
-
-# Generates off-radial grid structure for robustness
-# r := radius of ball
-# k := number of rings (excluding center)
-def generate_grid_2d(r, k):
-    """
-    Generate a 2D polar grid of auxiliary collocation centers.
-
-    Builds a set of points filling a disk of radius `r`, arranged as
-    `k` concentric rings (at radii `h, 2h, ..., k*h = r`, where
-    `h = r/k`) plus a single point at the origin. The number of
-    angular samples on each ring is chosen so that the arc-length
-    spacing between neighboring points on that ring is approximately
-    `h`, matching the radial spacing; this gives a roughly uniform
-    (not purely radial) distribution of points across the disk,
-    intended to make least-squares RBF-FD weight computations more
-    robust than a purely radial sampling pattern.
-
-    Parameters
-    ----------
-    r : float
-        Radius of the disk (typically set to the stencil radius for a
-        given node).
-    k : int
-        Number of concentric rings to generate, excluding the center
-        point (which is always included once, in addition to the `k`
-        rings).
-
-    Returns
-    -------
-    numpy.ndarray, shape (num_centers, 2)
-        Cartesian coordinates of the generated auxiliary centers,
-        relative to the origin (i.e. these are offsets, intended to be
-        added to a stencil's center node coordinate by the caller).
-    """
-    
-    centers = []
-    h = r/k
-    rings = int(r/h)
-
-    for i in range(1,rings+1):
-        radius = i*h
-        angle_steps = max(1, int(round(2*np.pi * radius / h)))
-        
-        for j in range(angle_steps):
-            theta = 2*np.pi*j/angle_steps
-            
-            centers.append(rad_to_euc_2d(radius, theta))
-
-    centers.append(rad_to_euc_2d(0.0,0.0))
-    return np.array(centers)
-
 def poly_basis(p):
     """
     Evaluate the linear polynomial augmentation basis at one or more
@@ -415,9 +286,9 @@ def anisotropic_diffusion_phi_cubic(p,A,tol=1e-12):
     result = 3*r*(trA + quad/r_safe**2)
     return np.where(r < tol, 0.0, result)
 
-def stencil_eps(diff_P, coeff=0.0010, tol=1e-12):
+def stencil_eps(diff_P, coeff=0.050, tol=1e-12):
     dist_M = np.linalg.norm(diff_P, axis=-1)
-    sep = dist_M[dist_M > tol].min()
+    sep = dist_M[dist_M > tol].max()
 
     return coeff/sep
 

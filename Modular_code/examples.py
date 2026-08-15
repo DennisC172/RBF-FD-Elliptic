@@ -8,6 +8,7 @@ Example Case Studies for Anisotropic Elliptic PDEs
 """
 
 import numpy as np
+import sympy as sp
 import scipy.integrate as integrate
 
 # Square domain example
@@ -70,7 +71,7 @@ def example_1(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
         else:
             return L - x
     
-    def u_exact(p, fourier_terms=100):
+    def u_exact(p, A, fourier_terms=100):
         """
         Evaluates the exact solution u(x,y) for the Poisson problem.
         Uses clean if/else defensive logic instead of try/except.
@@ -114,7 +115,7 @@ def example_1(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=[1.0,1.0],L=1.0):
         return u_particular + u_homogeneous
     
     # RHS function
-    def f(p):
+    def f(p, A):
         x, y = p
         alpha, beta = modes
         
@@ -882,77 +883,269 @@ def example_11(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
     return f, g, btype, u_exact
 
 # Radial Domain
-# Solution with 0-Dritichlet and forcing term (no nodes, matrices)
-def example_0(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
+# Solution with 0-Dritichlet and forcing term
+def example_00(eig_1=None, eig_2=None, angle=None, Amp=1.0, modes=None, L=1.0):
     """
-    Poisson problem on the unit disk with zero Dirichlet boundary conditions.
+    Poisson problem on the disk of radius L with zero Dirichlet boundary conditions.
 
     PDE:
         .. math::
-            \\Delta u = -2\\pi^2 \sin(\\pi x)\sin(\\pi y).
+            \\nabla \\cdot (A \\nabla u) = -Amp \\big[
+                \\sin(k_x x)\\sin(k_y y) + \\sin(k_y x)\\sin(k_x y)
+                + C_{coeff}\\cos(k_x x)\\cos(k_y y)
+                + D_{coeff}\\cos(k_y x)\\cos(k_x y) \\big]
+
+    where A = [[A11, A12], [A12, A22]] is the (spatially constant) anisotropic
+    diffusion tensor built from eig_1, eig_2, angle.
 
     Exact solution:
         Particular solution minus a Fourier-series homogeneous correction
-        expressed in polar coordinates.
+        (expressed in polar coordinates) chosen so that u = 0 on r = L.
 
     Boundary conditions:
-        Dirichlet: u = 0 on r = R.
+        Dirichlet: u = 0 on r = L (single boundary segment; the disk has no
+        separate x/y sides).
 
     Returns
     -------
     f : callable
-        Right-hand side :math:`f(x,y)`.
+        Right-hand side f(p) with p = (x, y).
     g : list of callables
-        Dirichlet boundary data in the order [y=0, x=1, y=1, x=0].
+        Dirichlet boundary data (single entry: u = 0 on r = L).
     btype : list of str
         Boundary condition types (all Dirichlet).
     u_exact : callable
-        Exact solution :math:`u(x,y)`.
+        Exact solution u(p).
     """
-    
+
+    def A11(x, y):
+        return (eig_1(np.array([x, y])) * np.cos(angle(np.array([x, y])))**2 +
+                eig_2(np.array([x, y])) * np.sin(angle(np.array([x, y])))**2)
+
+    def A12(x, y):
+        delta_eig = eig_1(np.array([x, y])) - eig_2(np.array([x, y]))
+        return (delta_eig * np.sin(angle(np.array([x, y]))) *
+                            np.cos(angle(np.array([x, y]))))
+
+    def A22(x, y):
+        return (eig_2(np.array([x, y])) * np.cos(angle(np.array([x, y])))**2 +
+                eig_1(np.array([x, y])) * np.sin(angle(np.array([x, y])))**2)
+
+    alpha, beta = modes
+    kx = alpha * np.pi / L
+    ky = beta * np.pi / L
+
+    def _coeffs(x, y):
+        """Local A11, A12, A22 and the particular-solution amplitude coefficients."""
+        a11 = A11(x, y)
+        a12 = A12(x, y)
+        a22 = A22(x, y)
+        A_coef = Amp / (kx**2 * a11 + ky**2 * a22)
+        B_coef = Amp / (ky**2 * a11 + kx**2 * a22)
+        return a11, a12, a22, A_coef, B_coef
+
+    def _u_particular(x, y):
+        _, _, _, A_coef, B_coef = _coeffs(x, y)
+        return (A_coef * np.sin(kx * x) * np.sin(ky * y) +
+                B_coef * np.sin(ky * x) * np.sin(kx * y))
+
     def u_exact(p, A=None, max_modes=12):
         """
-        Corrected analytical solution for Delta u = -2pi^2 sin(pi x) sin(pi y)
-        on a unit circle with 0-Dirichlet using a Sine Fourier Expansion.
+        Analytical solution via particular solution minus a sine-Fourier
+        homogeneous correction that enforces u = 0 on r = L.
         """
         X_nodes, Y_nodes = p
-        # Convert Cartesian input nodes to Polar coordinates
         R_nodes = np.sqrt(X_nodes**2 + Y_nodes**2)
         Theta_nodes = np.arctan2(Y_nodes, X_nodes)
-        
-        # 1. Particular Solution Component: Up = sin(pi x) * sin(pi y)
-        u_particular = np.sin(np.pi * X_nodes) * np.sin(np.pi * Y_nodes)
-        
-        # 2. Homogeneous Correction Component: Uh = Sum (B_n*r^n*sin(n*theta))
-        u_homogeneous = np.zeros_like(X_nodes)
-        
-        # Pre-calculate Fourier coefficients B_n via numerical integration
+
+        u_particular = _u_particular(X_nodes, Y_nodes)
+
+        # Homogeneous correction: Sum_n B_n * (r/L)^n * sin(n*theta), where
+        # B_n are the sine-Fourier coefficients of u_particular restricted
+        # to the boundary r = L (as a function of theta).
+        u_homogeneous = np.zeros_like(X_nodes, dtype=float)
+
         for n in range(1, max_modes + 1):
-            # Boundary integrand matching the odd symmetry profile
-            integrand = lambda t: (np.sin(np.pi * np.cos(t)) *
-                                   np.sin(np.pi * np.sin(t)) * np.sin(n * t))
-            
-            # Integrate from 0 to 2*pi
+            def integrand(t, n=n):
+                xb, yb = L * np.cos(t), L * np.sin(t)
+                return _u_particular(xb, yb) * np.sin(n * t)
+
             coeff, _ = integrate.quad(integrand, 0, 2 * np.pi)
             B_n = coeff / np.pi
-                
-            # Add mode contribution to all points: B_n * r^n * sin(n * theta)
-            u_homogeneous += B_n * (R_nodes**n) * np.sin(n * Theta_nodes)
-            
-        # Total Solution = Particular - Homogeneous Boundary Correction
+
+            u_homogeneous += B_n * (R_nodes / L) ** n * np.sin(n * Theta_nodes)
+
         return u_particular - u_homogeneous
-    
-    # RHS function
-    def f(p,A=None):
-        x,y = p
-        
-        return - 2 * np.pi**2 * np.sin(np.pi * x) * np.sin(np.pi * y)
-    
+
+    def f(p, A):
+        x, y = p
+        a11  = A[0,0]
+        a12  = A[0,1]
+        a22  = A[1,1]
+
+        # Mixed-derivative coefficients
+        C_coeff = -2 * kx * ky * a12 / (kx**2 * a11 + ky**2 * a22)
+        D_coeff = -2 * kx * ky * a12 / (ky**2 * a11 + kx**2 * a22)
+
+        return -Amp * (
+            np.sin(kx * x) * np.sin(ky * y)
+            + np.sin(ky * x) * np.sin(kx * y)
+            + C_coeff * np.cos(kx * x) * np.cos(ky * y)
+            + D_coeff * np.cos(ky * x) * np.cos(kx * y)
+        )
+
     def g(p):
         return 0.0
-    
-    btype = [
-        'dirichlet'       
-    ]
-    
+
+    btype = ['dirichlet']  # single boundary: r = L
+
+    return f, g, btype, u_exact
+
+def example_01(eig_1, eig_2, angle, Amp=1.0, modes=None, L=1.0):
+    """
+    Spike-like manufactured solution with anisotropy and Dirichlet boundaries.
+
+    Exact solution:
+        .. math::
+            u(x,y) = a(p,\\delta)\\,b(p)\\,c(p), \\quad p=(x,y),\\ r^2=x^2+y^2
+
+        where:
+            a(p,delta) = exp(-(r^2 - alpha^2)^2 / delta),  alpha = 0.99*L
+            b(p)       = (L^2 - r^2)^2
+            c(p)       = y / r   (regularized as y / sqrt(r^2 + eps^2))
+
+    Boundary conditions:
+        Dirichlet: u = 0 on r = L (b(p) vanishes there exactly).
+
+    Returns
+    -------
+    f : callable
+        Right-hand side f(p, A).
+    g : list of callables
+        Dirichlet boundary data (single entry: u = 0 on r = L).
+    btype : list of str
+        Boundary condition types.
+    u_exact : callable
+        Exact solution u(p, A).
+    """
+
+    alpha = 0.99 * L
+    eps = 1e-8 * L  # regularizes c = y/r at the origin
+
+    def _r2(x, y):
+        return x**2 + y**2
+
+    def _reps(x, y):
+        return np.sqrt(_r2(x, y) + eps**2)
+
+    # ---------------- a(p,delta) = exp(-(r^2-alpha^2)^2/delta) ----------------
+    def a(x, y, delta):
+        return np.exp(-(_r2(x, y) - alpha**2)**2 / delta)
+
+    def a_dx(x, y, delta):
+        r2 = _r2(x, y)
+        return -4 * x * (r2 - alpha**2) / delta * a(x, y, delta)
+
+    def a_dy(x, y, delta):
+        r2 = _r2(x, y)
+        return -4 * y * (r2 - alpha**2) / delta * a(x, y, delta)
+
+    def a_ddx(x, y, delta):
+        r2 = _r2(x, y)
+        return (-4 * (r2 - alpha**2) / delta - 8 * x**2 / delta
+                + 16 * x**2 * (r2 - alpha**2)**2 / delta**2) * a(x, y, delta)
+
+    def a_ddy(x, y, delta):
+        r2 = _r2(x, y)
+        return (-4 * (r2 - alpha**2) / delta - 8 * y**2 / delta
+                + 16 * y**2 * (r2 - alpha**2)**2 / delta**2) * a(x, y, delta)
+
+    def a_dxy(x, y, delta):
+        r2 = _r2(x, y)
+        return (-8 * x * y / delta
+                + 16 * x * y * (r2 - alpha**2)**2 / delta**2) * a(x, y, delta)
+
+    # ---------------- b(p) = (L^2 - r^2)^2 ----------------
+    def b(x, y):
+        return (L**2 - _r2(x, y))**2
+
+    def b_dx(x, y):
+        return -4 * x * (L**2 - _r2(x, y))
+
+    def b_dy(x, y):
+        return -4 * y * (L**2 - _r2(x, y))
+
+    def b_ddx(x, y):
+        return -4 * (L**2 - _r2(x, y)) + 8 * x**2
+
+    def b_ddy(x, y):
+        return -4 * (L**2 - _r2(x, y)) + 8 * y**2
+
+    def b_dxy(x, y):
+        return 8 * x * y
+
+    # ---------------- c(p) = y / r_eps ----------------
+    def c(x, y):
+        return y / _reps(x, y)
+
+    def c_dx(x, y):
+        return -x * y / _reps(x, y)**3
+
+    def c_dy(x, y):
+        reps = _reps(x, y)
+        return 1.0 / reps - y**2 / reps**3
+
+    def c_ddx(x, y):
+        reps = _reps(x, y)
+        return -y / reps**3 + 3 * x**2 * y / reps**5
+
+    def c_ddy(x, y):
+        reps = _reps(x, y)
+        return -3 * y / reps**3 + 3 * y**3 / reps**5
+
+    def c_dxy(x, y):
+        reps = _reps(x, y)
+        return -x / reps**3 + 3 * x * y**2 / reps**5
+
+    # ---------------- second partials of u = a*b*c (full product rule) ----------------
+    def u_xx(p, delta):
+        x, y = p
+        A_, Ax, Axx = a(x, y, delta), a_dx(x, y, delta), a_ddx(x, y, delta)
+        B_, Bx, Bxx = b(x, y), b_dx(x, y), b_ddx(x, y)
+        C_, Cx, Cxx = c(x, y), c_dx(x, y), c_ddx(x, y)
+        return (Axx * B_ * C_ + A_ * Bxx * C_ + A_ * B_ * Cxx
+                + 2 * Ax * Bx * C_ + 2 * Ax * B_ * Cx + 2 * A_ * Bx * Cx)
+
+    def u_yy(p, delta):
+        x, y = p
+        A_, Ay, Ayy = a(x, y, delta), a_dy(x, y, delta), a_ddy(x, y, delta)
+        B_, By, Byy = b(x, y), b_dy(x, y), b_ddy(x, y)
+        C_, Cy, Cyy = c(x, y), c_dy(x, y), c_ddy(x, y)
+        return (Ayy * B_ * C_ + A_ * Byy * C_ + A_ * B_ * Cyy
+                + 2 * Ay * By * C_ + 2 * Ay * B_ * Cy + 2 * A_ * By * Cy)
+
+    def u_xy(p, delta):
+        x, y = p
+        A_, Ax, Ay, Axy = a(x, y, delta), a_dx(x, y, delta), a_dy(x, y, delta), a_dxy(x, y, delta)
+        B_, Bx, By, Bxy = b(x, y), b_dx(x, y), b_dy(x, y), b_dxy(x, y)
+        C_, Cx, Cy, Cxy = c(x, y), c_dx(x, y), c_dy(x, y), c_dxy(x, y)
+        return (Axy * B_ * C_ + A_ * Bxy * C_ + A_ * B_ * Cxy
+                + Ax * By * C_ + Ax * B_ * Cy
+                + Ay * Bx * C_ + A_ * Bx * Cy
+                + Ay * B_ * Cx + A_ * By * Cx)
+
+    def u_exact(p, A):
+        x, y = p
+        delta = A[0, 0]
+        return a(x, y, delta) * b(x, y) * c(x, y)
+
+    def f(p, A):
+        delta = A[0, 0]
+        return A[0, 0] * u_xx(p, delta) + 2 * A[0, 1] * u_xy(p, delta) + A[1, 1] * u_yy(p, delta)
+
+    def g(p):
+        return 0.0
+
+    btype = ['dirichlet']  # single boundary: r = L
+
     return f, g, btype, u_exact

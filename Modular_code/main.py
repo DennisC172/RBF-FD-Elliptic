@@ -213,47 +213,50 @@ if __name__ == "__main__":
     # -----------------------------
     print('========================Define Parameters:========================')
     sparse = True
+
+    # Define the problem
+    example_num = "01"
     
     # Define the nodes per stencil
-    num_stencil_nodes = 6
+    num_stencil_nodes = 10
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 2
+    num_centers = 3
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
+    eps = None
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 100
-    Ny = 100
+    Nx = 200
     L = 1.0
-    shape = 'square'
-    
-    #eps = 0.075*np.sqrt((Nx+2)*(Ny+2))
-    eps = 0.951745
-    tol = 1e-12
+    shape = 'circle'
 
+    if shape == 'circle':
+        P = geometry.quasi_circle(L, Nx)
+        Nx = 2*Nx+1
+    elif shape == 'square':
+        P, num_int = geometry.uniform_int_square(L, Nx, Nx)
+    
+    print("Node array shape: "+str(P.shape))    
     print(f'Sparse Solve: {sparse}')
-    print(f'Nx = {Nx}, Ny = {Ny}')
+    print(f'Nx = {Nx}, Ny = {Nx}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
     print(f'Number of Center Rings   = {num_centers}')
-    print(f'eps  =  {eps}, and  tol  = {tol}')
+    print(f'Inverse Length Scale     = {eps}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
-    
-    P, num_int = geometry.uniform_int_square(L, Nx, Ny, 1)
-    print("Node array shape: "+str(P.shape))
-    
+        
     # -----------------------------
     # ANISOTROPY AND PDE PROPERTIES
     # -----------------------------    
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
-    eig_2_str = "lambda p: 1e-4"
+    eig_2_str = "lambda p: 1e-2"
     angle_str = "lambda p: 12.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
@@ -267,21 +270,20 @@ if __name__ == "__main__":
     
     # Forcing term parameters
     Amp = 1e3
-    modes = [1.0,1.0]
+    modes = [1.0,2.0]
     
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
     # -----------------------------
-    example_num = "2"
-    print(f'==================Define Example {example_num} and Refine:===================')
+    print(f'==================Define Example {example_num} and Refine:====================')
 
     problem_fun = eval(f"examples.example_{example_num}")
     f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes)
        
     '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
-                                   eig_1, eig_2, angle, eps, tol,
-                                   sparse, max_iter=25, alpha=1e-4, tangle_frac=0.5,
+                                   eig_1, eig_2, angle, eps, sparse, max_iter=25,
+                                   alpha=1e-4, tangle_frac=0.5,
                                    relax=1.0, verbose=True)
 
     print('Nodes Refined.')'''
@@ -293,7 +295,7 @@ if __name__ == "__main__":
     print('========================Assemble System:==========================')
     context = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
                                      num_stencil_nodes, num_centers, augmentation,
-                                     A=A,eps=eps, tol=1e-8, sparse=sparse)
+                                     A=A, eps=eps, sparse=sparse)
     
     # Display results
     print('===============Solve, Report and Graph Results:===================')

@@ -15,6 +15,87 @@ from domain import PDEDomainContext
 import stencils
 import rbf_vec as rbf
 import boundary
+import geometry
+
+def plot_stencil_centers(nodes, centers, p_i):
+    """
+    Plot local stencil nodes, RBF centers, and the evaluation node p_i.
+
+    Parameters
+    ----------
+    nodes : (N, 2) ndarray
+        Coordinates of the stencil nodes.
+
+    centers : (M, 2) ndarray
+        Coordinates of the RBF centers.
+
+    p_i : (2,) ndarray
+        The ith/evaluation node.
+    """
+
+    nodes = np.asarray(nodes)
+    centers = np.asarray(centers)
+    p_i = np.asarray(p_i)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    # Stencil nodes
+    ax.scatter(
+        nodes[:, 0],
+        nodes[:, 1],
+        s=60,
+        marker="o",
+        label=f"Stencil nodes ({len(nodes)})"
+    )
+
+    # RBF centers
+    ax.scatter(
+        centers[:, 0],
+        centers[:, 1],
+        s=90,
+        marker="x",
+        label=f"Centers ({len(centers)})"
+    )
+
+    # Evaluation node
+    ax.scatter(
+        p_i[0],
+        p_i[1],
+        s=200,
+        marker="*",
+        label=r"$P_i$"
+    )
+
+    # Annotate stencil nodes
+    for j, p in enumerate(nodes):
+        ax.annotate(
+            f"$P_{j}$",
+            (p[0], p[1]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=9
+        )
+
+    # Annotate centers
+    for j, c in enumerate(centers):
+        ax.annotate(
+            f"$C_{j}$",
+            (c[0], c[1]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=9
+        )
+
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("$y$")
+    ax.set_title("RBF-FD stencil and centers")
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(True, alpha=0.25)
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
 
 def local_weights_solve(context, i):
     """
@@ -139,8 +220,10 @@ def local_weights_ls(context, i, lam=0.0):
     k = context.centers_info
     dP_norm = np.linalg.norm(Ps - P[i], axis=1)
     r_max   = np.max(dP_norm)
-    points  = rbf.generate_grid_2d(r_max, k)
+    points  = geometry.quasi_circle(1.5*r_max, k)
     Cs      = P[i] + points
+
+    #plot_stencil_centers(Ps, Cs, P[i])
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
     eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
@@ -167,6 +250,11 @@ def local_weights_ls(context, i, lam=0.0):
     #print(f"Conditioning: {np.linalg.cond(M): e}")
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
+    '''print(filt)
+    print(U)
+    print("\n")
+    print(Vt.T)
+    print("\n\n\n\n\n")'''
     w = Vt.T @ (filt * (U.T @ b))
     return w[:num_nodes], np.linalg.cond(M)
     
@@ -238,7 +326,7 @@ def local_grad_solve(context, i):
     w_grad = np.linalg.solve(R, y)
     return w_grad[:num_nodes,:], np.linalg.cond(M)
 
-def local_grad_ls(context, i, lam=1e-12):
+def local_grad_ls(context, i, lam=0.0):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -281,8 +369,10 @@ def local_grad_ls(context, i, lam=1e-12):
     k = context.centers_info
     dP_norm = np.linalg.norm(Ps - P[i], axis=1)
     r_max   = np.max(dP_norm)
-    points  = rbf.generate_grid_2d(r_max, k)
+    points  = geometry.quasi_circle(1.5*r_max, k)
     Cs      = P[i] + points
+
+    #plot_stencil_centers(Ps, Cs, P[i])
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
     eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
@@ -309,6 +399,11 @@ def local_grad_ls(context, i, lam=1e-12):
     #print(f"Conditioning: {np.linalg.cond(M): e}")
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
+    '''print(filt)
+    print(U)
+    print("\n")
+    print(Vt.T)
+    print("\n\n\n\n\n")'''
     w = Vt.T @ (filt[:, None] * (U.T @ b_grad))
     return w[:num_nodes,:], np.linalg.cond(M)
 

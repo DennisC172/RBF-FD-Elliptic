@@ -51,7 +51,7 @@ def uniform_square(L, Nx, Ny):
     XX, YY = np.meshgrid(x,y)
     X = np.ravel(XX)
     Y = np.ravel(YY)
-    return np.column_stack((X,Y))
+    return np.column_stack((X,Y)), (Nx-2)*(Ny-2)
 
 def uniform_int_square(L, Nx_int, Ny_int, h_ratio=1):
     """
@@ -142,16 +142,19 @@ def cheby_square(L, Nx, Ny):
         Side length of the square domain `[0, L] x [0, L]`.
     Nx : int
         Number of Chebyshev intervals along the x-direction; produces
-        `Nx + 1` nodes along x (including both endpoints).
+        `Nx + 2` nodes along x (including both endpoints).
     Ny : int
         Number of Chebyshev intervals along the y-direction; produces
-        `Ny + 1` nodes along y (including both endpoints).
+        `Ny + 2` nodes along y (including both endpoints).
 
     Returns
     -------
-    numpy.ndarray, shape ((Nx+1)*(Ny+1), 2)
+    numpy.ndarray, shape ((Nx+2)*(Ny+2), 2)
         Coordinates of every grid point, in row-major (`meshgrid`/
         `ravel`) order.
+    num_interior : int
+        Number of interior points (`Nx * Ny`), i.e. the index
+        at which the boundary points begin in `points`.
 
     Notes
     -----
@@ -165,75 +168,144 @@ def cheby_square(L, Nx, Ny):
     performed here.
     """
     # Interior points (exclude boundary)
-    x_int = (np.cos(np.linspace(0, Nx, Nx+1)*np.pi/Nx)+1)*L/2
-    y_int = (np.cos(np.linspace(0, Ny, Ny+1)*np.pi/Ny)+1)*L/2
+    x_int = (np.cos(np.linspace(0, Nx, Nx+2)*np.pi/Nx)+1)*L/2
+    y_int = (np.cos(np.linspace(0, Ny, Ny+2)*np.pi/Ny)+1)*L/2
     XX, YY = np.meshgrid(x_int, y_int)
     domain = np.column_stack((XX.ravel(), YY.ravel()))
-    return domain
+    return domain, Nx*Ny
 
-
-def circular_geometry(R, Nx, Ny, num_bound=100):
+# theta is a list of angles for (n+1)-dimensions
+def rad_to_euc(r, theta):
     """
-    Generate a grid-based interior point set plus a separate ring of
-    boundary points for a disk domain.
+    Convert hyperspherical coordinates to Euclidean coordinates.
 
-    Interior points are taken from a uniform `Nx` by `Ny` Cartesian
-    grid over the bounding box `[-R, R] x [-R, R]`, keeping only those
-    grid points strictly inside the disk of radius `R` (using a strict
-    `<` comparison, so grid points lying exactly on the boundary
-    circle are excluded from the interior set). Boundary points are
-    generated independently and exactly on the circle, as `num_bound`
-    equally spaced angular samples (not including the duplicate
-    endpoint at `theta = 2*pi`). The interior and boundary point sets
-    are concatenated, interior points first.
+    Implements the standard recursive formula for converting an
+    n-sphere's (radius, angles) representation into Cartesian
+    coordinates in (n+1)-dimensional space:
+
+        x_0 = r * cos(theta_0)
+        x_1 = r * sin(theta_0) * cos(theta_1)
+        x_2 = r * sin(theta_0) * sin(theta_1) * cos(theta_2)
+        ...
+        x_{n-1} = r * sin(theta_0) * ... * sin(theta_{n-2}) * cos(theta_{n-1})
+        x_n     = r * sin(theta_0) * ... * sin(theta_{n-2}) * sin(theta_{n-1})
+
+    At each step `i`, the "remaining radius" `rho` (the magnitude of
+    the as-yet-undistributed coordinate) is split into a cosine
+    component (which finalizes coordinate `i`) and a sine component
+    (which becomes the remaining radius carried into the next angle).
+    After processing all angles in `theta`, the final remaining radius
+    is appended as the last coordinate.
+
+    For a single angle (`len(theta) == 1`), this reduces to standard
+    2D polar-to-Cartesian conversion: `[r*cos(theta), r*sin(theta)]`.
+
+    Parameters
+    ----------
+    r : float
+        Radius (distance from the origin).
+    theta : list of float
+        Angles parameterizing the direction on the (n)-sphere, for a
+        point in (n+1)-dimensional space. `len(theta)` determines the
+        number of angles consumed; the output has `len(theta) + 1`
+        coordinates.
+
+    Returns
+    -------
+    list of float
+        Cartesian coordinates corresponding to `(r, theta)`, of length
+        `len(theta) + 1`.
+    """
+    
+    point = [r]
+    
+    for i in range(len(theta)):
+        rho = point[i]
+        point[i] *= np.cos(theta[i])
+        point.append(rho * np.sin(theta[i]))
+        
+    return point
+
+def rad_to_euc_2d(r, theta):
+    """
+    Convert 2D radial coordinates to Euclidean coordinates.
+
+    Implements the (radius, angle) representation into Cartesian
+    coordinates in 2-dimensional space:
+
+        x_0 = r * cos(theta)
+        x_1 = r * sin(theta)
+
+    Parameters
+    ----------
+    r : float
+        Radius (distance from the origin).
+    theta : float
+        Angle parameterizing the direction on the disk.
+
+    Returns
+    -------
+    list of float
+        Cartesian coordinates corresponding to `(r, theta)`, of length
+        `2`.
+    """
+            
+    return [r * np.cos(theta), r * np.sin(theta)]
+
+def quasi_circle(R, num_rings, h_ratio=1):
+    """
+    Generate a 2D polar grid of auxiliary collocation centers.
+
+    Builds a set of points filling a disk of radius `R`, arranged as
+    `num_rings` concentric rings (at radii `h, 2h, ..., k*h = R`, where
+    `h = R/num_rings`) plus a single point at the origin. The number of
+    angular samples on each ring is chosen so that the arc-length
+    spacing between neighboring points on that ring is approximately
+    `h`, matching the radial spacing; this gives a roughly uniform
+    (not purely radial) distribution of points across the disk.
 
     Parameters
     ----------
     R : float
-        Radius of the disk domain, centered at the origin.
-    Nx : int
-        Number of grid points along the x-direction of the bounding
-        box `[-R, R]`, before filtering to the interior of the disk.
-    Ny : int
-        Number of grid points along the y-direction of the bounding
-        box `[-R, R]`, before filtering to the interior of the disk.
-    num_bound : int, optional
-        Number of equally spaced points placed on the boundary circle
-        (default `100`).
+        Radius of the disk.
+    num_rings : int
+        Number of concentric rings to generate, excluding the center
+        point (which is always included once, in addition to the
+        'num_rings').
+    h_ratio : int (optional)
+        Ratio of number of number of boundary nodes vs standard number
+        of boundary nodes for a quasi-uniform mesh
 
     Returns
     -------
-    numpy.ndarray, shape (num_interior + num_bound, 2)
-        Concatenated array of interior grid points (those strictly
-        inside the disk) followed by boundary circle points. The
-        number of interior points is not returned separately by this
-        function (unlike `uniform_int_square`), so callers needing the
-        split must recompute or infer it (e.g. as `len(result) -
-        num_bound`).
-
-    Notes
-    -----
-    Because the interior point set comes from a Cartesian grid rather
-    than a disk-conforming mesh, the spacing of interior points near
-    the boundary is generally not consistent with the spacing of the
-    `num_bound` points placed exactly on the circle; the two point
-    sets are independently generated and simply concatenated.
+    numpy.ndarray, shape (nodes, 2)
+        Cartesian coordinates of the generated auxiliary nodes,
+        relative to the origin.
     """
-    x = np.linspace(-R,R,Nx)
-    y = np.linspace(-R,R,Ny)
-    # Generating Grid
-    XX, YY = np.meshgrid(x,y)
-    X_ravel = np.ravel(XX)
-    Y_ravel = np.ravel(YY)
-    # Interior
-    index_mask = (X_ravel**2+Y_ravel**2) < R**2
-    X_interior = X_ravel[index_mask]
-    Y_interior = Y_ravel[index_mask]
-    # Boundary
-    theta = np.linspace(0,2*np.pi,num_bound,endpoint=False)
-    X_bound = R * np.cos(theta)
-    Y_bound = R * np.sin(theta)
-    # Combining Interior and Boundary
-    X = list(X_interior) + list(X_bound)
-    Y = list(Y_interior) + list(Y_bound)
-    return np.column_stack((X,Y))
+    
+    nodes = []
+    h = R/num_rings
+    rings = int(R/h)
+
+    for i in range(1,rings):
+        radius = i*h
+        angle_steps = max(1, int(round(2*np.pi * radius / h)))
+        
+        for j in range(angle_steps):
+            theta = 2*np.pi*j/angle_steps
+            
+            nodes.append(rad_to_euc_2d(radius, theta))
+
+    radius = rings*h
+    angle_steps = max(1, int(round(2*np.pi * radius * h_ratio / h)))
+
+    # Include the center node which is added later
+    num_nodes = len(nodes)+1
+
+    for j in range(angle_steps):
+        theta = 2*np.pi*j/angle_steps
+        
+        nodes.append(rad_to_euc_2d(radius, theta))
+
+    nodes.append([0.0,0.0])
+    return np.array(nodes)
