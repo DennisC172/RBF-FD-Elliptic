@@ -154,6 +154,7 @@ def local_weights_solve(context, i):
     diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
     b = context.laplacian_phi(diff_b, Ai, eps) # (num_nodes,)
 
+    '''Fix this code ASAP'''
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
 
@@ -232,6 +233,7 @@ def local_weights_ls(context, i, lam=0.0):
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b = context.laplacian_phi(diff_b, Ai, eps)  # (num_centers, dim)
 
+    '''Fix this code ASAP'''
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
@@ -287,6 +289,7 @@ def local_grad_solve(context, i):
         spatial dimension `d`, one row per node in `context.stencils[i]`.
     """
 
+    At = context.A[i].T
     s = context.stencils[i]
     num_nodes = len(s)
     
@@ -305,8 +308,9 @@ def local_grad_solve(context, i):
 
     # b_grad: grad_phi(P[i] - P[s[k]]) for all k, one vectorized call
     diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
-    b_grad = context.grad_phi(diff_b, eps)     # (num_nodes, dim)
+    b_grad = context.grad_phi(diff_b, eps)@At  # (num_nodes, dim)
 
+    '''Fix this code ASAP'''
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
        
@@ -381,6 +385,7 @@ def local_grad_ls(context, i, lam=0.0):
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b_grad = context.grad_phi(diff_b, eps) @ At # (num_centers, dim)
 
+    '''Fix this code ASAP'''
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
         Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
