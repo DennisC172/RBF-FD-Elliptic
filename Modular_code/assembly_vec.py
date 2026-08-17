@@ -356,7 +356,7 @@ def local_grad_ls(context, i, lam=0.0):
         `context.stencils[i]`.
     """
        
-    Ai = context.A[i]
+    At = context.A[i].T
     P = context.nodes
 
     s = context.stencils[i]
@@ -379,7 +379,7 @@ def local_grad_ls(context, i, lam=0.0):
     M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
-    b_grad = context.grad_phi(diff_b, eps)      # (num_centers, dim)
+    b_grad = context.grad_phi(diff_b, eps) @ At # (num_centers, dim)
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
@@ -1136,7 +1136,7 @@ def anchor_system_sparse(W, f, method="mean"):
 
     return W_lil.tocsr(), f
 
-def set_rbf_func(basis, augmentation, context, tol, eps_fixed=None):
+def set_rbf_func(basis, augmentation, context, tol=1e-12, eps_fixed=None):
     """
     Configure a domain context with the chosen RBF kernel and operator.
  
@@ -1260,7 +1260,7 @@ def set_boundary_func(g_bound, btype, shape, L, context):
     return g, in_boundary, normal_vec
 
 def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
-                  num_centers_info, augmentation=False, A=None, eps=3.0, tol=1e-12,
+                  num_centers_info, augmentation=False, A=None, eps=None, tol=1e-12,
                   sparse=False, anchor_method="mean"):
     """
     Build the full RBF-FD linear system for a (possibly anisotropic) PDE.

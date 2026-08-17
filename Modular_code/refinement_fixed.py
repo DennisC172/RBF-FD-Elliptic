@@ -182,28 +182,29 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     # 1) gradient of current solution on current nodes, under the
     #    PHYSICAL operator A (this part was already correct)
     S = stencils.knn_list(P, num_stencil_nodes)
-    C = stencils.knn_list(P, num_centers) if num_centers is not None else None
+    #C = stencils.knn_list(P, num_centers) if num_centers is not None else None
+    C = num_centers
     ctx_g = PDEDomainContext(P, S, C, A)
-    assembly.set_rbf_func(basis, augmentation, eps, tol, context=ctx_g)
+    assembly.set_rbf_func(basis, augmentation, ctx_g, tol)
     grad_u = np.column_stack([Wl @ u for Wl in assembly.global_grads_sparse(ctx_g)])
 
     if alpha is None:
-        alpha = calibrate_alpha(grad_u, A=A, d=dim, q=2,
+        alpha = calibrate_alpha(grad_u, A=None, d=dim, q=2,
                                  target_contrast=target_contrast, verbose=True)
 
     # 2) monitor function from that gradient.
     #    BUG FIX: forward A so the monitor is measured in the
     #    A^{-1}-energy norm instead of silently falling back to
     #    the Euclidean (isotropic) norm.
-    M = operator_gradient_monitor(grad_u, alpha, A=A, d=dim)
+    M = operator_gradient_monitor(grad_u, alpha, A=None, d=dim)
     #M = smooth_monitor(M, S, beta=0.5)
 
     evals = np.linalg.eigvalsh(M)
     lam_max = evals[:, -1]
 
-    plt.scatter(P[:,0], P[:,1], c=lam_max)
-    plt.colorbar()
-    plt.show()
+    #plt.scatter(P[:,0], P[:,1], c=lam_max)
+    #plt.colorbar()
+    #plt.show()
 
     # 3) solve coordinate PDEs, A = M, f = 0, Dirichlet = identity on boundary
     f_zero = lambda p, A: 0.0
@@ -223,7 +224,8 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
 
     ctx_x = assembly.rbf_fd_system(f_zero, g_x, btype_all_dirichlet, P, basis, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
-                                   M, eps, tol, sparse)
+                                   M, sparse=True)
+
     x_new = assembly.rbf_fd_solve_sparse(ctx_x.W, ctx_x.F)
 
     # reuse the SAME W, just a new rhs for the y-coordinate solve

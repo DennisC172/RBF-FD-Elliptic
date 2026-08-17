@@ -595,16 +595,36 @@ def example_9(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
     """
     Boundary-layer manufactured solution for anisotropic diffusion.
 
-    Exact solution:
-        .. math::
-            u(x,y) = \\tanh\\left(\\frac{y - L/2}{\\sqrt{A_{22}}}\\right).
+    PDE
+    ---
+        -div(A grad u) = f
 
-    Forcing:
-        .. math::
-            f = -2\\tanh(z)/\\cosh^2(z).
+    Diffusion tensor
+    ----------------
+        A = R diag(eig_1, eig_2) R^T,
 
-    Boundary conditions:
-        Dirichlet on y=0,L; 0-Neumann on x=0,L.
+    where R is the rotation matrix associated with ``angle``.
+
+    Exact solution
+    --------------
+        u(x,y) = tanh((y - L/2) / sqrt(A_22)).
+
+    For constant diffusion tensor A, the forcing is
+
+        f(x,y) = 2 tanh(z) / cosh(z)^2,
+
+    where
+
+        z = (y - L/2) / sqrt(A_22).
+
+
+    Boundary conditions
+    -------------------
+        Dirichlet on y = 0 and y = L.
+
+        Flux-Neumann conditions on x = 0 and x = L:
+
+            (A grad u) . n = +/- A_12 u_y.
 
     Returns
     -------

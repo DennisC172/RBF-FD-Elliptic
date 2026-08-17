@@ -118,6 +118,7 @@ def uniform_int_square(L, Nx_int, Ny_int, h_ratio=1):
     top    = np.column_stack((sx, L*np.ones_like(sx)))
     left   = np.column_stack((np.zeros_like(sy), sy))
     boundary = np.vstack((bottom, right, top, left))
+
     # Remove duplicate corners
     boundary = np.unique(boundary, axis=0)
     return np.vstack((interior, boundary)), len(interior)
@@ -298,9 +299,6 @@ def quasi_circle(R, num_rings, h_ratio=1):
 
     radius = rings*h
     angle_steps = max(1, int(round(2*np.pi * radius * h_ratio / h)))
-
-    # Include the center node which is added later
-    num_nodes = len(nodes)+1
 
     for j in range(angle_steps):
         theta = 2*np.pi*j/angle_steps

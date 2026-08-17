@@ -16,7 +16,7 @@ import refinement_fixed as refinement
 import error_analysis
 import examples
 
-def report_and_graph(context, u_exact, sparse=False):
+def report_and_graph(context, u_exact, sparse=False, plot=True):
     """
     Report solution-quality metrics and plot the RBF-FD solution, exact
     solution, and pointwise error.
@@ -91,46 +91,47 @@ def report_and_graph(context, u_exact, sparse=False):
     print("Res l2 Lu_ex - F  = ", res_l2)
     print("Res Max Lu_ex - F = ", res_max)
 
-    '''print('--------------------------Graphics:-------------------------------')
-    # Plot a contour for the approximated solution
-    plt.figure(figsize=(8, 6))
-    contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
-    cbar = plt.colorbar(contour_filled)
-    cbar.set_label('U Solution Value', rotation=270, labelpad=15)
-    plt.title(rf"""RBF-FD Approximate Solution (Contour):""")
-    plt.xlabel("x-direction")
-    plt.ylabel("y-direction")
-    #plt.show()
-    
-    # Plot a 3D graph of the approximated solution
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(X,Y,u_soln,cmap='viridis', edgecolor='none', alpha=0.9)
-    ax.set_zlim(u_ex.min(), u_ex.max())
-    plt.title(rf"""RBF-FD Approximate Solution:""")
-    
-    plt.xlabel("x-direction")
-    plt.ylabel("y-direction")
-    #plt.show()
-    
-    # Plot a 3D graph of the exact solution
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(X,Y,u_ex,cmap='viridis', edgecolor='none', alpha=0.9)
-    ax.set_zlim(u_ex.min(), u_ex.max())
-    plt.title(rf"""Exact Solution:""")
-    plt.xlabel("x-direction")
-    plt.ylabel("y-direction")
-    #plt.show()
+    if plot:
+        print('--------------------------Graphics:-------------------------------')
+        # Plot a contour for the approximated solution
+        plt.figure(figsize=(8, 6))
+        contour_filled = plt.tricontourf(X, Y, u_soln, levels=50, cmap='viridis')
+        cbar = plt.colorbar(contour_filled)
+        cbar.set_label('U Solution Value', rotation=270, labelpad=15)
+        plt.title(rf"""RBF-FD Approximate Solution (Contour):""")
+        plt.xlabel("x-direction")
+        plt.ylabel("y-direction")
+        #plt.show()
+        
+        # Plot a 3D graph of the approximated solution
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_trisurf(X,Y,u_soln,cmap='viridis', edgecolor='none', alpha=0.9)
+        ax.set_zlim(u_ex.min(), u_ex.max())
+        plt.title(rf"""RBF-FD Approximate Solution:""")
+        
+        plt.xlabel("x-direction")
+        plt.ylabel("y-direction")
+        #plt.show()
+        
+        # Plot a 3D graph of the exact solution
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_trisurf(X,Y,u_ex,cmap='viridis', edgecolor='none', alpha=0.9)
+        ax.set_zlim(u_ex.min(), u_ex.max())
+        plt.title(rf"""Exact Solution:""")
+        plt.xlabel("x-direction")
+        plt.ylabel("y-direction")
+        #plt.show()
 
-    # Plot a 3D graph of the error  
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(X,Y,np.log10(np.maximum(error, 1e-16)),cmap='viridis', edgecolor='none', alpha=0.9)
-    plt.title(rf"""RBF-FD Approximate Log Error:""")
-    plt.xlabel("x-direction")
-    plt.ylabel("y-direction")
-    plt.show()'''
+        # Plot a 3D graph of the error  
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_trisurf(X,Y,np.log10(np.maximum(error, 1e-16)),cmap='viridis', edgecolor='none', alpha=0.9)
+        plt.title(rf"""RBF-FD Approximate Log Error:""")
+        plt.xlabel("x-direction")
+        plt.ylabel("y-direction")
+        plt.show()
 
 def generate_adaptive_nodes(
     n,
@@ -215,10 +216,10 @@ if __name__ == "__main__":
     sparse = True
 
     # Define the problem
-    example_num = "01"
+    example_num = "9"
     
     # Define the nodes per stencil
-    num_stencil_nodes = 10
+    num_stencil_nodes = 5
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
@@ -232,9 +233,9 @@ if __name__ == "__main__":
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 200
+    Nx = 500
     L = 1.0
-    shape = 'circle'
+    shape = 'square'
 
     if shape == 'circle':
         P = geometry.quasi_circle(L, Nx)
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
     eig_2_str = "lambda p: 1e-2"
-    angle_str = "lambda p: 12.0/24.0*np.pi"
+    angle_str = "lambda p: 0.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
     print(f'Angle = {angle_str}')
@@ -270,7 +271,7 @@ if __name__ == "__main__":
     
     # Forcing term parameters
     Amp = 1e3
-    modes = [1.0,2.0]
+    modes = [1.0,1.0]
     
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
@@ -279,14 +280,15 @@ if __name__ == "__main__":
 
     problem_fun = eval(f"examples.example_{example_num}")
     f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes)
-       
-    '''P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
+
+    if False:
+        P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
-                                   eig_1, eig_2, angle, eps, sparse, max_iter=25,
+                                   eig_1, eig_2, angle, eps, sparse, max_iter=7,
                                    alpha=1e-4, tangle_frac=0.5,
                                    relax=1.0, verbose=True)
 
-    print('Nodes Refined.')'''
+    print('Nodes Refined.')
 
     A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
     print('Diffusion Tensor Redefined.')
@@ -299,4 +301,4 @@ if __name__ == "__main__":
     
     # Display results
     print('===============Solve, Report and Graph Results:===================')
-    report_and_graph(context, u_exact, sparse)
+    report_and_graph(context, u_exact, sparse, plot=True)

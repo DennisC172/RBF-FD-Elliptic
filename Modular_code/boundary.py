@@ -54,13 +54,9 @@ def in_square_boundary(p, L, btype, tol=1e-6):
     Notes
     -----
     At a corner, two edge tests are simultaneously satisfied (e.g. the
-    origin satisfies both the bottom and left edge tests). Because the
-    checks are performed in a fixed order and the function returns on
-    the first match, corners are always classified by the
-    bottom/top test before the right/left test: the corner (0,0) and
-    (L,0) take `btype[0]` (bottom), while (L,L) takes `btype[1]`
-    (right) and (0,L) takes `btype[2]` (top). Callers relying on a
-    specific corner classification should be aware of this precedence.
+    origin satisfies both the bottom and left edge tests). Corners are
+    classified as Dirichlet if either edge is Dirichlet. Callers relying
+    on a specific corner classification should be aware of this precedence.
     """
     
     x, y = p
