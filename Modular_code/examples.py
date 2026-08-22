@@ -513,10 +513,10 @@ def example_7(eig_1=None,eig_2=None,angle=None,Amp=1.0,modes=None,L=1.0):
                 eig_1(np.array([x,y]))*(np.sin(angle(np.array([x,y])))**2))
     
     g = [
-        lambda x: 2*x,      #y=0
-        lambda y: 2*L,      #x=L
-        lambda x: 2,        #y=L
-        lambda y: y**2      #x=0
+        lambda x: 2*x,                     #y=0
+        lambda y: 2*(A11(L,y)+A12(L,y)*y), #x=L
+        lambda x: 2*(A12(x,L)+A22(x,L)*L), #y=L
+        lambda y: y**2                     #x=0
     ]
     
     btype = [

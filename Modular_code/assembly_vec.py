@@ -135,7 +135,6 @@ def local_weights_solve(context, i):
     """
 
     s = context.stencils[i]
-    num_nodes = len(s)
     P = context.nodes
 
     # Augmentation form
@@ -154,19 +153,14 @@ def local_weights_solve(context, i):
     diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
     b = context.laplacian_phi(diff_b, Ai, eps) # (num_nodes,)
 
-    '''Fix this code ASAP'''
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
+        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        pdim =  Pmat.shape[1]
 
-        M = np.block([
-            [M, Pmat],
-            [Pmat.T, np.zeros((pdim,pdim))]
-        ])
-        
-        b = np.concatenate([
-            b,
-            rbf.anisotropic_diffusion_poly(P[i])
-        ])
+        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q2 = Q[:,pdim:]
+
+        M = M @ Q2
 
     '''print(f"Conditioning: {np.linalg.cond(M): e}, ({M.shape}) at idx = {i}")
     s = np.linalg.svd(M, compute_uv=False)
@@ -175,8 +169,8 @@ def local_weights_solve(context, i):
     print(np.linalg.matrix_rank(M))'''
     Q,R = np.linalg.qr(M)
     y = Q.T @ b
-    w = np.linalg.solve(R, y)
-    return w[:num_nodes], np.linalg.cond(M)
+    z = np.linalg.solve(R, y)
+    return z if not context.augmentation else Q2 @ z, np.linalg.cond(M)
 
 ### Least Squares
 def local_weights_ls(context, i, lam=0.0):
@@ -212,7 +206,6 @@ def local_weights_ls(context, i, lam=0.0):
     P = context.nodes
 
     s = context.stencils[i]
-    num_nodes = len(s)
     Ps = P[s]
 
     #c = context.centers_info[i]
@@ -233,21 +226,14 @@ def local_weights_ls(context, i, lam=0.0):
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b = context.laplacian_phi(diff_b, Ai, eps)  # (num_centers, dim)
 
-    '''Fix this code ASAP'''
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
-        Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
+        pdim =  Pmat.shape[1]
 
-        pdim = Pmat.shape[1]
+        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q2 = Q[:,pdim:]
 
-        M = np.block([
-            [M, Cmat],
-            [Pmat.T, np.zeros((pdim,pdim))]
-        ])
-        b = np.concatenate([
-            b,
-            rbf.anisotropic_diffusion_poly(P[i])# (pdim, dim)
-        ])
+        M = M @ Q2
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
@@ -257,10 +243,10 @@ def local_weights_ls(context, i, lam=0.0):
     print("\n")
     print(Vt.T)
     print("\n\n\n\n\n")'''
-    w = Vt.T @ (filt * (U.T @ b))
-    return w[:num_nodes], np.linalg.cond(M)
+    z = Vt.T @ (filt * (U.T @ b))
+    return z if not context.augmentation else Q2 @ z, np.linalg.cond(M)
     
-def local_grad_solve(context, i):
+def local_grad_solve(context, i, add_anisotropy=True):
     """
     Compute RBF-FD gradient weights for node i using direct collocation.
  
@@ -290,9 +276,7 @@ def local_grad_solve(context, i):
     """
 
     At = context.A[i].T
-    s = context.stencils[i]
-    num_nodes = len(s)
-    
+    s = context.stencils[i] 
     P = context.nodes
 
     # Augmentation form
@@ -308,29 +292,27 @@ def local_grad_solve(context, i):
 
     # b_grad: grad_phi(P[i] - P[s[k]]) for all k, one vectorized call
     diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
-    b_grad = context.grad_phi(diff_b, eps)@At  # (num_nodes, dim)
+    b_grad = context.grad_phi(diff_b, eps)     # (num_nodes, dim)
 
-    '''Fix this code ASAP'''
+    if add_anisotropy:
+        b_grad = b_grad @ At
+
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)              # (num_nodes, pdim)
-       
-        M = np.block([
-            [M, Pmat],
-            [Pmat.T, np.zeros((pdim,pdim))]
-        ])
-        
-        b_grad = np.concatenate([
-            b_grad,
-            rbf.grad_poly(P[i])
-        ])
+        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        pdim =  Pmat.shape[1]
+
+        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q2 = Q[:,pdim:]
+
+        M = M @ Q2
 
     #print(f"Conditioning {np.linalg.cond(M): e}")
     Q,R = np.linalg.qr(M)
     y = Q.T @ b_grad
-    w_grad = np.linalg.solve(R, y)
-    return w_grad[:num_nodes,:], np.linalg.cond(M)
+    z_grad = np.linalg.solve(R, y)
+    return z_grad if not context.augmentation else Q2 @ z_grad, np.linalg.cond(M)
 
-def local_grad_ls(context, i, lam=0.0):
+def local_grad_ls(context, i, add_anisotropy=True,lam=0.0):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -364,7 +346,6 @@ def local_grad_ls(context, i, lam=0.0):
     P = context.nodes
 
     s = context.stencils[i]
-    num_nodes = len(s)
     Ps = P[s]
 
     #c = context.centers_info[i]
@@ -383,23 +364,19 @@ def local_grad_ls(context, i, lam=0.0):
     M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
-    b_grad = context.grad_phi(diff_b, eps) @ At # (num_centers, dim)
+    b_grad = context.grad_phi(diff_b, eps)      # (num_centers, dim)
 
-    '''Fix this code ASAP'''
+    if add_anisotropy:
+        b_grad = b_grad @ At
+
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
-        Cmat = rbf.poly_basis(Cs)               # (num_centers, pdim)
+        pdim =  Pmat.shape[1]
 
-        pdim = Pmat.shape[1]
+        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q2 = Q[:,pdim:]
 
-        M = np.block([
-            [M, Cmat],
-            [Pmat.T, np.zeros((pdim,pdim))]
-        ])
-        b_grad = np.concatenate([
-            b_grad,
-            rbf.grad_poly(P[i])                 # (pdim, dim)
-        ])
+        M = M @ Q2
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
@@ -409,8 +386,8 @@ def local_grad_ls(context, i, lam=0.0):
     print("\n")
     print(Vt.T)
     print("\n\n\n\n\n")'''
-    w = Vt.T @ (filt[:, None] * (U.T @ b_grad))
-    return w[:num_nodes,:], np.linalg.cond(M)
+    z_grad = Vt.T @ (filt[:, None] * (U.T @ b_grad))
+    return z_grad if not context.augmentation else Q2 @ z_grad, np.linalg.cond(M)
 
 # .2 Assembles the global Weights.
 def global_weights(context, in_boundary=None, normal_vec=None):

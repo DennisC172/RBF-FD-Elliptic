@@ -36,7 +36,7 @@ def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
     A[:, 1, 0] = off_diag                                 # Bottom-left (A_yx)
     print("Coefficient Matrix:\n" + str(A))
     
-    f, g_bound, btype, u_exact = example(alpha, beta, angle, Amp, modes) 
+    f, g_bound, btype, u_exact = example(alpha, beta, angle, Amp, modes, L) 
     
     # Solve the PDE exactly and with RBF-FD
     if sparse:
@@ -110,16 +110,16 @@ if __name__ == "__main__":
     sparse = True
     
     # Define the nodes per stencil
-    num_stencil_nodes = 10
+    num_stencil_nodes = 6
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 10
+    num_centers = 3
     
     # Define the shape and parameters of the radial basis function
-    rbf_shape = 'cubic'
-    augmentation = True
-    eps = 3.0
+    rbf_shape = 'gaussian'
+    augmentation = False
+    eps = None
     tol = 1e-12
 
     # -----------------------------
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     # -----------------------------
     # Define the conductivity condition
     alpha = lambda p: 1e0
-    beta  = lambda p: 5e-3
+    beta  = lambda p: 1e-4
     angle = lambda p: 12.0/24*np.pi
     
     # Forcing term parameters
@@ -151,6 +151,7 @@ if __name__ == "__main__":
                         examples.example_8,
                         examples.example_9,
                         examples.example_10,
+                        examples.example_11
                        ]
     
     print('----------------------- Training Setup: --------------------------')    

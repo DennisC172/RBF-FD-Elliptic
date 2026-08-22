@@ -168,10 +168,9 @@ def cheby_square(L, Nx, Ny):
     `uniform_square`, but no such interior-only filtering is actually
     performed here.
     """
-    # Interior points (exclude boundary)
-    x_int = (np.cos(np.linspace(0, Nx, Nx+2)*np.pi/Nx)+1)*L/2
-    y_int = (np.cos(np.linspace(0, Ny, Ny+2)*np.pi/Ny)+1)*L/2
-    XX, YY = np.meshgrid(x_int, y_int)
+    x = 0.5 * L * (1 - np.cos(np.pi * np.arange(Nx) / (Nx - 1)))
+    y = 0.5 * L * (1 - np.cos(np.pi * np.arange(Ny) / (Ny - 1)))
+    XX, YY = np.meshgrid(x, y)
     domain = np.column_stack((XX.ravel(), YY.ravel()))
     return domain, Nx*Ny
 
