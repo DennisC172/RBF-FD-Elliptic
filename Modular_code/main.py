@@ -162,18 +162,19 @@ if __name__ == "__main__":
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = None
+    num_centers = 3
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = None
+    eps = 0.0050
+    fixed_eps = False
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 200
-    L = 0.50
+    Nx = 250
+    L = 1.0
     shape = 'square'
 
     if shape == 'circle':
@@ -187,7 +188,8 @@ if __name__ == "__main__":
     print(f'Nx = {Nx}, Ny = {Nx}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
     print(f'Number of Center Rings   = {num_centers}')
-    print(f'Inverse Length Scale     = {eps}')
+    print(f'Inverse Length Scale     = {eps}' if fixed_eps else
+          f'Inverse Length Coeff     = {eps}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
         
@@ -219,13 +221,13 @@ if __name__ == "__main__":
 
     problem_fun = eval(f"examples.example_{example_num}")
     '''Anisotropy needs to be outputed from this function'''
-    f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes,L)
+    f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes, L)
 
     if False:
         P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
-                                   eig_1, eig_2, angle, eps, sparse, max_iter=7,
-                                   alpha=1e-4, tangle_frac=0.5,
+                                   eig_1, eig_2, angle, eps, fixed_eps, sparse,
+                                   max_iter=7, alpha=1e-4, tangle_frac=0.5,
                                    relax=1.0, verbose=True)
 
         print('Nodes Refined.')
@@ -237,7 +239,7 @@ if __name__ == "__main__":
     print('========================Assemble System:==========================')
     context = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
                                      num_stencil_nodes, num_centers, augmentation,
-                                     A=A, eps=eps, sparse=sparse)
+                                     A=A, eps=eps, fixed_eps=fixed_eps, sparse=sparse)
     
     # Display results
     print('===============Solve, Report and Graph Results:===================')

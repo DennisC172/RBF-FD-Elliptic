@@ -97,7 +97,7 @@ def plot_stencil_centers(nodes, centers, p_i):
     plt.tight_layout()
     plt.show()
 
-def local_weights_solve(context, i):
+def local_weights_solve(context, i, eps0, fixed_eps=False):
     """
     Compute RBF-FD differentiation weights for node i using direct collocation.
  
@@ -136,6 +136,7 @@ def local_weights_solve(context, i):
 
     s = context.stencils[i]
     P = context.nodes
+    num_nodes = len(P)
 
     # Augmentation form
     pdim = 0
@@ -146,7 +147,12 @@ def local_weights_solve(context, i):
     Ps = P[s]
     Ai = context.A[i]
     diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
-    eps = rbf.stencil_eps(diff_M)
+
+    if fixed_eps:
+        eps = eps0
+    else:
+        eps = rbf.stencil_eps(diff_M, eps0)
+
     M = context.phi(diff_M, eps)               # (num_nodes, num_nodes)
 
     # b: laplacian_phi(P[i] - P[s[k]]) for all k, one vectorized call
@@ -154,13 +160,19 @@ def local_weights_solve(context, i):
     b = context.laplacian_phi(diff_b, Ai, eps) # (num_nodes,)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        Pmat = rbf.poly_basis(Ps)                       # (num_nodes, pdim)
+        b_poly = rbf.anisotropic_diffusion_poly(P[i])   # (pdim)
         pdim =  Pmat.shape[1]
 
-        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q, R = np.linalg.qr(Pmat, mode="complete")
+        Q1 = Q[:,:pdim]
         Q2 = Q[:,pdim:]
 
-        M = M @ Q2
+        w_1 = Q1 @ np.linalg.solve(R[:pdim].T, b_poly)
+        b = Q2.T @ (b - M @ w_1)
+        M = Q2.T @ M @ Q2
+    else:
+        w_1 = np.zeros(num_nodes)
 
     '''print(f"Conditioning: {np.linalg.cond(M): e}, ({M.shape}) at idx = {i}")
     s = np.linalg.svd(M, compute_uv=False)
@@ -170,10 +182,10 @@ def local_weights_solve(context, i):
     Q,R = np.linalg.qr(M)
     y = Q.T @ b
     z = np.linalg.solve(R, y)
-    return z if not context.augmentation else Q2 @ z, np.linalg.cond(M)
+    return z if not context.augmentation else Q2 @ z + w_1, np.linalg.cond(M)
 
 ### Least Squares
-def local_weights_ls(context, i, lam=0.0):
+def local_weights_ls(context, i, eps0, fixed_eps=False, lam=0.0):
     """
     Compute RBF-FD differentiation weights for node i via least squares.
  
@@ -207,6 +219,7 @@ def local_weights_ls(context, i, lam=0.0):
 
     s = context.stencils[i]
     Ps = P[s]
+    num_nodes = len(Ps)
 
     #c = context.centers_info[i]
     #Cs = P[c]
@@ -216,37 +229,53 @@ def local_weights_ls(context, i, lam=0.0):
     r_max   = np.max(dP_norm)
     points  = geometry.quasi_circle(1.5*r_max, k)
     Cs      = P[i] + points
+    num_centers = len(Cs)
 
     #plot_stencil_centers(Ps, Cs, P[i])
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
-    eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
+
+    if fixed_eps:
+        eps = eps0
+    else:
+        eps = rbf.stencil_eps(diff_M, eps0)
+
     M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
     b = context.laplacian_phi(diff_b, Ai, eps)  # (num_centers, dim)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        Pmat = rbf.poly_basis(Ps)                     # (num_nodes, pdim)
+        b_poly = rbf.anisotropic_diffusion_poly(P[i]) # (dim)
         pdim =  Pmat.shape[1]
 
-        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q, R = np.linalg.qr(Pmat, mode="complete")
+        Q1 = Q[:,:pdim]
         Q2 = Q[:,pdim:]
 
+        w_1 = Q1 @ np.linalg.solve(R[:pdim].T, b_poly)
+        b_2 = M @ w_1
         M = M @ Q2
+    else:
+        b_2 = np.zeros(num_centers)
+        w_1 = np.zeros(num_nodes)
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
-    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    '''U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
-    '''print(filt)
+    print(filt)
     print(U)
     print("\n")
     print(Vt.T)
-    print("\n\n\n\n\n")'''
-    z = Vt.T @ (filt * (U.T @ b))
-    return z if not context.augmentation else Q2 @ z, np.linalg.cond(M)
+    print("\n\n\n\n\n")
+    z = Vt.T @ (filt * (U.T @ (b-b_2)))'''
+    Q,R = np.linalg.qr(M)
+    y = Q.T @ (b-b_2)
+    z = np.linalg.solve(R, y)
+    return z if not context.augmentation else Q2 @ z + w_1, np.linalg.cond(M)
     
-def local_grad_solve(context, i, add_anisotropy=True):
+def local_grad_solve(context, i, eps0, fixed_eps=False, add_anisotropy=True):
     """
     Compute RBF-FD gradient weights for node i using direct collocation.
  
@@ -278,6 +307,7 @@ def local_grad_solve(context, i, add_anisotropy=True):
     At = context.A[i].T
     s = context.stencils[i] 
     P = context.nodes
+    num_nodes = len(P)
 
     # Augmentation form
     pdim = 0
@@ -287,7 +317,12 @@ def local_grad_solve(context, i, add_anisotropy=True):
     Ps = P[s]
     # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
     diff_M = Ps[:, None, :] - Ps[None, :, :]   # (num_nodes, num_nodes, dim)
-    eps = rbf.stencil_eps(diff_M)
+
+    if fixed_eps:
+        eps = eps0
+    else:
+        eps = rbf.stencil_eps(diff_M, eps0)
+
     M = context.phi(diff_M, eps)               # (num_nodes, num_nodes)
 
     # b_grad: grad_phi(P[i] - P[s[k]]) for all k, one vectorized call
@@ -299,20 +334,27 @@ def local_grad_solve(context, i, add_anisotropy=True):
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        b_poly = rbf.grad_poly(P[i])            # (pdim, dim)
         pdim =  Pmat.shape[1]
 
-        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q, R = np.linalg.qr(Pmat, mode="complete")
+        Q1 = Q[:,:pdim]
         Q2 = Q[:,pdim:]
 
-        M = M @ Q2
+        w_1 = Q1 @ np.linalg.solve(R[:pdim].T, b_poly)
+        b_grad = Q2.T @ (b_grad - M @ w_1)
+        M = Q2.T @ M @ Q2
 
-    #print(f"Conditioning {np.linalg.cond(M): e}")
+    else:
+        dim = P.shape[1]
+        w_1 = np.zeros((num_nodes, dim))
+
     Q,R = np.linalg.qr(M)
     y = Q.T @ b_grad
     z_grad = np.linalg.solve(R, y)
-    return z_grad if not context.augmentation else Q2 @ z_grad, np.linalg.cond(M)
+    return z_grad if not context.augmentation else Q2 @ z_grad + w_1, np.linalg.cond(M)
 
-def local_grad_ls(context, i, add_anisotropy=True,lam=0.0):
+def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True,lam=0.0):
     """
     Compute RBF-FD gradient weights for node i via least squares.
  
@@ -347,6 +389,7 @@ def local_grad_ls(context, i, add_anisotropy=True,lam=0.0):
 
     s = context.stencils[i]
     Ps = P[s]
+    num_nodes = len(Ps)
 
     #c = context.centers_info[i]
     #Cs = P[c]
@@ -356,11 +399,17 @@ def local_grad_ls(context, i, add_anisotropy=True,lam=0.0):
     r_max   = np.max(dP_norm)
     points  = geometry.quasi_circle(1.5*r_max, k)
     Cs      = P[i] + points
+    num_centers = len(Cs)
 
     #plot_stencil_centers(Ps, Cs, P[i])
 
     diff_M = Ps[None, :, :] - Cs[:, None, :]    # (num_centers, num_nodes, dim)
-    eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :])
+
+    if fixed_eps:
+        eps = eps0
+    else:
+        eps = rbf.stencil_eps(Ps[None, :, :] - Ps[:, None, :], eps0)
+
     M = context.phi(diff_M, eps)                # (num_centers, num_nodes)
 
     diff_b = P[i][None, :] - Cs                 # (num_centers, dim)
@@ -371,26 +420,37 @@ def local_grad_ls(context, i, add_anisotropy=True,lam=0.0):
 
     if context.augmentation:
         Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
+        b_poly = rbf.grad_poly(P[i])            # (pdim, dim)
         pdim =  Pmat.shape[1]
 
-        Q, _ = np.linalg.qr(Pmat, mode="complete")
+        Q, R = np.linalg.qr(Pmat, mode="complete")
+        Q1 = Q[:,:pdim]
         Q2 = Q[:,pdim:]
 
+        w_1 = Q1 @ np.linalg.solve(R[:pdim].T, b_poly)
+        b_2 = M @ w_1
         M = M @ Q2
+    else:
+        dim = P.shape[1]
+        b_2 = np.zeros((num_centers, dim))
+        w_1 = np.zeros((num_nodes, dim))
 
     #print(f"Conditioning: {np.linalg.cond(M): e}")
-    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    '''U, S, Vt = np.linalg.svd(M, full_matrices=False)
     filt = S / (S**2 + lam)
-    '''print(filt)
+    print(filt)
     print(U)
     print("\n")
     print(Vt.T)
-    print("\n\n\n\n\n")'''
-    z_grad = Vt.T @ (filt[:, None] * (U.T @ b_grad))
-    return z_grad if not context.augmentation else Q2 @ z_grad, np.linalg.cond(M)
+    print("\n\n\n\n\n")
+    z_grad = Vt.T @ (filt[:, None] * (U.T @ (b_grad-b_2)))'''
+    Q,R = np.linalg.qr(M)
+    y = Q.T @ (b_grad-b_2)
+    z_grad = np.linalg.solve(R, y)
+    return z_grad if not context.augmentation else Q2 @ z_grad + w_1, np.linalg.cond(M)
 
 # .2 Assembles the global Weights.
-def global_weights(context, in_boundary=None, normal_vec=None):
+def global_weights(context, eps, fixed_eps=False, in_boundary=None, normal_vec=None):
     """
     Assemble the global RBF-FD differentiation (Laplacian) matrix.
  
@@ -469,9 +529,9 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                 W[i,i] = 1.0
             elif node_type == 'neumann':
                 if k is None:
-                    w_grad, kA = local_grad_solve(context, i)
+                    w_grad, kA = local_grad_solve(context, i, eps, fixed_eps)
                 else:
-                    w_grad, kA = local_grad_ls(context, i) 
+                    w_grad, kA = local_grad_ls(context, i, eps, fixed_eps) 
                 
                 n_v = normal_vec(P[i])                
                 dir_derv = w_grad @ n_v
@@ -480,9 +540,9 @@ def global_weights(context, in_boundary=None, normal_vec=None):
                     W[i,s[j]] = dir_derv[j]
         else:
             if k is None:
-                w, kA = local_weights_solve(context, i)
+                w, kA = local_weights_solve(context, i, eps, fixed_eps)
             else:
-                w, kA = local_weights_ls(context, i)
+                w, kA = local_weights_ls(context, i, eps, fixed_eps)
     
             for j in range(num_stencil_nodes):
                 W[i,s[j]] = w[j]
@@ -495,7 +555,7 @@ def global_weights(context, in_boundary=None, normal_vec=None):
     print(f"Max conditioning: {cond_A: e} at {idx_c} ({node_cond})")     
     return W
 
-def global_weights_sparse(context, in_boundary=None, normal_vec=None):
+def global_weights_sparse(context, eps, fixed_eps=False, in_boundary=None, normal_vec=None):
     """
     Assemble the global RBF-FD differentiation (Laplacian) matrix in
     sparse (CSR) format, optionally applying boundary rows directly.
@@ -596,9 +656,9 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             ptr += 1
         elif node_type == 'neumann':
             if k is None:
-                w_grad, kA = local_grad_solve(context, i)                
+                w_grad, kA = local_grad_solve(context, i, eps, fixed_eps)                
             else:
-                w_grad, kA = local_grad_ls(context, i)
+                w_grad, kA = local_grad_ls(context, i, eps, fixed_eps)
 
             n_v = normal_vec(P[i])
             dir_derv = w_grad @ n_v
@@ -610,9 +670,9 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
             ptr += n
         else:
             if k is None:
-                w, kA = local_weights_solve(context, i)
+                w, kA = local_weights_solve(context, i, eps, fixed_eps)
             else:
-                w, kA = local_weights_ls(context, i)
+                w, kA = local_weights_ls(context, i, eps, fixed_eps)
 
             n = len(s)
             rows[ptr:ptr+n] = i
@@ -631,7 +691,7 @@ def global_weights_sparse(context, in_boundary=None, normal_vec=None):
     print(f"Max conditioning: {cond_A: e} at {P[idx_c]} ({node_cond})")      
     return W.tocsr()
 
-def global_grads(context):
+def global_grads(context, eps, fixed_eps=False):
     """
     Assemble the global RBF-FD differentiation (Gradient) Tensor.
  
@@ -669,9 +729,9 @@ def global_grads(context):
         num_stencil_nodes = len(s)
         
         if k is None:
-            w_grad, _ = local_grad_solve(context, i)
+            w_grad, _ = local_grad_solve(context, i, eps, fixed_eps)
         else:
-            w_grad, _ = local_grad_ls(context, i) 
+            w_grad, _ = local_grad_ls(context, i, eps, fixed_eps) 
             
         for j in range(num_stencil_nodes):
             for l in range(dim):
@@ -679,7 +739,7 @@ def global_grads(context):
             
     return W
 
-def global_grads_sparse(context):
+def global_grads_sparse(context, eps, fixed_eps=False):
     """
     Assemble the global RBF-FD differentiation (Gradient) operator in
     sparse (CSR) format, as a list of per-dimension matrices.
@@ -737,9 +797,9 @@ def global_grads_sparse(context):
         n = len(s)
 
         if k is None:
-            w_grad, _ = local_grad_solve(context, i)
+            w_grad, _ = local_grad_solve(context, i, eps, fixed_eps)
         else:
-            w_grad, _ = local_grad_ls(context, i)
+            w_grad, _ = local_grad_ls(context, i, eps, fixed_eps)
 
         rows[ptr:ptr+n] = i
         cols[ptr:ptr+n] = s
@@ -755,7 +815,7 @@ def global_grads_sparse(context):
 
     return W_list
 
-def boundary_to_weights(W, context, in_boundary, normal_vec):
+def boundary_to_weights(W, context, in_boundary, normal_vec, eps, fixed_eps=False):
     """
     Overwrite global weight matrix rows for boundary nodes in place.
  
@@ -811,9 +871,9 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
                 W_b[i,i] = 1.0
             elif node_type == 'neumann':
                 if k is None:
-                    w_grad = local_grad_solve(context, i)
+                    w_grad = local_grad_solve(context, i, eps, fixed_eps)
                 else:
-                    w_grad = local_grad_ls(context, i) 
+                    w_grad = local_grad_ls(context, i, eps, fixed_eps) 
                 
                 n_v = normal_vec(P[i])                
                 dir_derv = w_grad @ n_v
@@ -823,7 +883,7 @@ def boundary_to_weights(W, context, in_boundary, normal_vec):
                     
     return W_b
 
-def boundary_to_weights_sparse(W, context, in_boundary, normal_vec):
+def boundary_to_weights_sparse(W, context, in_boundary, normal_vec, eps, fixed_eps=False):
     """
     Overwrite global sparse weight matrix rows for boundary nodes.
 
@@ -878,9 +938,9 @@ def boundary_to_weights_sparse(W, context, in_boundary, normal_vec):
                 W_lil.data[i] = [1.0]
             elif node_type == 'neumann':
                 if k is None:
-                    w_grad = local_grad_solve(context, i)
+                    w_grad = local_grad_solve(context, i, eps, fixed_eps)
                 else:
-                    w_grad = local_grad_ls(context, i)
+                    w_grad = local_grad_ls(context, i, eps, fixed_eps)
 
                 n_v = normal_vec(P[i])
                 dir_derv = w_grad @ n_v
@@ -1118,7 +1178,7 @@ def anchor_system_sparse(W, f, method="mean"):
 
     return W_lil.tocsr(), f
 
-def set_rbf_func(basis, augmentation, context, tol=1e-12, eps_fixed=None):
+def set_rbf_func(basis, augmentation, context, tol=1e-12):
     """
     Configure a domain context with the chosen RBF kernel and operator.
  
@@ -1159,17 +1219,9 @@ def set_rbf_func(basis, augmentation, context, tol=1e-12, eps_fixed=None):
     context.set_augmentation(augmentation) 
  
     if (basis == 'gaussian'):
-        if eps_fixed is None:
-            context.set_phi(lambda p, eps: rbf.phi_gauss(p, eps))
-            context.set_grad_phi(lambda p, eps: rbf.grad_phi_gauss(p, eps))
-            context.set_laplacian_phi(
-                lambda p, A, eps: rbf.anisotropic_diffusion_phi_gauss(p, A, eps))
-        else:
-            context.set_phi(lambda p, eps: rbf.phi_gauss(p, eps_fixed))
-            context.set_grad_phi(lambda p, eps: rbf.grad_phi_gauss(p, eps_fixed))
-            context.set_laplacian_phi(
-                lambda p, A, eps: rbf.anisotropic_diffusion_phi_gauss(p, A, eps_fixed))
-        
+        context.set_phi(rbf.phi_gauss)
+        context.set_grad_phi(rbf.grad_phi_gauss)
+        context.set_laplacian_phi(rbf.anisotropic_diffusion_phi_gauss)        
     elif (basis == 'cubic'):
         context.set_phi(lambda p, eps: rbf.phi_cubic(p))
         context.set_grad_phi(lambda p, eps: rbf.grad_phi_cubic(p))
@@ -1242,8 +1294,8 @@ def set_boundary_func(g_bound, btype, shape, L, context):
     return g, in_boundary, normal_vec
 
 def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
-                  num_centers_info, augmentation=False, A=None, eps=None, tol=1e-12,
-                  sparse=False, anchor_method="mean"):
+                  num_centers_info, augmentation=False, A=None, eps=0.050,
+                  fixed_eps=False, tol=1e-12, sparse=False, anchor_method="mean"):
     """
     Build the full RBF-FD linear system for a (possibly anisotropic) PDE.
  
@@ -1329,14 +1381,14 @@ def rbf_fd_system(f, g_bound, btype, P, basis, shape, L, num_stencil_nodes,
     context = PDEDomainContext(P, S, C, A)    
     print('1) Nodes and Stencils Generated.')
 
-    set_rbf_func(basis, augmentation, context, tol, eps)
+    set_rbf_func(basis, augmentation, context, tol)
     g, in_boundary, normal_vec = set_boundary_func(g_bound, btype, shape, L, context)  
     print('2) RBF and Boundary information Stored.')
     
     if sparse:
-        W = global_weights_sparse(context, in_boundary, normal_vec)
+        W = global_weights_sparse(context, eps, fixed_eps, in_boundary, normal_vec)
     else:
-        W = global_weights(context, in_boundary, normal_vec)
+        W = global_weights(context, eps, fixed_eps, in_boundary, normal_vec)
     print('3) Weight Matrix Generated.')
             
     f_vec = right_hand_side(context, f, g, in_boundary)

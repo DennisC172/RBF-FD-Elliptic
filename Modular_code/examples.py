@@ -902,6 +902,286 @@ def example_11(eig_1,eig_2,angle,Amp=1.0,modes=None,L=1.0):
 
     return f, g, btype, u_exact
 
+def example_12(eig_1, eig_2, angle, Amp=1.0, modes=None, L=1.0, sharpness=0.04):
+    """
+    Rotated sharp-layer manufactured solution for an anisotropic
+    elliptic PDE.
+
+    The PDE is
+
+        A11 u_xx + 2 A12 u_xy + A22 u_yy = f,
+
+    where A has eigenvalues eig_1 and eig_2 and principal direction
+    given by ``angle(p)``.
+
+    Exact solution:
+
+        u(x,y) =
+            Amp * exp(-(xi/sharpness/L)**2)
+                * sin(pi*x/L) * sin(pi*y/L),
+
+    where
+
+        xi = cos(theta_s)*(x-xc) + sin(theta_s)*(y-yc).
+
+    The Gaussian produces a sharp internal layer.  The layer can be
+    rotated relative to the principal diffusion direction.
+
+    Boundary conditions:
+        Homogeneous Dirichlet on all four sides.
+
+    Parameters
+    ----------
+    eig_1, eig_2 : callable
+        Principal eigenvalues of the diffusion tensor.
+
+    angle : callable
+        Principal diffusion angle theta_A(p).
+
+    Amp : float
+        Solution amplitude.
+
+    L : float
+        Domain size.
+
+    sharpness : float
+        Width of the Gaussian layer as a fraction of L.
+        For example:
+            0.10 -> broad
+            0.05 -> moderately sharp
+            0.03 -> sharp
+            0.02 -> very sharp
+
+    Returns
+    -------
+    f : callable
+        PDE right-hand side.
+
+    g : list of callables
+        Dirichlet boundary data in the order
+        [y=0, x=L, y=L, x=0].
+
+    btype : list of str
+        Boundary condition types.
+
+    u_exact : callable
+        Exact solution.
+    """
+
+    # ------------------------------------------------------------
+    # Sharp layer parameters
+    # ------------------------------------------------------------
+
+    # Center of the layer
+    xc = 0.5 * L
+    yc = 0.5 * L
+
+    # Orientation of the sharp layer.
+    #
+    # IMPORTANT:
+    # This is deliberately different from the diffusion angle.
+    #
+    # 45 degrees gives a diagonal layer.
+    theta_s = 0.25 * np.pi
+
+    cs = np.cos(theta_s)
+    ss = np.sin(theta_s)
+
+    # ------------------------------------------------------------
+    # Rotated coordinate
+    # ------------------------------------------------------------
+
+    def xi(p):
+        x, y = p
+        return cs*(x-xc) + ss*(y-yc)
+
+    # ------------------------------------------------------------
+    # Gaussian layer
+    # ------------------------------------------------------------
+
+    def G(p, delta):
+        q = xi(p)
+        return np.exp(-(q/delta)**2)
+
+    def G_x(p, delta):
+        q = xi(p)
+
+        return G(p,delta) * (
+            -2.0*q*cs/delta**2
+        )
+
+    def G_y(p, delta):
+        q = xi(p)
+
+        return G(p,delta) * (
+            -2.0*q*ss/delta**2
+        )
+
+    def G_xx(p,delta):
+        q = xi(p)
+
+        return G(p,delta) * (
+            4.0*q**2*cs**2/delta**4
+            - 2.0*cs**2/delta**2
+        )
+
+    def G_xy(p,delta):
+        q = xi(p)
+
+        return G(p,delta) * (
+            4.0*q**2*cs*ss/delta**4
+            - 2.0*cs*ss/delta**2
+        )
+
+    def G_yy(p,delta):
+        q = xi(p)
+
+        return G(p,delta) * (
+            4.0*q**2*ss**2/delta**4
+            - 2.0*ss**2/delta**2
+        )
+
+    # ------------------------------------------------------------
+    # Boundary-vanishing smooth factor
+    # ------------------------------------------------------------
+
+    def sx(x):
+        return np.sin(np.pi*x/L)
+
+    def sy(y):
+        return np.sin(np.pi*y/L)
+
+    def sx_d(x):
+        return (np.pi/L)*np.cos(np.pi*x/L)
+
+    def sy_d(y):
+        return (np.pi/L)*np.cos(np.pi*y/L)
+
+    def sx_dd(x):
+        return -(np.pi/L)**2*np.sin(np.pi*x/L)
+
+    def sy_dd(y):
+        return -(np.pi/L)**2*np.sin(np.pi*y/L)
+
+    # ------------------------------------------------------------
+    # Exact solution derivatives
+    # ------------------------------------------------------------
+
+    def u_exact(p, A):
+        x, y = p
+        delta = A[0,0]
+
+        return (
+            Amp
+            * G(p,delta)
+            * sx(x)
+            * sy(y)
+        )
+
+    def u_xx(p, A):
+        x, y = p
+        delta = A[0,0]
+
+        S = sx(x) * sy(y)
+
+        return Amp * (
+            G_xx(p,delta) * S
+            + 2.0 * G_x(p,delta) * sx_d(x) * sy(y)
+            + G(p,delta) * sx_dd(x) * sy(y)
+        )
+
+    def u_xy(p,A):
+        x, y = p
+        delta = A[0,0]
+
+        return Amp * (
+            G_xy(p,delta) * sx(x) * sy(y)
+            + G_x(p,delta) * sx(x) * sy_d(y)
+            + G_y(p,delta) * sx_d(x) * sy(y)
+            + G(p,delta) * sx_d(x) * sy_d(y)
+        )
+
+    def u_yy(p,A):
+        x, y = p
+        delta = A[0,0]
+
+        S = sx(x) * sy(y)
+
+        return Amp * (
+            G_yy(p,delta) * S
+            + 2.0 * G_y(p,delta) * sx(x) * sy_d(y)
+            + G(p,delta) * sx(x) * sy_dd(y)
+        )
+
+    # ------------------------------------------------------------
+    # Diffusion tensor
+    # ------------------------------------------------------------
+
+    def A11(x, y):
+        p = np.array([x, y])
+        theta = angle(p)
+
+        return (
+            eig_1(p) * np.cos(theta)**2
+            + eig_2(p) * np.sin(theta)**2
+        )
+
+    def A12(x, y):
+        p = np.array([x, y])
+        theta = angle(p)
+
+        return (
+            (eig_1(p) - eig_2(p))
+            * np.sin(theta)
+            * np.cos(theta)
+        )
+
+    def A22(x, y):
+        p = np.array([x, y])
+        theta = angle(p)
+
+        return (
+            eig_1(p) * np.sin(theta)**2
+            + eig_2(p) * np.cos(theta)**2
+        )
+
+    # ------------------------------------------------------------
+    # PDE RHS
+    # ------------------------------------------------------------
+
+    def f(p, A):
+        x, y = p
+
+        return (
+            A11(x, y) * u_xx(p,A)
+            + 2.0 * A12(x, y) * u_xy(p,A)
+            + A22(x, y) * u_yy(p,A)
+        )
+
+    # ------------------------------------------------------------
+    # Boundary conditions
+    # ------------------------------------------------------------
+
+    # Because sin(pi*x/L) = 0 at x=0,L
+    # and sin(pi*y/L) = 0 at y=0,L,
+    # the exact solution is zero on every boundary.
+
+    g = [
+        lambda x: 0.0,       # y=0
+        lambda y: 0.0,       # x=L
+        lambda x: 0.0,       # y=L
+        lambda y: 0.0        # x=0
+    ]
+
+    btype = [
+        'dirichlet',
+        'dirichlet',
+        'dirichlet',
+        'dirichlet'
+    ]
+
+    return f, g, btype, u_exact
+
 # Radial Domain
 # Solution with 0-Dritichlet and forcing term
 def example_00(eig_1=None, eig_2=None, angle=None, Amp=1.0, modes=None, L=1.0):

@@ -159,7 +159,7 @@ def smooth_monitor(M, S, beta=0.25):
 
 def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
                         shape, L, btype_all_dirichlet, augmentation,
-                        A, alpha, eps, tol, sparse, relax=1.0,
+                        A, alpha, eps, fixed_eps, tol, sparse, relax=1.0,
                         min_relax=1e-4, tangle_frac=0.5,
                         target_contrast=5.0):
     """
@@ -224,7 +224,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
 
     ctx_x = assembly.rbf_fd_system(f_zero, g_x, btype_all_dirichlet, P, basis, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
-                                   M, sparse=True)
+                                   M, eps=eps, fixed_eps=fixed_eps, sparse=True)
 
     x_new = assembly.rbf_fd_solve_sparse(ctx_x.W, ctx_x.F)
 
@@ -262,7 +262,7 @@ def redistribute_nodes(P, u, num_stencil_nodes, num_centers, basis,
     return P_solved, spacing_old
 
 def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
-                    num_centers, augmentation, eig_1, eig_2, angle, eps, tol,
+                    num_centers, augmentation, eig_1, eig_2, angle, eps, fixed_eps, tol,
                     sparse=True, max_iter=20, alpha=None, tangle_frac=0.5,
                     move_tol=1e-6, relax=1.0, target_contrast=5.0, verbose=True):
     """
@@ -286,14 +286,14 @@ def mesh_refinement(f, g, btype, P, rbf_shape, shape, L, num_stencil_nodes,
         A = assembly.coeff_matrix(P.T, eig_1, eig_2, angle)
         ctx = assembly.rbf_fd_system(f, g, btype, P, rbf_shape, shape, L,
                             num_stencil_nodes, num_centers, augmentation,
-                            A, eps, tol, sparse)
+                            A, eps, fixed_eps, tol, sparse)
         u = assembly.rbf_fd_solve_sparse(ctx.W, ctx.F)
 
         print("Solving P:")
         P_new, spacing_old = redistribute_nodes(P, u, num_stencil_nodes,
                                    num_centers, rbf_shape, shape, L,
                                    btype_all_dirichlet, augmentation,
-                                   A, alpha, eps, tol, sparse, relax=relax,
+                                   A, alpha, eps, fixed_eps, tol, sparse, relax=relax,
                                    target_contrast=target_contrast,
                                    tangle_frac=tangle_frac)
 

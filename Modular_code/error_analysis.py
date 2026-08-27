@@ -58,7 +58,7 @@ def max_error(u_soln, u_ex):
 def max_error_relative(u_soln, u_ex):
     return np.max(abs(u_soln-u_ex))/np.max(abs(u_ex))
 
-def energy_error(context, weights, u_soln, u_ex, sparse=False, W_grads=None):
+def energy_error(context, weights, u_soln, u_ex, eps, fixed_eps, sparse=False, W_grads=None):
     P = context.nodes
     A = context.A
     num_nodes = len(P)
@@ -66,9 +66,9 @@ def energy_error(context, weights, u_soln, u_ex, sparse=False, W_grads=None):
 
     if W_grads is None:
         if sparse:
-            W_grads = assembly.global_grads_sparse(context)
+            W_grads = assembly.global_grads_sparse(context, eps, fixed_eps)
         else:
-            W_grads = assembly.global_grads(context)
+            W_grads = assembly.global_grads(context, eps, fixed_eps)
         
     err = u_soln-u_ex
     
@@ -94,15 +94,15 @@ def energy_error_delaunay(context, u_soln, u_ex, sparse=False):
     
     return energy_error(context, weights, u_soln, u_ex, sparse)
 
-def energy_error_delaunay_relative(context, u_soln, u_ex, sparse=False):
+def energy_error_delaunay_relative(context, u_soln, u_ex, eps, fixed_eps, sparse=False):
     P = context.nodes
     tri = Delaunay(P)
     weights = delaunay_lumped_weights(P, tri)
     
     if sparse:
-        W_grads = assembly.global_grads_sparse(context)
+        W_grads = assembly.global_grads_sparse(context, eps, fixed_eps)
     else:
-        W_grads = assembly.global_grads(context)
+        W_grads = assembly.global_grads(context, eps, fixed_eps)
 
     energy_err = energy_error(context, weights, u_soln, u_ex,
                               sparse, W_grads)
@@ -112,16 +112,16 @@ def energy_error_delaunay_relative(context, u_soln, u_ex, sparse=False):
     
     return energy_err/dirichlet_energy
 
-def energy_functional(context, weights, u_soln, f_vec, sparse=False):
+def energy_functional(context, weights, u_soln, f_vec, eps, fixed_eps, sparse=False):
     P = context.nodes
     A = context.A
     num_nodes = len(P)
     dim = len(P[0])
 
     if sparse:
-        W_grads = assembly.global_grads_sparse(context)
+        W_grads = assembly.global_grads_sparse(context, eps, fixed_eps)
     else:
-        W_grads = assembly.global_grads(context)
+        W_grads = assembly.global_grads(context, eps, fixed_eps)
     
     grad_u = np.zeros((num_nodes, dim))
     energy= 0.0
@@ -138,15 +138,15 @@ def energy_functional(context, weights, u_soln, f_vec, sparse=False):
     
     return energy
 
-def energy_functional_delaunay(context, u_soln, f_vec, sparse=False):
+def energy_functional_delaunay(context, u_soln, f_vec, eps, fixed_eps, sparse=False):
     P = context.nodes
     tri = Delaunay(P)
     weights = delaunay_lumped_weights(P, tri)
     
-    return energy_functional(context, weights, u_soln, f_vec, sparse)
+    return energy_functional(context, weights, u_soln, f_vec, eps, fixed_eps, sparse)
 
 def pde_context_provider(L, N_int, eig_1, eig_2, num_stencil_nodes,
-                         num_centers, rbf_shape, eps, augmentation,
+                         num_centers, rbf_shape, eps, fixed_eps, augmentation,
                          angle, example_problem, sparse=False):
     # -----------------------------
     # BUILD NODES
@@ -176,7 +176,7 @@ def pde_context_provider(L, N_int, eig_1, eig_2, num_stencil_nodes,
     context = assembly.rbf_fd_system(f, g, btype, P,
                                  rbf_shape, shape, L, num_stencil_nodes,
                                  num_centers, augmentation=augmentation,
-                                 A=A, eps=eps, sparse=sparse)
+                                 A=A, eps=eps, fixed_eps=fixed_eps, sparse=sparse)
     
     P = context.nodes
     W = context.W
@@ -192,7 +192,7 @@ def pde_context_provider(L, N_int, eig_1, eig_2, num_stencil_nodes,
     return context, u_soln, u_ex
 
 def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
-                   eig_2, rbf_shape, eps, augmentation, angle,
+                   eig_2, rbf_shape, eps, fixed_eps, augmentation, angle,
                    context, u_soln, u_ex, sparse=False):
     W = context.W
     F = context.F
@@ -201,7 +201,8 @@ def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
     print(f'Nx = {Nx}, Ny = {Nx}')
     print(f'Number of Stencils Nodes = {num_stencil_nodes}')
     print(f'Number of Center Rings   = {num_centers}')
-    print(f'Inverse Length Scale     = {eps}')
+    print(f'Inverse Length Scale     = {eps}' if fixed_eps else
+          f'Inverse Length Coeff     = {eps}')
     print(f'RBF: {rbf_shape} with augmentation: {augmentation}')
     print(f'Domain shape: {shape}')
     print('Maximum weight:     ' + str(W.max()))
@@ -214,7 +215,7 @@ def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
 
     res_op_max    = max_error_relative(Lu_approx, F)
     res_op_l2     = l2_error_relative(Lu_approx, F)
-    res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, sparse)
+    res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, eps, fixed_eps, sparse)
     print("Max u_exact-u Error Rel     = ", err_soln_max)
     print("L2  u_exact-u Error Rel     = ", err_soln_l2)
     print("Energy Error Rel            = ", res_energy)
@@ -226,6 +227,7 @@ def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
     'Nx': Nx,
     'Ny': Nx,
     'eps': eps,
+    'fixed_eps': fixed_eps,
     'num_stencil_nodes': num_stencil_nodes,
     'num_centers': num_centers,
     'eigenvalue 1': eig_1,
@@ -301,15 +303,16 @@ def data_output(example_num):
     angle = "lambda p: 0.0"    
     num_stencil_nodes = 5
     num_centers = 5
-    eps = None
+    eps = 3.0
+    fixed_eps = True
     
     context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(eig_2),
                                                  num_stencil_nodes,
-                                                 num_centers, rbf_shape, eps,
+                                                 num_centers, rbf_shape, eps, fixed_eps,
                                                  augmentation, eval(angle),
                                                  example, sparse)
     error_analysis(N_int, shape_domain, num_stencil_nodes, num_centers, eig_1,
-                   eig_2, rbf_shape, eps, augmentation, angle, context,
+                   eig_2, rbf_shape, eps, fixed_eps, augmentation, angle, context,
                    u_soln, u_ex, sparse)
     
     # -----------------------------
@@ -318,8 +321,8 @@ def data_output(example_num):
     # original sequential script)
     # -----------------------------
     N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250, 300, 500, 750]
-    INV_L_S = [5e-2,1e-1,5e-1,1.0,2.0,2.5,3.0,3.5,4.0,5.0,7.5,10.0,15.0,20.0,30.0]
-    N_S_N = [5,7,10,15,20,25,40,50]#,65,75,85,100,115,130,150,175,200]
+    INV_L_S = [1e-3,5e-3,1e-2,5e-2,1e-1,5e-1,1.0,1.5,2.0]
+    N_S_N = [5,7,10,15,20,25,40,50]
     N_C_R = [5,7,10,15,20,25,40,50]
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
@@ -328,7 +331,8 @@ def data_output(example_num):
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e-4"
     angle = "lambda p: 12.0/24.0*np.pi"
-    eps = None
+    eps = 0.050
+    fixed_eps = False
     num_stencil_nodes = 6
     num_centers = 3
 
@@ -341,14 +345,14 @@ def data_output(example_num):
     
     for x in N_ints:
         print(f'---------------------N_int = {x}-------------------------')
-        context, u_soln, u_ex = pde_context_provider(x, eval(eig_1), eval(eig_2),
+        context, u_soln, u_ex = pde_context_provider(L, x, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_centers, rbf_shape,
-                                                     eps, augmentation,
+                                                     eps, fixed_eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(x, shape_domain, num_stencil_nodes, num_centers, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, angle, context,
-                             u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, eps, fixed_eps, augmentation, angle,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'N_int'
         row['varied_value'] = x
         rows.append(row)
@@ -366,11 +370,11 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_centers, rbf_shape,
-                                                     x, augmentation,
+                                                     x, fixed_eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(N_int, shape_domain, num_stencil_nodes, num_centers, eig_1,
-                             eig_2, rbf_shape, x, augmentation, angle, context,
-                             u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, x, fixed_eps, augmentation, angle,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'Inverse Length Scale'
         row['varied_value'] = x
         rows.append(row)
@@ -380,18 +384,18 @@ def data_output(example_num):
     # TEST 2: NUMBER STENCIL NODES
     # -----------------------------
     print('================2: Number of Stencil Nodes Study==================')
-    #N_S_N = [25]   
+    #N_S_N = [6]   
     rows = []
     
     for x in N_S_N:
         print(f'----------num_stencil_nodes = {x}------------')
         context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(eig_2),
                                                      x, num_centers, rbf_shape,
-                                                     eps, augmentation,
+                                                     eps, fixed_eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(N_int, shape_domain, x, num_centers, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, angle, context,
-                             u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, eps, fixed_eps, augmentation, angle,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'num_stencil_nodes'
         row['varied_value'] = x
         rows.append(row)
@@ -401,7 +405,7 @@ def data_output(example_num):
     # TEST 3: NUMBER CENTER RINGS
     # -----------------------------
     print('===================3: Number of Center Study====================')
-    #N_C_R = N_S_N
+    #N_C_R = [3]
     rows = []
     
     for x in N_C_R:
@@ -409,11 +413,11 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      x, rbf_shape,
-                                                     eps, augmentation,
+                                                     eps, fixed_eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(N_int, shape_domain, num_stencil_nodes, x, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, angle, context,
-                             u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, eps, fixed_eps, augmentation, angle,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'num_centers'
         row['varied_value'] = x
         rows.append(row)
@@ -432,11 +436,11 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(x),
                                                      num_stencil_nodes,
                                                      num_centers, rbf_shape,
-                                                     eps, augmentation,
+                                                     eps, fixed_eps, augmentation,
                                                      eval(angle), example, sparse)
         row = error_analysis(N_int, shape_domain, num_stencil_nodes, num_centers, eig_1,
-                             x, rbf_shape, eps, augmentation, angle, context,
-                             u_soln, u_ex, sparse)
+                             x, rbf_shape, eps, fixed_eps, augmentation, angle,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'eig_2'
         row['varied_value'] = x
         rows.append(row)
@@ -455,18 +459,18 @@ def data_output(example_num):
         context, u_soln, u_ex = pde_context_provider(L, N_int, eval(eig_1), eval(eig_2),
                                                      num_stencil_nodes,
                                                      num_centers, rbf_shape,
-                                                     eps, augmentation,
+                                                     eps, fixed_eps, augmentation,
                                                      eval(x), example, sparse)
         row = error_analysis(N_int, shape_domain, num_stencil_nodes, num_centers, eig_1,
-                             eig_2, rbf_shape, eps, augmentation, x, context,
-                             u_soln, u_ex, sparse)
+                             eig_2, rbf_shape, eps, fixed_eps, augmentation, x,
+                             context, u_soln, u_ex, sparse)
         row['varied_param'] = 'angle'
         row['varied_value'] = x
         rows.append(row)
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)
 
 if __name__ == "__main__":
-    example_nums = [2,3,4,5,6,7,8,9,10,11]
+    example_nums = [2,3,4,5,6,7,8,9,10,11,12]
     
     for example_num in example_nums:
         data_output(example_num)

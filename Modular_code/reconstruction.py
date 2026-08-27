@@ -15,7 +15,8 @@ import error_analysis
 
 def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
                    augmentation, eps, tol, alpha, beta,
-                   angle, Amp, modes, example, sparse=False):
+                   angle, Amp, modes, example, fixed_eps,
+                   sparse=False):
        
     P, num_int = geometry.uniform_int_square(L, Nx, Ny)
     
@@ -43,12 +44,13 @@ def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
         context = assembly.rbf_fd_system(f, g_bound, btype, P,
                                          rbf_shape, shape, L, k_s, k_c,
                                          augmentation=augmentation,
-                                         A=A, eps=eps, tol=tol, sparse=sparse)
+                                         A=A, eps=eps, fixed_eps=False,
+                                         tol=tol, sparse=sparse)
     else:
         context = assembly.rbf_fd_system(f, g_bound, btype, P,
                                          rbf_shape, shape, L, k_s, k_c,
                                          augmentation=augmentation,
-                                         A=A, eps=eps, tol=tol)        
+                                         A=A, eps=eps, fixed_eps=fixed_eps, tol=tol)        
     
     W = context.W
     F = context.F
@@ -73,7 +75,8 @@ def training_setup(L, Nx, Ny, shape, k_s, k_c, rbf_shape,
     
     return context
 
-def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, e1, e2, angle, sparse=False):
+def reconstruction_analysis(context, shape, L, Amp, modes, example_problems,
+                            e1, e2, angle, eps, fixed_eps=False, sparse=False):
     P = context.nodes
     A = context.A
     W = context.W
@@ -85,9 +88,9 @@ def reconstruction_analysis(context, shape, L, Amp, modes, example_problems, e1,
                                                                 shape, L,
                                                                 context)
         if sparse:
-            W = assembly.boundary_to_weights_sparse(W, context, in_boundary, normal_vec)
+            W = assembly.boundary_to_weights_sparse(W, context, eps, fixed_eps, in_boundary, normal_vec)
         else:
-            W = assembly.boundary_to_weights(W, context, in_boundary, normal_vec)
+            W = assembly.boundary_to_weights(W, context, eps, fixed_eps, in_boundary, normal_vec)
             
         F = assembly.right_hand_side(context, f, g, in_boundary)
         u_ex = u_exact(P.T,np.transpose(A, (1, 2, 0)))
@@ -119,7 +122,8 @@ if __name__ == "__main__":
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = None
+    eps = 0.050
+    fixed_eps = False
     tol = 1e-12
 
     # -----------------------------
@@ -160,12 +164,14 @@ if __name__ == "__main__":
     # -----------------------------
     context = training_setup(L, Nx, Ny, shape, num_stencil_nodes,
                              num_centers, rbf_shape, augmentation, eps,
-                             tol, alpha, beta, angle,
-                             Amp, modes, examples.example_2,sparse=sparse)
+                             tol, alpha, beta, angle, Amp, modes,
+                             examples.example_3, fixed_eps=fixed_eps,
+                             sparse=sparse)
         
     # -----------------------------
     # RECONSTRUCT AND REPORT ERRORS
     # -----------------------------    
     print('---------------------- Testing Problems: -------------------------')
     reconstruction_analysis(context, shape, L, Amp, modes,
-                            example_problems, alpha, beta, angle, sparse=sparse)
+                            example_problems, alpha, beta, angle,
+                            eps, fixed_eps=fixed_eps, sparse=sparse)
