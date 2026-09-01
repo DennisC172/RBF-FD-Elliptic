@@ -155,25 +155,25 @@ if __name__ == "__main__":
     plot = True
 
     # Define the problem
-    example_num = "10"
+    example_num = "12"
     
     # Define the nodes per stencil
     num_stencil_nodes = 6
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 3
+    num_centers = 2
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = 0.0050
+    eps = 0.0150
     fixed_eps = False
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 250
+    Nx = 200
     L = 1.0
     shape = 'square'
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # -----------------------------    
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
-    eig_2_str = "lambda p: 1e-4"
+    eig_2_str = "lambda p: 1e-3"
     angle_str = "lambda p: 12.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     '''Anisotropy needs to be outputed from this function'''
     f, g, btype, u_exact = problem_fun(eig_1, eig_2, angle, Amp, modes, L)
 
-    if False:
+    if True:
         P = refinement.mesh_refinement(f, g, btype, P, rbf_shape, shape, L,
                                    num_stencil_nodes, num_centers, augmentation,
                                    eig_1, eig_2, angle, eps, fixed_eps, sparse,
