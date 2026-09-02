@@ -1,0 +1,165 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{bm}
+\usetikzlibrary{positioning, arrows.meta}
+
+\geometry{margin=1in}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  language=Python,
+  showstringspaces=false,
+  columns=fullflexible,
+  keywordstyle=\color{blue!70!black}
+}
+
+\newcommand{\diver}{\nabla\!\cdot}
+\newcommand{\grad}{\nabla}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\R}{\mathbb{R}}
+
+\title{RBF-FD Solver: Least Squares Method for Operator Reproduction}
+\author{Dennis Corraliza}
+\date{9/2/2026}
+
+\begin{document}
+\maketitle
+
+\pagebreak
+
+\section{Setup:}
+
+Standard RBF-FD methods assume a native space for the solution set of a PDE problem in form of:
+\begin{equation}
+	- Lu = -\diver\!\big(A \grad u\big) = f \quad \text{in } \Omega,
+	\label{eq:PDE}
+\end{equation}
+
+$A$ is an symmetric positive definite anisotropic tensor and $f$ is the forcing term acting in the domain $\Omega$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
+\begin{align}
+  u &= g_D \quad \text{on } \Gamma_D \subset \partial\Omega, \\
+  \frac{\partial u}{\partial n} \equiv n \cdot A \grad u &= g_N \quad
+  \text{on } \Gamma_N \subset \partial\Omega,
+  \label{eq:neumann-bc}
+\end{align}
+
+Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to the $u$ sampled at nodes. We define the radial basis functions in the form $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||)$ for $i = 1, \hdots , m$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes in $\Omega$. For the following procedure, assume $m > n$, thus more center nodes than stencil nodes per stencil. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these radial basis functions will be to approximate to approximate the operator $L$. Rather than assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
+\begin{align}
+	r_j(\bm{x}) :&= L\phi_j(\bm{x}) - \sum_{i=1}^n w_i(\bm{x}) \phi_j(\bm{x_i})\\
+	r(\bm{x}) &= L\bm{\phi}(\bm{x}) - \bm{\Phi^T} \bm{w}(\bm{x}), \text{ } \bm{w}: \mathbb{R}^n \rightarrow \mathbb{R}^n \text{ for } \bm{x} \in \Omega.
+\end{align}
+
+Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials satisfying the nullspace condition for the radial basis functions. Let $\Pi_k=span\left\{p_i\right\}_{i=1}^l$ with polynomial degree up to $k$. We want to reproduce the operator exactly on the polynomial basis: 
+\begin{align}
+	Lp_j(\bm{x}) :&= \sum_{i=1}^n w_i(\bm{x}) p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
+	L\bm{p}(\bm{x}) &= \bm{P^T} \bm{w}
+\end{align}
+
+where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. Thus, we have a constrained least squares problem in the form:
+\begin{equation}
+	\left\{
+	\begin{aligned}
+		\min J(\bm{w}(\bm{x})) &:= \min \frac{1}{2}\|\bm{r}(\bm{x})\|_2^2 \quad \text{for } \bm{x} \in \Omega \\
+		\text{subject to } \bm{\Phi}^T \bm{w} &= L\bm{p}
+	\end{aligned}
+	\right.
+\end{equation}
+
+We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem as follows:
+\begin{align*}
+	\mathcal{L}(\bm{w}, \bm{\nu}) :&= J(\bm{w}) + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p}(\bm{x}) > \\
+	&= \frac{1}{2}<\bm{\Phi}^T \bm{w}, \bm{\Phi}^T \bm{w}> - <\bm{\Phi}^T \bm{w}, L\bm{\phi}> + \frac{1}{2}<L\bm{\phi}, L\bm{\phi}>  + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p} >
+\end{align*}
+The resulting KKT equations for this system are then:
+\begin{align}
+	\nabla_w \mathcal{L} &= 0: \bm{\Phi} L\bm{\phi} = \bm{\Phi} \bm{\Phi}^T \bm{w} + \bm{P} \bm{\nu}\\
+	\nabla_\nu \mathcal{L} &= 0: \bm{P}^T \bm{w} = L\bm{p}
+\end{align}
+
+The augmented matrix then takes the form:
+\begin{equation}
+	\begin{bmatrix}
+		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{w} \\ \bm{\nu}
+	\end{bmatrix} =
+	\begin{bmatrix}
+		\bm{\Phi} L\bm{\phi} \\ L\bm{p}
+	\end{bmatrix}
+\end{equation}
+
+The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1, \hdots, u(\bm{x}_n) \right]^T$. Define $L_h u(\bm{x}) := \bm{w}^T \bm{u}$. Thus, we have the following:
+\begin{align*}
+	L_h u(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{u}\\
+			&= \begin{bmatrix}
+					\bm{w}^T & \bm{\nu}^T
+				\end{bmatrix}
+				\begin{bmatrix}
+					\bm{u} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \left(
+	\begin{bmatrix}
+		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-1}
+	\begin{bmatrix}
+		\bm{\Phi} L\bm{\phi} \\ L\bm{p}
+	\end{bmatrix}
+				\right)^T 
+				\begin{bmatrix}
+					\bm{u} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \begin{bmatrix}
+					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
+				\end{bmatrix}
+	\begin{bmatrix}
+		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-T}
+				\begin{bmatrix}
+					\bm{u} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \begin{bmatrix}
+					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
+				\end{bmatrix}
+				\begin{bmatrix}
+					\bm{q} \\ \bm{\alpha}
+				\end{bmatrix}\\
+			&= L\bm{\phi}^T (\bm{x}) \left(\bm{\Phi}^T \bm{q}\right) + L\bm{p}^T (\bm{x}) \bm{\alpha}
+\end{align*}
+
+Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coefficients of $u$ as follows:
+
+\begin{equation}
+	\begin{bmatrix}
+		\bm{u} \\ \bm{0}
+	\end{bmatrix} = 
+	\begin{bmatrix}
+		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{q} \\ \bm{\alpha}
+	\end{bmatrix}
+\end{equation}
+
+Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$.
+
+\end{document}
