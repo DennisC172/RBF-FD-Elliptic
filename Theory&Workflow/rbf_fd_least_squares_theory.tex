@@ -42,7 +42,7 @@
 
 \pagebreak
 
-\section{Setup:}
+\section{Weight Constraint RBF-FD Setup:}
 
 Standard RBF-FD methods assume a native space for the solution set of a PDE problem in form of:
 \begin{equation}
@@ -85,10 +85,14 @@ We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem
 	\mathcal{L}(\bm{w}, \bm{\nu}) :&= J(\bm{w}) + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p}(\bm{x}) > \\
 	&= \frac{1}{2}<\bm{\Phi}^T \bm{w}, \bm{\Phi}^T \bm{w}> - <\bm{\Phi}^T \bm{w}, L\bm{\phi}> + \frac{1}{2}<L\bm{\phi}, L\bm{\phi}>  + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p} >
 \end{align*}
+
+\section{Consistency Conditions for Finite Spaces and Interpolation Results}
+
 The resulting KKT equations for this system are then:
 \begin{align}
-	\nabla_w \mathcal{L} &= 0: \bm{\Phi} L\bm{\phi} = \bm{\Phi} \bm{\Phi}^T \bm{w} + \bm{P} \bm{\nu}\\
+	\nabla_w \mathcal{L} &= 0: \bm{\Phi} L\bm{\phi} = \bm{\Phi} \bm{\Phi}^T \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
 	\nabla_\nu \mathcal{L} &= 0: \bm{P}^T \bm{w} = L\bm{p}
+	\label{eq:constraint}
 \end{align}
 
 The augmented matrix then takes the form:
@@ -105,14 +109,14 @@ The augmented matrix then takes the form:
 	\end{bmatrix}
 \end{equation}
 
-The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1, \hdots, u(\bm{x}_n) \right]^T$. Define $L_h u(\bm{x}) := \bm{w}^T \bm{u}$. Thus, we have the following:
+The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_h f(\bm{x}) := \bm{w}^T (\bm{x}) \bm{f}$ for some function $f$. Thus, we have the following:
 \begin{align*}
-	L_h u(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{u}\\
+	L_h f(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{f}\\
 			&= \begin{bmatrix}
 					\bm{w}^T & \bm{\nu}^T
 				\end{bmatrix}
 				\begin{bmatrix}
-					\bm{u} \\ \bm{0}
+					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \left(
 	\begin{bmatrix}
@@ -124,7 +128,7 @@ The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$,
 	\end{bmatrix}
 				\right)^T 
 				\begin{bmatrix}
-					\bm{u} \\ \bm{0}
+					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
 					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
@@ -134,7 +138,7 @@ The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$,
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}^{-T}
 				\begin{bmatrix}
-					\bm{u} \\ \bm{0}
+					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
 					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
@@ -149,7 +153,7 @@ Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coef
 
 \begin{equation}
 	\begin{bmatrix}
-		\bm{u} \\ \bm{0}
+		\bm{f} \\ \bm{0}
 	\end{bmatrix} = 
 	\begin{bmatrix}
 		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
@@ -160,6 +164,40 @@ Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coef
 	\end{bmatrix}
 \end{equation}
 
-Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$.
+Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$. Thus, $s(x) = \bm{\phi}^T(\bm{x})\bm{\Phi}^T q + \bm{P} \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
+\begin{align}
+	\bm{s} = s(X) &= \bm{\Phi} \bm{\Phi}^T \bm{q} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
+	\bm{P}^T \bm{q} &= \bm{0}
+\end{align}
+
+Hence, we get interpolation of $f$ at the node set $X$. Furthermore, from the KKT matrix we can show that $\bm{\Phi} \bm{r} = \bm{P} \bm{\nu}$ which implies that $\bm{\Phi} \bm{r} \in range(\bm{P}) = \left( ker \left(\bm{P}^T \right) \right)^\perp$. Thus, we get the relationship:
+\begin{equation}
+\bm{r}^T \left( \bm{\Phi}^T \bm{z} \right)=\bm{0} \text{ for } \bm{P}^T \bm{z} = \bm{0} \label{eq:res_orth}
+\end{equation}
+
+Finally, we check the consistency error for $s \in V_h+\Pi_k$ with $\bm{P}^T \bm{q}=\bm{0}$.
+\begin{align*}
+	Ls(x)-L_hs(x) &= L\left(\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + \bm{p}^T(\bm{x}\right) \bm{\alpha}) - \bm{w}^T(\bm{x})\bm{s}\\
+	&= L\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})(\bm{\Phi} \bm{\Phi}^T \bm{q} + \bm{P} \bm{\alpha})\\
+	&= L\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})\bm{\Phi} \bm{\Phi}^T \bm{q} - \bm{w}^T(\bm{x}) \bm{P} \bm{\alpha}\\
+	&= \left( L\bm{\phi}(\bm{x}) - \bm{\Phi}^T \bm{w}(\bm{x}) \right)^T \bm{\Phi}^T \bm{q} + \left( L\bm{p}^T(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
+	&= \bm{r}^T \bm{\Phi}^T \bm{q} + \left( L\bm{p}(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
+\end{align*}
+\begin{equation}
+	Ls(x)-L_hs(x) = 0 \text{ due to (\ref{eq:constraint}) and (\ref{eq:res_orth}}) \label{eq:repro}
+\end{equation}
+
+\section{Consistency Results for Function Approximations}.
+
+Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s + (u - s)$ to get the following:
+\begin{align*}
+\mathcal{E}[u](\bm{x}) :&= Lu(\bm{x}) - L_hu(\bm{x})\\
+	&= Lu(\bm{x}) - \bm{w}^T(\bm{x})\bm{u}\\
+	&= L((u-s) + s)(\bm{x}) - \bm{w}^T(\bm{x})\bm{u} - L_h s(\bm{x}) + L_h s(\bm{x})\\
+	&= L(u-s)(\bm{x}) + (L s(\bm{x}) - L_h s(\bm{x})) + L_h(s-u)(\bm{x})\\
+	&= L(u-s)(\bm{x}) - \bm{w}^T(\bm{x})(\bm{u}-\bm{s}) \text{, by (\ref{eq:repro})}\\
+	&= Le(\bm{x}) - \bm{w}^T(\bm{x})\bm{e} \text{, } e(\bm{x})=u(\bm{x})-s(\bm{x})\\
+	&= \mathcal{E}[e](\bm{x})
+\end{align*}
 
 \end{document}
