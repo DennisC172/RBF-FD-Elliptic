@@ -64,7 +64,7 @@ Rather than assuming a form for the solution, our goal is to approximate the ope
 	r(\bm{x}) &= L\bm{\phi}(\bm{x}) - \bm{\Phi^T} \bm{w}(\bm{x}), \text{ } \bm{w}: \mathbb{R}^n \rightarrow \mathbb{R}^n \text{ for } \bm{x} \in \Omega.
 \end{align}
 
-Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials satisfying the nullspace condition for the radial basis functions. Let $\Pi_k=span\left\{p_i\right\}_{i=1}^l$ with polynomial degree up to $k$. We want to reproduce the operator exactly on the polynomial basis: 
+Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials augmenting the radial basis functions. Let $\Pi_k=span\left\{p_i\right\}_{i=1}^l$ with polynomial degree up to $k$. We want to reproduce the operator exactly on the polynomial basis: 
 \begin{align}
 	Lp_j(\bm{x}) :&= \sum_{i=1}^n w_i(\bm{x}) p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
 	L\bm{p}(\bm{x}) &= \bm{P^T} \bm{w}
@@ -164,7 +164,7 @@ Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coef
 	\end{bmatrix}
 \end{equation}
 
-Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$. Thus, $s(x) = \bm{\phi}^T(\bm{x})\bm{\Phi}^T q + \bm{P} \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
+Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$. Thus, $s(x) = \bm{\phi}^T(\bm{x})\bm{\Phi}^T q + \bm{p}^T(\bm{x}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
 \begin{align}
 	\bm{s} = s(X) &= \bm{\Phi} \bm{\Phi}^T \bm{q} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
 	\bm{P}^T \bm{q} &= \bm{0}
