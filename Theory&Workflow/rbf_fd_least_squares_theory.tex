@@ -63,15 +63,15 @@ and $f \in L^p(\Omega)$ is the forcing term acting in the domain $\Omega$. The p
   \label{eq:neumann-bc}
 \end{align}
 
-For simplicity, we assume $\partial \Omega = \Gamma_D \cup \Gamma_N$ and $\Gamma_D \cap \Gamma_N = \emptyset$. Furthermore, let $g_D, g_N \in W^{k-1,p}(\partial \Omega)$. By \textit{Agmon-Douglis-Nirenberg} Theorem, we have the following estimate for $u$:
+For simplicity, we assume $\partial \Omega = \Gamma_D \cup \Gamma_N$ and $\Gamma_D \cap \Gamma_N = \emptyset$. Furthermore, let $g_D, g_N \in W^{k-1,p}(\partial \Omega)$. By \textit{Agmon-Douglis-Nirenberg} Theorem \cite{Agmon}, we have the following estimate for $u$:
 \begin{equation}
-\|u\|_{W^{k,p}(\Omega)} \leq C\left(\|Lu\|_{L^p(\Omega)} \sum_{j=1}^{m} \|g_i\|_{W^{k-1,p}(\partial\Omega)} + \|u\|_{L^p(\Omega)} \right).
+\|u\|_{W^{k,p}(\Omega)} \leq C\left(\|Lu\|_{L^p(\Omega)} + \sum_{j=1}^{m} \|g_i\|_{W^{k-1,p}(\partial\Omega)} + \|u\|_{L^p(\Omega)} \right).
 \end{equation}
 
 \section{RBF-FD Method:}
 
 \subsection{Local Approximation setup}
-To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approximate $\hat{u} \approx u$ on a neighborhood $\Omega \subseteq \mathbb{R}^n$ of $\bf{z}$ such that we approximate $Lu \approx L\hat{u}$. We define the radial basis functions in the form $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||): \Omega \rightarrow \mathbb{R}$ for $i = 1, \hdots , m$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes for a point $\bf{z}$ in $\Omega$. For the classical approximation scheme, let $X=Y$ and $m=n$. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these basis functions will be to approximate the operator $L$. The approximation of $u$ takes the form of:
+To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approximate $\hat{u} \approx u$ on a neighborhood $\Omega \subseteq \mathbb{R}^d$ of $\bf{z}$ such that we approximate $Lu \approx L\hat{u}$. We define the radial basis functions in the form $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||): \Omega \rightarrow \mathbb{R}$ for $i = 1, \hdots , m$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes for a point $\bf{z}$ in $\Omega$. For the classical approximation scheme, let $X=Y$ and $m=n$. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these basis functions will be to approximate the operator $L$. The approximation of $u$ takes the form of:
 \begin{equation}
 	\hat{u}(\bf{x}) =  \sum_{i=1}^n \lambda_i \phi_i(\bf{x})
 \end{equation}
@@ -97,9 +97,51 @@ Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get th
 
 For conditionally positive definite kernels, we augment them through the form:
 
+\begin{equation}
+	\hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i \phi_i(\bf{x}) + \sum_{j=1}^l \beta_j p_l(\bf{x})
+\end{equation}
+
+We can generate a Gram matrix equation of the form:
+
+\begin{equation}
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} = 
+	\begin{bmatrix}
+		\bm{\Phi} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{\lambda} \\ \bm{\alpha}
+	\end{bmatrix}
+\end{equation}
+
+Hence, we can approximate the operator to take the form:
+
+\begin{equation}\
+	(L\hat{u})(\bm{x}) =
+	\begin{bmatrix}
+		\bm{(L\phi)(\bm{x})} \\ \bm{(Lp)(\bm{x})}
+	\end{bmatrix}^T 
+	\begin{bmatrix}
+		\bm{\Phi} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-1}
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} :=
+	\bm{w}^T(\bm{x}) \bm{\hat{u}}
+\end{equation}
+
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights.
+
+\subsection{Consistency Error Analysis}
+
+We begin by defining the native space for the set of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Let $\mathcal{F_K}$ be the RKHS Native space for the set of solutions. Suppose $V_Y \subseteq V = span\left\{ \phi(\cdot, \bm{x}): \bm{x} \in \Omega \subseteq{R}^d \right\} \subseteq \mathcal{F_K}$. Let $f in \mathcal{F_K}$, then $f(x) = \left\langle f, \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Then $(Lf)(x) = \left\langle f, L \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Additionally, $\bm{w}^T(\bm{x}) \bm{f} = \left\langle f, \bm{w}^T(\bm{x}) \bm{\phi} \right\rangle_{\mathcal{F_K}}$. Defining the error functional $\xi_{w,x}(f) = \sup_{f \in \mathcal{F_K}, ||f||_\mathcal{F_K} \le 1} |Lf(x) - \bm{w}^T(\bm{x}) \bm{f}| < \infty$ and $\xi_{w,x} \in \mathcal{F_K}^*$. Therefore, by Riesz Representation Theorem, $g_{w,x} = L \phi(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{\phi}$ , $\xi_{w,x} = ||g_{w,x}||_\mathcal{F_K}$. Finally, We define the power function $\mathcal{P}^2(x) = ||g_{w,x}||_\mathcal{F_K}^2$.
+
 \section{Weight Constraint RBF-FD Setup:}
 
-Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to $u$ sampled at nodes. Suppose $m > n$, thus more center nodes than stencil nodes per stencil. Additionally, instead of assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
+Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to $u$ sampled at nodes. Suppose $m > n$ (for the case of $m < n$, refer to \cite{Slak}), thus more center nodes than stencil nodes per stencil. Additionally, instead of assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align}
 	r_j(\bm{x}) :&= L\phi_j(\bm{x}) - \sum_{i=1}^n w_i(\bm{x}) \phi_j(\bm{x_i})\\
 	r(\bm{x}) &= L\bm{\phi}(\bm{x}) - \bm{\Phi^T} \bm{w}(\bm{x}), \text{ } \bm{w}: \mathbb{R}^n \rightarrow \mathbb{R}^n \text{ for } \bm{x} \in \Omega.
@@ -123,8 +165,16 @@ where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. Thus, we have 
 
 We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem as follows:
 \begin{align*}
-	\mathcal{L}(\bm{w}, \bm{\nu}) :&= J(\bm{w}) + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p}(\bm{x}) > \\
-	&= \frac{1}{2}<\bm{\Phi}^T \bm{w}, \bm{\Phi}^T \bm{w}> - <\bm{\Phi}^T \bm{w}, L\bm{\phi}> + \frac{1}{2}<L\bm{\phi}, L\bm{\phi}>  + <\bm{\nu}, \bm{P}^T \bm{w} - L\bm{p} >
+\mathcal{L}(\bm{w},\bm{\nu})
+&:= J(\bm{w})
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{x}) \right\rangle \\
+&= \frac{1}{2}
+\left\langle \bm{\Phi}^{T}\bm{w},\,\bm{\Phi}^{T}\bm{w} \right\rangle
+- \left\langle \bm{\Phi}^{T}\bm{w},\,L\bm{\phi} \right\rangle
++ \frac{1}{2}
+\left\langle L\bm{\phi},\,L\bm{\phi} \right\rangle \\
+&\qquad
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{x}) \right\rangle.
 \end{align*}
 
 \section{Consistency Conditions for Finite Spaces and Interpolation Results}
@@ -148,9 +198,10 @@ The augmented matrix then takes the form:
 	\begin{bmatrix}
 		\bm{\Phi} L\bm{\phi} \\ L\bm{p}
 	\end{bmatrix}
+	\label{eq:augmented}
 \end{equation}
 
-The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_h f(\bm{x}) := \bm{w}^T (\bm{x}) \bm{f}$ for some function $f$. Thus, we have the following:
+From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution given $L\bm{p} \in Range(\bf{P}^T)$. The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_h f(\bm{x}) := \bm{w}^T (\bm{x}) \bm{f}$ for some function $f$. Thus, we have the following:
 \begin{align*}
 	L_h f(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{f}\\
 			&= \begin{bmatrix}
@@ -241,14 +292,46 @@ Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s
 	&= \mathcal{E}[e](\bm{x})
 \end{align*}
 
-\begin{thebibliography}{2}
+\pagebreak
 
-\bibitem{TrefethenBau}
-Agmon, S., Douglis, A. and Nirenberg, L. (1959). \textit{Estimates near the boundary for solutions of elliptic partial differential equations satisfying general boundary conditions}. I. Comm. Pure Appl. Math., 12: 623-727. \\
-\url{https://doi.org/10.1002/cpa.3160120405}
+\begin{thebibliography}{2}
 
 \bibitem{Slak}
 Slak, J. (2026). \textit{Adaptive RBF-FD method}. PhD Thesis, University of Ljubljana.
+
+\bibitem{Agmon}
+Agmon, S., Douglis, A. and Nirenberg, L. (1959). \textit{Estimates near the boundary for solutions of elliptic partial differential equations satisfying general boundary conditions}. I. Comm. Pure Appl. Math., 12: 623-727. \\
+\url{https://doi.org/10.1002/cpa.3160120405}
+
+\bibitem{Petras2018}
+Petras, A., Ling, L., Piret, C. and Ruuth, S. J. (2018).
+\textit{A least-squares implicit RBF-FD closest point method and applications to PDEs on moving surfaces}.
+Journal of Computational Physics, 363: 94--114. \\
+\url{https://doi.org/10.1016/j.jcp.2018.02.023}
+
+\bibitem{BeatsonDavydovLevesley2009}
+Beatson, R., Davydov, O. and Levesley, J. (2009).
+\textit{Error bounds for anisotropic RBF interpolation}.
+Journal of Approximation Theory, 162(1): 1--20.
+
+\bibitem{Davydov2025}
+Davydov, O. (2025).
+\textit{Error bounds for numerical differentiation using kernels of finite smoothness}.
+November 15, 2025.
+
+\bibitem{Davydov2020}
+Davydov, O. (2020).
+\textit{Approximation with Conditionally Positive Definite Kernels on Deficient Sets}.
+arXiv preprint arXiv:2006.13543. \\
+\url{https://arxiv.org/abs/2006.13543}
+
+
+\bibitem{FlyerFornbergBayonaBarnett}
+Flyer, N., Fornberg, B., Bayona, V. and Barnett, G. A. (2016).
+\textit{On the role of polynomials in RBF-FD approximations: I. Interpolation and accuracy}.
+Journal of Computational Physics, 321: 21--38. \\
+\url{https://doi.org/10.1016/j.jcp.2016.05.026}
+
 
 \end{thebibliography}
 
