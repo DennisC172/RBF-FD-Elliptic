@@ -35,7 +35,8 @@
 
 \title{RBF-FD Solver: Least Squares Method for Operator Reproduction}
 \author{Dennis Corraliza}
-\date{9/2/2026}
+\date{Began: 9/2/2026}
+\date{Updated: 9/16/25}
 
 \begin{document}
 \maketitle
@@ -50,23 +51,41 @@ Following the standard RBF-FD methods, let $u \in \mathcal{F}$ be a solution for
 	\label{eq:PDE}
 \end{equation}
 
-Let $1<p<\infty$, $A \in C^{0,1} (\bar{\Omega}; \mathbb{R}^{d \times d}):\bar{\Omega} \rightarrow \mathbb{R}^{d \times d}$ is an symmetric positive definite anisotropic tensor, where
+Let $1<p<\infty$, $A \in W^{1,\infty} (\bar{\Omega}; \mathbb{R}^{d \times d}):\bar{\Omega} \rightarrow \mathbb{R}^{d \times d}$ is an symmetric positive definite anisotropic tensor, where
 \begin{equation}
 	\eta |\xi|^2 \le \bf{A}(\bf{x}) \xi \cdot \xi \le H |\xi|^2 \text{, } 0 < \eta \le H
 \end{equation}
 
-and $f \in L^p(\Omega)$ is the forcing term acting in the domain $\Omega$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
+Assume $\Omega \subset \mathbb{R}^d$ and $f \in W^{k,p}(\Omega)$ is the forcing term acting in the domain $\Omega$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
 \begin{align}
   u &= g_D \quad \text{on } \Gamma_D \subset \partial\Omega, \\
-  \frac{\partial u}{\partial n} \equiv n \cdot A \grad u &= g_N \quad
+  n \cdot A \grad u &= g_N \quad
   \text{on } \Gamma_N \subset \partial\Omega,
   \label{eq:neumann-bc}
 \end{align}
 
-For simplicity, we assume $\partial \Omega = \Gamma_D \cup \Gamma_N$ and $\Gamma_D \cap \Gamma_N = \emptyset$. Furthermore, let $g_D, g_N \in W^{k-1,p}(\partial \Omega)$. By \textit{Agmon-Douglis-Nirenberg} Theorem \cite{Agmon}, we have the following estimate for $u$:
+For simplicity, we assume $\Omega$ be a bounded $C^{1,1}(\partial \Omega)$ domain, with $\partial \Omega = \Gamma_D \cup \Gamma_N$ and $\Gamma_D \cap \Gamma_N = \emptyset$. Furthermore, let $g_D \in W^{k-1/p,p}(\partial \Omega)$, $g_N \in W^{k-1-1/p,p}(\partial \Omega)$. By \textit{Agmon-Douglis-Nirenberg} Theorem \cite{Agmon}, we have the following estimate for $u$:
 \begin{equation}
-\|u\|_{W^{k,p}(\Omega)} \leq C\left(\|Lu\|_{L^p(\Omega)} + \sum_{j=1}^{m} \|g_i\|_{W^{k-1,p}(\partial\Omega)} + \|u\|_{L^p(\Omega)} \right).
+\|u\|_{W^{k,p}(\Omega)} \leq C\left(\|Lu\|_{W^{k-2,p}(\Omega)} + \|g_D\|_{W^{k-1/p,p}(\partial\Omega)} + \|g_N\|_{W^{k-1-1/p,p}(\partial\Omega)} + \|u\|_{L^p(\Omega)} \right).
 \end{equation}
+
+In the case that we work on a Hilbert space, we then have for $p=2$ ($W^{k,2} := H^k$) the following estimate for $u$:
+\begin{equation}
+\|u\|_{H^k(\Omega)} \leq C\left(\|Lu\|_{H^{k-2}(\Omega)} + \|g_D\|_{H^{k-\frac{1}{2}}(\partial\Omega)} + \|g_N\|_{H^{k-\frac{3}{2}}(\partial\Omega)} + \|u\|_{L^2(\Omega)} \right).
+\end{equation}
+
+If we want to study cases where $(Lu)(\bm{x}) \in L^\infty(\Omega)$. we can formulate the setup by having $f \in W^{s,p}(\Omega)$ and, by Morrey Embedding, 
+\begin{equation}
+	W^{s,p} \hookrightarrow C^{0,\alpha} \text{, with } \alpha=s-\frac{d}{p}>0
+\end{equation}
+In other words, $s > \frac{d}{p}$. Suppose $p=2$, then $s > \frac{d}{2}$. Given an operator $L: H^{s+2}(\Omega) \rightarrow H^{s}(\Omega)$, we define an error functional of the form:
+\begin{equation}
+	\xi_{L,x}: H^{s+2}(\Omega) \rightarrow \mathbb{R} \text{, } \xi_{L,x} \in \left(H^{s+2}\right)^*(\Omega)
+\end{equation}
+
+Then by Riesz Representation Theorem, there exists a $v_{L,x} \in H^{s+2}(\Omega)$ such that $\xi_{L,x} (u) = \left\langle u , v_{L,x} \right\rangle_{H^{s+2}(\Omega)}$, and $\| \xi_{L,x} |\|_{\left(H^{s+2}(\Omega)\right)^*} = \| v_{L,x} \|_{H^{s+2}(\Omega)}$
+
+\pagebreak
 
 \section{RBF-FD Method:}
 
@@ -76,12 +95,12 @@ To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approxi
 	\hat{u}(\bf{x}) =  \sum_{i=1}^n \lambda_i \phi_i(\bf{x})
 \end{equation}
 
-This will lead to the form $\bf{\Phi} \bf{\lambda} = \hat{\bf{u}}$ for $\hat{\bf{u}} = [ u(\bf{x_1}), \hdots, u(\bf{x_n}) ]^T.$ We can simply for $\lambda$ to obtain:
+This will lead to the form $\bf{\Phi} \bf{\lambda} = \hat{\bf{u}}$ for $\hat{\bf{u}} = [ u(\bf{x_1}), \hdots, u(\bf{x_n}) ]^T.$ We can simplify for $\lambda$ to obtain:
 \begin{equation}
 \hat{u}(\bf{x}) = \sum_{i=1}^n (\bf{\Phi}^{-1} \bf{u})_i \phi_i(\bf{x}) = \bf{\phi}(\bf{x})^T \bf{\Phi}^{-1} \bf{u}
 \end{equation}
 
-The approximation of $Lu$ at $z$ is in the form of:
+The approximation of $Lu$ at $\bm{z}$ is in the form of:
 \begin{equation}
 	Lu (\bf{z}) \approx L \hat{u} (\bf{z}) = L \bf{\phi}^T(\bf{z}) \bf{\lambda} = L \bf{\phi}^T(\bf{z}) \bf{\Phi}^{-1} \bf{u} := w^{L, X}(\bf{z}) \bf{u}
 \end{equation}
@@ -91,7 +110,7 @@ Thus, approximation the operator turns into local solver for the weights $w_i$ f
 	\bf{\Phi}^T \bf{w^{L, X}(\bf{z})} = L \bf{ \phi} (\bf{z})
 \end{equation}
 
-Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, by defining the basis for $V_Y$ as radial basis functions results in the Radial Basis Function generated Finite Difference method (RBF-FD). 
+Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, by defining the basis for $V_Y$ as radial basis functions, we get the Radial Basis Function generated Finite Difference method (RBF-FD). 
 
 \subsection{Polynomial Augmentation}
 
@@ -133,9 +152,44 @@ Hence, we can approximate the operator to take the form:
 	\bm{w}^T(\bm{x}) \bm{\hat{u}}
 \end{equation}
 
-The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights.
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
+
+\begin{table}[ht]
+    \centering
+    \caption{Common radial basis functions and their minimal CPD order.}
+    \label{tab:rbf-cpd-order}
+    \begin{tabular}{lll}
+        \hline
+        \textbf{RBF} & \textbf{Radial function $\phi(r)$} & 
+        \textbf{CPD order $k$} \\
+        \hline
+        Gaussian & $\exp(-\varepsilon^2 r^2)$ & $0$ \\[2pt]
+        Inverse multiquadric & 
+        $(r^2+\varepsilon^2)^{-1/2}$ & $0$ \\[2pt]
+        Multiquadric & 
+        $(r^2+\varepsilon^2)^{1/2}$ & $1$ \\[2pt]
+        Linear & $r$ & $1$ \\[2pt]
+        Cubic & $r^3$ & $2$ \\[2pt]
+        Thin-plate spline & $r^2\log r$ & $2$ \\[2pt]
+        Quintic & $r^5$ & $3$ \\[2pt]
+        \hline
+    \end{tabular}
+\end{table}
+
+This order provides us both, the degree of the polynomials $k-1$ and the number of terms:
+\begin{equation}
+l=\begin{pmatrix}
+	d+k-1 \\ k-1
+\end{pmatrix}
+\end{equation}
+
+As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a larger degree than required for the RBF, acting as a correction term while inheriting the non-oscillatory behavior of the RBF at the boundary $\partial \Omega$.
 
 \subsection{Consistency Error Analysis}
+
+We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = W^{k,p}$. 
+
+RKHS is a Hilbert space with bounded evaluation functionals. Thus, we have a kernel definition.
 
 We begin by defining the native space for the set of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Let $\mathcal{F_K}$ be the RKHS Native space for the set of solutions. Suppose $V_Y \subseteq V = span\left\{ \phi(\cdot, \bm{x}): \bm{x} \in \Omega \subseteq{R}^d \right\} \subseteq \mathcal{F_K}$. Let $f in \mathcal{F_K}$, then $f(x) = \left\langle f, \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Then $(Lf)(x) = \left\langle f, L \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Additionally, $\bm{w}^T(\bm{x}) \bm{f} = \left\langle f, \bm{w}^T(\bm{x}) \bm{\phi} \right\rangle_{\mathcal{F_K}}$. Defining the error functional $\xi_{w,x}(f) = \sup_{f \in \mathcal{F_K}, ||f||_\mathcal{F_K} \le 1} |Lf(x) - \bm{w}^T(\bm{x}) \bm{f}| < \infty$ and $\xi_{w,x} \in \mathcal{F_K}^*$. Therefore, by Riesz Representation Theorem, $g_{w,x} = L \phi(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{\phi}$ , $\xi_{w,x} = ||g_{w,x}||_\mathcal{F_K}$. Finally, We define the power function $\mathcal{P}^2(x) = ||g_{w,x}||_\mathcal{F_K}^2$.
 
@@ -332,6 +386,12 @@ Flyer, N., Fornberg, B., Bayona, V. and Barnett, G. A. (2016).
 Journal of Computational Physics, 321: 21--38. \\
 \url{https://doi.org/10.1016/j.jcp.2016.05.026}
 
+
+\bibitem{Bayona2019}
+Bayona, V. (2019).
+\textit{An insight into RBF-FD approximations augmented with polynomials}.
+Computers \& Mathematics with Applications, 77(9): 2337--2353. \\
+\url{https://doi.org/10.1016/j.camwa.2018.12.029}
 
 \end{thebibliography}
 
