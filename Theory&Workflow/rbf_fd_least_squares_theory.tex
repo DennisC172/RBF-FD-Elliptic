@@ -33,6 +33,26 @@
 \newcommand{\bp}{\mathbf{p}}
 \newcommand{\R}{\mathbb{R}}
 
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  language=Python,
+  showstringspaces=false,
+  columns=fullflexible,
+  keywordstyle=\color{blue!70!black}
+}
+
 \title{RBF-FD Solver: Least Squares Method for Operator Reproduction}
 \author{Dennis Corraliza}
 \date{Began: 9/2/2026}
@@ -41,9 +61,11 @@
 \begin{document}
 \maketitle
 
+\tableofcontents
+
 \pagebreak
 
-\section{Problem Setting:}
+\section{Problem Setting}
 
 Following the standard RBF-FD methods, let $u \in \mathcal{F}$ be a solution for a PDE in form of:
 \begin{equation}
@@ -87,10 +109,10 @@ Then by Riesz Representation Theorem, there exists a $v_{L,x} \in H^{s+2}(\Omega
 
 \pagebreak
 
-\section{RBF-FD Method:}
+\section{RBF-FD Method}
 
 \subsection{Local Approximation setup}
-To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approximate $\hat{u} \approx u$ on a neighborhood $\Omega \subseteq \mathbb{R}^d$ of $\bf{z}$ such that we approximate $Lu \approx L\hat{u}$. We define the radial basis functions in the form $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||): \Omega \rightarrow \mathbb{R}$ for $i = 1, \hdots , m$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes for a point $\bf{z}$ in $\Omega$. For the classical approximation scheme, let $X=Y$ and $m=n$. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these basis functions will be to approximate the operator $L$. The approximation of $u$ takes the form of:
+To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approximate $\hat{u} \approx u$ on a neighborhood $\Omega \subseteq \mathbb{R}^d$ of $\bf{z}$ such that we approximate $Lu \approx L\hat{u}$. We define the basis functions in the form $\phi_i(\bm{x}): \Omega \rightarrow \mathbb{R}$ for $i = 1, \hdots , m$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes for a point $\bf{z}$ in $\Omega$. For the classical approximation scheme, let $m=n$. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these basis functions will be to approximate the operator $L$. The approximation of $u$ takes the form of:
 \begin{equation}
 	\hat{u}(\bf{x}) =  \sum_{i=1}^n \lambda_i \phi_i(\bf{x})
 \end{equation}
@@ -110,15 +132,16 @@ Thus, approximation the operator turns into local solver for the weights $w_i$ f
 	\bf{\Phi}^T \bf{w^{L, X}(\bf{z})} = L \bf{ \phi} (\bf{z})
 \end{equation}
 
-Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, by defining the basis for $V_Y$ as radial basis functions, we get the Radial Basis Function generated Finite Difference method (RBF-FD). 
+Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, by defining the basis for $V_Y$ as radial basis functions, with $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||)$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Thus we defined the Radial Basis Function generated Finite Difference method (RBF-FD). 
 
 \subsection{Polynomial Augmentation}
 
 For conditionally positive definite kernels, we augment them through the form:
 
-\begin{equation}
-	\hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i \phi_i(\bf{x}) + \sum_{j=1}^l \beta_j p_l(\bf{x})
-\end{equation}
+\begin{align}
+	&hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i \phi_i(\bf{x}) + \sum_{j=1}^l \beta_j p_l(\bf{x}) \\	
+	&\sum_{i=1}^n \lambda_i p_j(\bm{x_i}) = 0 \text{, } \forall i=1,\hdots,n
+\end{align}
 
 We can generate a Gram matrix equation of the form:
 
@@ -149,7 +172,28 @@ Hence, we can approximate the operator to take the form:
 	\begin{bmatrix}
 		\bm{\hat{u}} \\ \bm{0}
 	\end{bmatrix} :=
+	\begin{bmatrix}
+		\bm{w}(\bm{x}) \\ \bm{\nu}(\bm{x})
+	\end{bmatrix}^T 
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} =
 	\bm{w}^T(\bm{x}) \bm{\hat{u}}
+\end{equation}
+
+Thus, we get the local augmented operator reproduction scheme:
+
+\begin{equation}
+	\begin{bmatrix}
+		\bm{(L\phi)(\bm{x})} \\ \bm{(Lp)(\bm{x})}
+	\end{bmatrix} =
+	\begin{bmatrix}
+		\bm{\Phi}^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix} \begin{bmatrix}
+		\bm{w}(\bm{x}) \\ \bm{\nu}(\bm{x})
+	\end{bmatrix}
+	\label{eq: weight_solve}
 \end{equation}
 
 The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
@@ -187,13 +231,28 @@ As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a lar
 
 \subsection{Consistency Error Analysis}
 
-We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = W^{k,p}$. 
+We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s+2}(\Omega)$. This is defines an RKHS for functions $u \in H^{s+2}(\Omega)$, $Lu \in H^{s}(\Omega)$ and by Morrey Embedding, $L(\cdot)(\bm{x})$ is bounded, lienar functional on $H^{s+2}(\Omega)$. Thus, by Riesz, $v_{Lu,x} \in H^{s+2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that
+\begin{align}
+	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
+	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
+	\bm{w}^T(\bm{x}) \bm{f} &= \left\langle f, \bm{w}^T(\bm{x}) \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
+	\xi_{w,L,x}(f) :&= Lf(x) - \bm{w}^T(\bm{x}) \bm{f}\\
+	\| \xi_{w,L,x} \|_\mathcal{F_K^*} :&= \sup_{\substack{f \in \mathcal{F_K} \\ ||f||_\mathcal{F_K} \le 1}} |\xi_{w,L,x}(f)|
+\end{align}
 
-RKHS is a Hilbert space with bounded evaluation functionals. Thus, we have a kernel definition.
+$L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [k(\bm{z},\bm{x}_1), \hdots, k(\bm{z},\bm{x}_n)]^T$. Since $\| \xi_{w,L,x} \|_\mathcal{F_K^*} <\infty$, by Riesz Representation Theorem, $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$ with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,L,x}||_\mathcal{F_K}$ By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function $\mathcal{P}^2(x) = ||v_{w,L,x}||_\mathcal{F_K}^2$. Note that:
 
-We begin by defining the native space for the set of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Let $\mathcal{F_K}$ be the RKHS Native space for the set of solutions. Suppose $V_Y \subseteq V = span\left\{ \phi(\cdot, \bm{x}): \bm{x} \in \Omega \subseteq{R}^d \right\} \subseteq \mathcal{F_K}$. Let $f in \mathcal{F_K}$, then $f(x) = \left\langle f, \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Then $(Lf)(x) = \left\langle f, L \phi(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}$. Additionally, $\bm{w}^T(\bm{x}) \bm{f} = \left\langle f, \bm{w}^T(\bm{x}) \bm{\phi} \right\rangle_{\mathcal{F_K}}$. Defining the error functional $\xi_{w,x}(f) = \sup_{f \in \mathcal{F_K}, ||f||_\mathcal{F_K} \le 1} |Lf(x) - \bm{w}^T(\bm{x}) \bm{f}| < \infty$ and $\xi_{w,x} \in \mathcal{F_K}^*$. Therefore, by Riesz Representation Theorem, $g_{w,x} = L \phi(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{\phi}$ , $\xi_{w,x} = ||g_{w,x}||_\mathcal{F_K}$. Finally, We define the power function $\mathcal{P}^2(x) = ||g_{w,x}||_\mathcal{F_K}^2$.
+\begin{align*}
+	\mathcal{P}^2(\bm{x}) &= \left\langle v_{w,L,x}, v_{w,L,x} \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot), L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_x K(\cdot, \bm{x}), L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_x K(\cdot, \bm{x}) , \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} + \left\langle \bm{w}^T(\bm{x}) \bm{k}(\cdot), \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left. L_y L_z K(y,z) \right|_{y=x=z} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
+	&= \left. L_y L_z K(y,z) \right|_{y=x=z} - \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i)
+\end{align*}
 
-\section{Weight Constraint RBF-FD Setup:}
+The last line is carried out by Eq (\ref{eq: weight_solve}).
+
+\section{Weight Constraint RBF-FD Setup}
 
 Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to $u$ sampled at nodes. Suppose $m > n$ (for the case of $m < n$, refer to \cite{Slak}), thus more center nodes than stencil nodes per stencil. Additionally, instead of assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align}
