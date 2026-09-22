@@ -75,7 +75,7 @@ Following the standard RBF-FD methods, let $u \in \mathcal{F}$ be a solution for
 
 Let $1<p<\infty$, $A \in W^{1,\infty} (\bar{\Omega}; \mathbb{R}^{d \times d}):\bar{\Omega} \rightarrow \mathbb{R}^{d \times d}$ is an symmetric positive definite anisotropic tensor, where
 \begin{equation}
-	\eta |\xi|^2 \le \bf{A}(\bf{x}) \xi \cdot \xi \le H |\xi|^2 \text{, } 0 < \eta \le H
+	\zeta |\xi|^2 \le \bf{A}(\bf{x}) \xi \cdot \xi \le Z |\xi|^2 \text{, } 0 < \zeta \le Z
 \end{equation}
 
 Assume $\Omega \subset \mathbb{R}^d$ and $f \in W^{k,p}(\Omega)$ is the forcing term acting in the domain $\Omega$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
@@ -139,7 +139,7 @@ Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get th
 For conditionally positive definite kernels, we augment them through the form:
 
 \begin{align}
-	&hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i \phi_i(\bf{x}) + \sum_{j=1}^l \beta_j p_l(\bf{x}) \\	
+	&\hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i \phi_i(\bf{x}) + \sum_{j=1}^l \beta_j p_l(\bf{x}) \\	
 	&\sum_{i=1}^n \lambda_i p_j(\bm{x_i}) = 0 \text{, } \forall i=1,\hdots,n
 \end{align}
 
@@ -196,7 +196,7 @@ Thus, we get the local augmented operator reproduction scheme:
 	\label{eq: weight_solve}
 \end{equation}
 
-The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_Y$ and $(L\bm{p})(\bm{x}) \in Range(\bm{P}^T)$, then Eq. (\ref{eq: weight_solve}) is uniquely solvable. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
 
 \begin{table}[ht]
     \centering
