@@ -13,6 +13,8 @@
 \usepackage{tikz}
 \usepackage{bm}
 \usetikzlibrary{positioning, arrows.meta}
+\usepackage{pdfpages}
+\usepackage{xurl}
 
 \geometry{margin=1in}
 
@@ -235,7 +237,7 @@ As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a lar
 
 \subsection{Consistency Error Analysis}
 
-We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s+2}(\Omega)$. This is defines an RKHS for functions $u \in H^{s+2}(\Omega)$, $Lu \in H^{s}(\Omega)$ and by Morrey Embedding, $L(\cdot)(\bm{x})$ is bounded, lienar functional on $H^{s+2}(\Omega)$. Thus, by Riesz, $v_{Lu,x} \in H^{s+2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
+We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s+2}(\Omega)$. This is defines an RKHS for functions $u \in H^{s+2}(\Omega)$, $Lu \in H^{s}(\Omega)$ and by Morrey Embedding, $L(\cdot)(\bm{x})$ is bounded, linear functional on $H^{s+2}(\Omega)$. Thus, by Riesz, $v_{Lu,x} \in H^{s+2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
 \begin{align}
 	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
 	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
@@ -255,8 +257,8 @@ The RKHS norm can be simplified as
 	&= \left\langle L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot), L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left\langle L_x K(\cdot, \bm{x}), L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_x K(\cdot, \bm{x}) , \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T(\bm{x}) \bm{k}(\cdot), \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - \sum_{i,j=1}^n w_i(\bm{x}) w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. \xi_{w,L,y} \xi_{w,L,z} K(y,z) \right|_{y=z=x}
+	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{x})\\
+	&= \left. \xi_{w,L,y} \xi_{w,L,z} K(y,z) \right|_{y=z=x} \text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
 \end{align*}
 
 The last two line are carried out by Eq (\ref{eq:weight_solve}).
@@ -272,8 +274,10 @@ Now we have an error estimate for functions in $\mathcal{F_K}$ of the form:
 	\mathcal{P}_{K,L,X}^2(x) ||f||_\mathcal{F_K} &\ge |\xi_{w^*,L,x}(f)|
 \end{align*}
 
+\subsection{Growth Function}
 
-\section{Weight Constraint RBF-FD Setup}
+\section{Local Least Square Weights RBF-FD}
+\subsection{Weight Constraint Setup}
 
 Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to $u$ sampled at nodes. Suppose $m > n$ (for the case of $m < n$, refer to \cite{Slak}), thus more center nodes than stencil nodes per stencil. Additionally, instead of assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align}
@@ -311,7 +315,7 @@ We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem
 + \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{x}) \right\rangle.
 \end{align*}
 
-\section{Consistency Conditions for Finite Spaces and Interpolation Results}
+\subsection{Consistency Conditions for Finite Spaces and Interpolation Results}
 
 The resulting KKT equations for this system are then:
 \begin{align}
@@ -413,7 +417,7 @@ Finally, we check the consistency error for $s \in V_h+\Pi_k$ with $\bm{P}^T \bm
 	Ls(x)-L_hs(x) = 0 \text{ due to (\ref{eq:constraint}) and (\ref{eq:res_orth}}) \label{eq:repro}
 \end{equation}
 
-\section{Consistency Results for Function Approximations}.
+\subsection{Consistency Results for Function Approximations}.
 
 Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s + (u - s)$ to get the following:
 \begin{align*}
@@ -425,6 +429,10 @@ Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s
 	&= Le(\bm{x}) - \bm{w}^T(\bm{x})\bm{e} \text{, } e(\bm{x})=u(\bm{x})-s(\bm{x})\\
 	&= \mathcal{E}[e](\bm{x})
 \end{align*}
+
+\pagebreak
+
+\includepdf[pages={2-6}]{Result_Idea.pdf}
 
 \pagebreak
 
