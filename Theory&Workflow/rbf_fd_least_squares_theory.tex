@@ -3,6 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath, amssymb}
+\usepackage{amsmath, amsthm}
 \usepackage{geometry}
 \usepackage{booktabs}
 \usepackage{listings}
@@ -32,6 +33,8 @@
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\bp}{\mathbf{p}}
 \newcommand{\R}{\mathbb{R}}
+
+\newtheorem{theorem}{Theorem}
 
 \geometry{margin=1in}
 
@@ -132,7 +135,7 @@ Thus, approximation the operator turns into local solver for the weights $w_i$ f
 	\bf{\Phi}^T \bf{w^{L, X}(\bf{z})} = L \bf{ \phi} (\bf{z})
 \end{equation}
 
-Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, by defining the basis for $V_Y$ as radial basis functions, with $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||)$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Thus we defined the Radial Basis Function generated Finite Difference method (RBF-FD). 
+Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, we let the basis for $V_Y$ be constituted by radial basis functions, with $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||)$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Thus we have defined the Radial Basis Function generated Finite Difference method (RBF-FD). 
 
 \subsection{Polynomial Augmentation}
 
@@ -143,7 +146,7 @@ For conditionally positive definite kernels, we augment them through the form:
 	&\sum_{i=1}^n \lambda_i p_j(\bm{x_i}) = 0 \text{, } \forall i=1,\hdots,n
 \end{align}
 
-We can generate a Gram matrix equation of the form:
+We can generate a Gram matrix equation as follows:
 
 \begin{equation}
 	\begin{bmatrix}
@@ -158,7 +161,7 @@ We can generate a Gram matrix equation of the form:
 	\end{bmatrix}
 \end{equation}
 
-Hence, we can approximate the operator to take the form:
+Hence, we can approximate the operator as below:
 
 \begin{equation}\
 	(L\hat{u})(\bm{x}) =
@@ -179,6 +182,7 @@ Hence, we can approximate the operator to take the form:
 		\bm{\hat{u}} \\ \bm{0}
 	\end{bmatrix} =
 	\bm{w}^T(\bm{x}) \bm{\hat{u}}
+	\label{eq:operator_approx}
 \end{equation}
 
 Thus, we get the local augmented operator reproduction scheme:
@@ -193,10 +197,10 @@ Thus, we get the local augmented operator reproduction scheme:
 	\end{bmatrix} \begin{bmatrix}
 		\bm{w}(\bm{x}) \\ \bm{\nu}(\bm{x})
 	\end{bmatrix}
-	\label{eq: weight_solve}
+	\label{eq:weight_solve}
 \end{equation}
 
-The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_Y$ and $(L\bm{p})(\bm{x}) \in Range(\bm{P}^T)$, then Eq. (\ref{eq: weight_solve}) is uniquely solvable. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_Y$, $(L\bm{p})(\bm{x}) \in Range(\bm{P}^T)$ $\iff$ Eq. (\ref{eq:weight_solve}) is uniquely solvable, for any set $X$. Additionally, by \cite{Davydov2020}, Eq. (\ref{eq:operator_approx}) hold $\iff$ Eq. (\ref{eq:weight_solve}) holds. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
 
 \begin{table}[ht]
     \centering
@@ -231,7 +235,7 @@ As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a lar
 
 \subsection{Consistency Error Analysis}
 
-We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s+2}(\Omega)$. This is defines an RKHS for functions $u \in H^{s+2}(\Omega)$, $Lu \in H^{s}(\Omega)$ and by Morrey Embedding, $L(\cdot)(\bm{x})$ is bounded, lienar functional on $H^{s+2}(\Omega)$. Thus, by Riesz, $v_{Lu,x} \in H^{s+2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that
+We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s+2}(\Omega)$. This is defines an RKHS for functions $u \in H^{s+2}(\Omega)$, $Lu \in H^{s}(\Omega)$ and by Morrey Embedding, $L(\cdot)(\bm{x})$ is bounded, lienar functional on $H^{s+2}(\Omega)$. Thus, by Riesz, $v_{Lu,x} \in H^{s+2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
 \begin{align}
 	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
 	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
@@ -240,17 +244,34 @@ We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref
 	\| \xi_{w,L,x} \|_\mathcal{F_K^*} :&= \sup_{\substack{f \in \mathcal{F_K} \\ ||f||_\mathcal{F_K} \le 1}} |\xi_{w,L,x}(f)|
 \end{align}
 
-$L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [k(\bm{z},\bm{x}_1), \hdots, k(\bm{z},\bm{x}_n)]^T$. Since $\| \xi_{w,L,x} \|_\mathcal{F_K^*} <\infty$, by Riesz Representation Theorem, $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$ with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,L,x}||_\mathcal{F_K}$ By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function $\mathcal{P}^2(x) = ||v_{w,L,x}||_\mathcal{F_K}^2$. Note that:
+$L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [k(\bm{z},\bm{x}_1), \hdots, k(\bm{z},\bm{x}_n)]^T$. Since $\| \xi_{w,L,x} \|_\mathcal{F_K^*} <\infty$, by Riesz Representation Theorem, $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$ with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,x}||_\mathcal{F_K}$ By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
+\begin{equation}
+\mathcal{P}_{K,L,X}^2(x) = \min \left \{||v_{w,K,L,X,x}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \xi_{w,L,x} p = 0, p \in \Pi_{k-1}^d \right \}
+\end{equation}
 
+The RKHS norm can be simplified as
 \begin{align*}
-	\mathcal{P}^2(\bm{x}) &= \left\langle v_{w,L,x}, v_{w,L,x} \right\rangle_{\mathcal{F_K}}\\
+	||v_{w,K,L,X,x}||_\mathcal{F_K}^2 &= \left\langle v_{w,K,L,X,x}, v_{w,K,L,X,x} \right\rangle_{\mathcal{F_K}}\\
 	&= \left\langle L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot), L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
-	&= \left\langle L_x K(\cdot, \bm{x}), L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_x K(\cdot, \bm{x}) , \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} + \left\langle \bm{w}^T(\bm{x}) \bm{k}(\cdot), \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
-	&= \left. L_y L_z K(y,z) \right|_{y=x=z} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. L_y L_z K(y,z) \right|_{y=x=z} - \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i)
+	&= \left\langle L_x K(\cdot, \bm{x}), L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_x K(\cdot, \bm{x}) , \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T(\bm{x}) \bm{k}(\cdot), \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
+	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - \sum_{i,j=1}^n w_i(\bm{x}) w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
+	&= \left. \xi_{w,L,y} \xi_{w,L,z} K(y,z) \right|_{y=z=x}
 \end{align*}
 
-The last line is carried out by Eq (\ref{eq: weight_solve}).
+The last two line are carried out by Eq (\ref{eq:weight_solve}).
+
+Now we have an error estimate for functions in $\mathcal{F_K}$ of the form:
+
+\begin{align*}
+	\| \xi_{w,L,x} \|_\mathcal{F_K^*} &= \sup_{\substack{f \in \mathcal{F_K} \\ ||f||_\mathcal{F_K} \le 1}} |\xi_{w,L,x}(f)|	 \\
+	\| \xi_{w,L,x} \|_\mathcal{F_K^*} &= \sup_{f \in \mathcal{F_K}} \frac{|\xi_{w,L,x}(f)|}{||f||_\mathcal{F_K}} \\
+	\| \xi_{w,L,x} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} &\ge |\xi_{w,L,x}(f)| \\
+	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \| \xi_{w,L,x} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} &\ge |\xi_{w^*,L,x}(f)| \\	
+	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} ||v_{w,K,L,X,x}||_\mathcal{F_K} ||f||_\mathcal{F_K} &\ge |\xi_{w^*,L,x}(f)| \\
+	\mathcal{P}_{K,L,X}^2(x) ||f||_\mathcal{F_K} &\ge |\xi_{w^*,L,x}(f)|
+\end{align*}
+
 
 \section{Weight Constraint RBF-FD Setup}
 
