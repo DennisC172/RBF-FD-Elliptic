@@ -254,11 +254,11 @@ $L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kern
 The RKHS norm can be simplified as
 \begin{align*}
 	||v_{w,K,L,X,x}||_\mathcal{F_K}^2 &= \left\langle v_{w,K,L,X,x}, v_{w,K,L,X,x} \right\rangle_{\mathcal{F_K}}\\
+	&= \left. \xi_{w,L,y} \xi_{w,L,z} K(y,z) \right|_{y=z=x}\\
 	&= \left\langle L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot), L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left\langle L_x K(\cdot, \bm{x}), L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_x K(\cdot, \bm{x}) , \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T(\bm{x}) \bm{k}(\cdot), \bm{w}^T(\bm{x}) \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{x})\\
-	&= \left. \xi_{w,L,y} \xi_{w,L,z} K(y,z) \right|_{y=z=x} \text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
+	&= \left. L_y L_z K(y,z) \right|_{y=z=x} - \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{x}) \\ &\text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
 \end{align*}
 
 The last two line are carried out by Eq (\ref{eq:weight_solve}).
@@ -275,6 +275,22 @@ Now we have an error estimate for functions in $\mathcal{F_K}$ of the form:
 \end{align*}
 
 \subsection{Growth Function}
+
+Growth function is defined as follows:
+\begin{equation}
+	\rho_{k-1,D}(\bm{z},X,\mu) := \sup{Lp(\bm{z}: p\in \Pi_{k-1}^d, | p(\bm{x_j} | \le \| \bm{x}_j - \bm{x} \|_2^\mu, j=1,\hdots,n)}
+\end{equation}
+
+By \cite{Davydov2018}, the dual form of $\rho$ takes the form
+\begin{equation}
+	\rho_{k-1,D}(\bm{z},Z,\| \cdot \|) := \inf{\left \{ \| \bm{w} \|: \bm{w} \in \mathbb{R}^n, \xi_{w,L,x} p = 0, p \in \Pi_{k-1}^d  \right \}}
+\end{equation}
+
+\begin{equation}
+	S_{\bm{x},X} := \bigcup_{i=1}^N[\bm{x}, \bm{x}_i]
+\end{equation}.
+
+Then for $f: S_{\bm{x},X} \times S_{\bm{x},X} \rightarrow \mathbb{R}$.
 
 \section{Local Least Square Weights RBF-FD}
 \subsection{Weight Constraint Setup}
@@ -432,14 +448,11 @@ Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s
 
 \pagebreak
 
-\includepdf[pages={2-6}]{Result_Idea.pdf}
-
-\pagebreak
-
 \begin{thebibliography}{2}
 
 \bibitem{Slak}
 Slak, J. (2026). \textit{Adaptive RBF-FD method}. PhD Thesis, University of Ljubljana.
+\url{https://e6.ijs.si/~jslak/files/phd.pdf}
 
 \bibitem{Agmon}
 Agmon, S., Douglis, A. and Nirenberg, L. (1959). \textit{Estimates near the boundary for solutions of elliptic partial differential equations satisfying general boundary conditions}. I. Comm. Pure Appl. Math., 12: 623-727. \\
@@ -481,6 +494,35 @@ Bayona, V. (2019).
 Computers \& Mathematics with Applications, 77(9): 2337--2353. \\
 \url{https://doi.org/10.1016/j.camwa.2018.12.029}
 
+\bibitem{Davydov2018}
+O. Davydov and R. Schaback. \textit{Minimal numerical differentiation formulas}. Numerische Mathematik, 140(3):555–592, 2018.\\
+\url{https://num.math.uni-goettingen.de/schaback/research/papers/MNDF.pdf}
+
+\bibitem{Oanh2016}
+D. T. Oanh, O. Davydov, and H. X. Phu. Adaptive RBF-FD method for elliptic
+problems with point singularities in 2D. Preprint, 2016.
+
+\bibitem{Schaback2016}
+R. Schaback. Error analysis of nodal meshless methods. Preprint, 2016.
+
+\bibitem{Seibold2006}
+B. Seibold. M-Matrices in Meshless Finite Difference Methods. Dissertation, Uni-
+versity of Kaiserslautern, 2006.
+
+\bibitem{Seibold2008}
+B. Seibold. Minimal positive stencils in meshfree finite difference methods for the
+Poisson equation. Comput. Methods Appl. Mech. Eng., 198(3-4):592–601, 2008.
+
+\bibitem{Stetter1973}
+H. J. Stetter. Analysis of Discretization Methods for Ordinary Differential Equa-
+tions. Springer, New York, 1973.
+
 \end{thebibliography}
+
+\pagebreak
+
+\section{Appendix}
+
+\includepdf[pages={2-6}]{Result_Idea.pdf}
 
 \end{document}
