@@ -72,7 +72,7 @@
 
 \section{Problem Setting}
 
-Following the standard RBF-FD methods, let $u \in \mathcal{F}$ be a solution for a PDE in form of:
+Following the standard RBF-FD methods, let $u \in \mathcal{F} = W^{k,p}$ be a solution for a PDE in form of:
 \begin{equation}
 	- Lu = -\diver\!\big(A \grad u\big) = f \quad \text{in } \Omega,
 	\label{eq:PDE}
@@ -83,7 +83,7 @@ Let $1<p<\infty$, $A \in W^{1,\infty} (\bar{\Omega}; \mathbb{R}^{d \times d}):\b
 	\zeta |\xi|^2 \le \bf{A}(\bf{x}) \xi \cdot \xi \le Z |\xi|^2 \text{, } 0 < \zeta \le Z
 \end{equation}
 
-Assume $\Omega \subset \mathbb{R}^d$ and $f \in W^{k,p}(\Omega)$ is the forcing term acting in the domain $\Omega$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
+Assume $\Omega \subset \mathbb{R}^d$ and $f \in W^{k-t,p}(\Omega)$ is the forcing term acting in the domain $\Omega$. For $2^{nd}$ order elliptic operators, we set $t=2$. The problem is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
 \begin{align}
   u &= g_D \quad \text{on } \Gamma_D \subset \partial\Omega, \\
   n \cdot A \grad u &= g_N \quad
@@ -101,11 +101,11 @@ In the case that we work on a Hilbert space, we then have for $p=2$ ($W^{k,2} :=
 \|u\|_{H^k(\Omega)} \leq C\left(\|Lu\|_{H^{k-2}(\Omega)} + \|g_D\|_{H^{k-\frac{1}{2}}(\partial\Omega)} + \|g_N\|_{H^{k-\frac{3}{2}}(\partial\Omega)} + \|u\|_{L^2(\Omega)} \right).
 \end{align*}
 
-If we want to study cases where $(Lu)(\bm{x}) \in L^\infty(\Omega)$. we can formulate the setup by having $f \in W^{s,p}(\Omega)$ and, by Morrey Embedding, 
+If we want to study cases where $(Lu)(\bm{x})$ is known pointwise, we can formulate the setup by having $f \in W^{s-t,p}(\Omega)$ and, by Morrey Embedding, 
 \begin{equation*}
-	W^{s,p} \hookrightarrow C^{0,\alpha} \text{, with } \alpha=s-\frac{d}{p}>0
+	W^{s-t,p} \hookrightarrow C^{\mu,\gamma} \text{, with } \mu := \left \lfloor s-t-\frac{d}{p} \right \rfloor \text{, } \gamma := s-t-\mu-\frac{d}{p}
 \end{equation*}
-In other words, $s > \frac{d}{p}$. Suppose $p=2$, then $s > \frac{d}{2}$. Given an operator $L: H^{s}(\Omega) \rightarrow H^{s-2}(\Omega)$, we define an error functional of the form:
+In other words, $s > t + \frac{d}{p}$. Suppose $p=2$ and $t=2$, then $s > 2 + \frac{d}{2}$. Given an operator $L: H^{s}(\Omega) \rightarrow H^{s-2}(\Omega)$, we define an error functional of the form:
 \begin{equation*}
 	\xi_{L,x}: H^{s}(\Omega) \rightarrow \mathbb{R} \text{, } \xi_{L,x} \in \left(H^{s}\right)^*(\Omega)
 \end{equation*}
@@ -116,40 +116,56 @@ Then by Riesz Representation Theorem, there exists a $v_{L,x} \in H^{s}(\Omega)$
 
 \section{Functional Analysis Aspect}
 
-We proceed to examine the structural framework that governs the RBF-FD method. We begin by defining the native space $\mathcal{N}(\Omega)$ for solutions to our PDE. We let $L:\mathcal{N}(\Omega) \rightarrow W^{k,p}(\Omega)$ be a bounded operator. Suppose we have a second operator $L_h:\mathcal{N}(\Omega) \rightarrow W^{k,p}(\Omega)$ with the goal to approximate $L_h \rightarrow L$. Suppose for $n \in \mathbb{N}$ and $\theta_i: \mathcal{N} \rightarrow \mathbb{R}$.
+We examine the structural framework that governs the RBF-FD method. Let $\mathcal{N}(\Omega):=W^{s,p}(\Omega)$ be the native space in which solutions are sought. We later assume that $\mathcal{N}(\Omega)$ is a Hilbert space (this holds, for instance, when $\mathcal{N}(\Omega)$ is the native space of a symmetric positive definite kernel). Let $L:\mathcal{N}(\Omega) \rightarrow W^{s-t,p}(\Omega)$ be a bounded linear operator.
+
+For $n \in \mathbb{N}$, let $\theta_1, \dots, \theta_n \in \mathcal{N}(\Omega)^*$ be bounded linear functionals (for example, point evaluations $\theta_i = \delta_{\bm{x}_i}$), and let $w_1, \dots, w_n \in W^{s-t,p}(\Omega)$ be weight functions. Define $L_h:\mathcal{N}(\Omega) \rightarrow W^{s-t,p}(\Omega)$ by
 \begin{equation}
-	L_h u := \sum_{i=1}^n w_i \theta_i(u)
+	L_w u := \sum_{i=1}^n w_i \, \theta_i(u).
 \end{equation}
-
-We further say we can, for a subset $\mathcal{V}_h(\Omega) \subset \mathcal{N}(\Omega)$ assume exact reproduction, in the form $Lu = L_h u $ for $u \in\mathcal{V}_h(\Omega)$. Then, we define for $u \in \mathcal{N}$, $\xi_{w,L} \in \mathcal{L}\left(\mathcal{N}, W^{k,p} \right)(\Omega)$ in the form $\xi_{w,L}(u) := Lu - L_h u$, bounded. By the H\"{o}lder inequality and for $1 < p < \infty$,
-for $q$ such that $\frac{1}{p} + \frac{1}{q} = 1$, let $g \in W^{k,q} (\Omega)$ with:
-\begin{align*}
-	|l_g(\xi_{w,L}(u))| &\le \| \xi_{w,L}(u) \|_{W^{k,p}(\Omega)} \| g \|_{W^{k,q}(\Omega)}\\
-	|(l_g \circ \xi_{w,L})(u)| &< \infty
-\end{align*}
-
-Thus $\xi_{w,L,g}:=l_g \circ \xi_{w,L}$ is as bounded functional. In the case that $\mathcal{N}$ is a Hilbert space, by the Riesz Representation Theorem, there exists $v_{w,L,g} \in \mathcal{N}(\Omega)$ such that $\xi_{w,L,g}(u) = \left \langle u, v_{w,L,g} \right \rangle_{\mathcal{N}(\Omega)}$. Then we have the following:
-\begin{align*}
-	\| \xi_{w,L,g} \|_{\mathcal{N}(\Omega)^*} &= \sup_{\substack{u \in {\mathcal{N}(\Omega)} \\ \| u \|_{\mathcal{N} (\Omega)} \le 1}} |\xi_{w,L,g}(u)| \\
-	&= \sup_{\substack{u \in {\mathcal{N}(\Omega)} \\ ||u||_{{\mathcal{N}(\Omega)} \le 1}}} |\xi_{w,L,g}(u)|	 \\
-	&= \sup_{u \in \mathcal{N}(\Omega)} \frac{|\xi_{w,L,g}(u)|}{||u||_{\mathcal{N}(\Omega)}} \\
-	&= \| v_{w,L,g} \|_{\mathcal{N}(\Omega)}
-\end{align*}
-
-Finally, for $u \in \mathcal{N}(\Omega)$, we have the following:
+This operator is linear and bounded, since
 \begin{equation*}
-	| \xi_{w,L,g}(u) | \le \| v_{w,L,g} \|_{\mathbb{N}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}
+	\| L_w u \|_{W^{s-t,p}(\Omega)} \le \sum_{i=1}^n \| w_i \|_{W^{s-t,p}(\Omega)} \, \| \theta_i \|_{\mathcal{N}(\Omega)^*} \, \| u \|_{\mathcal{N}(\Omega)}.
+\end{equation*}
+The goal is for $L_w$ to approximate $L$.
+
+We further assume that there is a linear subspace $\mathcal{V}_h(\Omega) \subseteq \mathcal{N}(\Omega)$ on which $L_w$ reproduces $L$ exactly, i.e., $Lu = L_h u$ for all $u \in \mathcal{V}_h(\Omega)$. We define the error operator $\xi_{w,L} \in \mathcal{L}\bigl(\mathcal{N}(\Omega), W^{s-t,p}(\Omega)\bigr)$ by
+\begin{equation*}
+	\xi_{w,L}(u) := Lu - L_w u .
+\end{equation*}
+It is linear and bounded because $L$ and $L_w$ are, and it vanishes on $\mathcal{V}_h(\Omega)$.
+
+Let $1 < p < \infty$ and let $q$ satisfy $\frac{1}{p} + \frac{1}{q} = 1$. For $g \in W^{s-t,q}(\Omega)$ define the linear functional $l_g$ on $W^{s-t,p}(\Omega)$ by
+\begin{equation*}
+	l_g(v) := \sum_{|\alpha| \le k} \int_\Omega D^\alpha v \, D^\alpha g \, d\bm{x}.
+\end{equation*}
+With $\| v \|_{W^{s-t,p}(\Omega)} = \bigl( \sum_{|\alpha| \le k} \| D^\alpha v \|_{L^p(\Omega)}^p \bigr)^{1/p}$, the H\"{o}lder inequality (applied to the integrals and then to the finite sum over $\alpha$) gives
+\begin{equation*}
+	|l_g(v)| \le \| v \|_{W^{s-t,p}(\Omega)} \| g \|_{W^{k,q}(\Omega)}.
+\end{equation*}
+Set $\xi_{w,L,g} := l_g \circ \xi_{w,L}$. It is linear, and for every $u \in \mathcal{N}(\Omega)$
+\begin{align*}
+	|\xi_{w,L,g}(u)| &\le \| \xi_{w,L}(u) \|_{W^{s-t,p}(\Omega)} \| g \|_{W^{s-t,q}(\Omega)}\\
+	&\le \| \xi_{w,L} \|_{\mathcal{L}(\mathcal{N}, W^{s-t,p})} \| g \|_{W^{s-t,q}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}.
+\end{align*}
+
+Thus $\xi_{w,L,g}$ is a bounded functional, $\xi_{w,L,g} \in \mathcal{N}(\Omega)^*$. Assuming now that $\mathcal{N}(\Omega)$ is a Hilbert space, the Riesz Representation Theorem gives a unique $v_{w,L,g} \in \mathcal{N}(\Omega)$ such that $\xi_{w,L,g}(u) = \left\langle u, v_{w,L,g} \right\rangle_{\mathcal{N}(\Omega)}$ for all $u \in \mathcal{N}(\Omega)$. Moreover,
+\begin{align*}
+	\| \xi_{w,L,g} \|_{\mathcal{N}(\Omega)^*} &= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ \| u \|_{\mathcal{N}(\Omega)} \le 1}} |\xi_{w,L,g}(u)| \\
+	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\xi_{w,L,g}(u)|}{\| u \|_{\mathcal{N}(\Omega)}} \\
+	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\left\langle u, v_{w,L,g} \right\rangle_{\mathcal{N}(\Omega)}|}{\| u \|_{\mathcal{N}(\Omega)}} = \| v_{w,L,g} \|_{\mathcal{N}(\Omega)},
+\end{align*}
+where the last equality is the Cauchy--Schwarz inequality, attained at $u = v_{w,L,g}$ (the case $v_{w,L,g} = 0$ is trivial). Finally, for $u \in \mathcal{N}(\Omega)$, we have the following:
+\begin{equation*}
+	| \xi_{w,L,g}(u) | \le \| v_{w,L,g} \|_{\mathcal{N}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}.
 \end{equation*}
 
-In the case that $p=\infty$, $\xi_{w,L} \in W^{k,\infty}(\Omega)$ is pointwise bounded in the equivalence class and we have the following:
-\begin{align*}
-	| \xi_{w,L} [x] (u)| < \infty\\
-	| \left( \delta_x \circ \xi_{w,L} \right) (u) | < \infty
-\end{align*}
-
-Then $\xi_{w,L,x}:=\left( \delta_x \circ \xi_{w,L} \right) \in \mathcal{N} (\Omega)^*$. If $\mathcal{N}$ is a Hilbert Space, by Riesz representation, there exists $v_{w,L,x} \in \mathcal{N}$ such that $\xi_{w,L,x} (u) = \left \langle u, v_{w,L,x} \right \rangle$. From above, $\| \xi_{w,L,x} |\|_{\mathcal{N}(\Omega)^*} = \| v_{w,L,x} \|_{\mathcal{N}(\Omega)}$. Finally, we have the pointwise error estimate on functions $u$ by the approximation operator $L_h$ in the form
+For pointwise estimates, point values of $\xi_{w,L}(u)$ must be meaningful, and elements of $W^{s-t,p}(\Omega)$ are in general only equivalence classes. Consider the case $s > t + \frac{d}{p}$, where every element of $W^{s-t,p}(\Omega) \hookrightarrow C^{\mu,\gamma}(\bar{\Omega})$ is also H\"{o}lder continuous with $\gamma = s-t-\mu-\frac{d}{p}$. Then for every $\bm{x} \in \Omega$
+\begin{equation*}
+	| \xi_{w,L}(u)(\bm{x}) | \le \|  \xi_{w,L}(u) \|_{C^{\mu,\gamma}(\bar{\Omega})} \le C_\mathcal{H} \| \xi_{w,L}(u) \|_{W^{s-t,p}(\Omega)} \le \| \xi_{w,L} \|_{\mathcal{L}(\mathcal{N}, W^{s-t,p})} \, \| u \|_{\mathcal{N}(\Omega)},
+\end{equation*}
+so $\xi_{w,L,\bm{x}} := \delta_{\bm{x}} \circ \xi_{w,L}$ is a bounded linear functional, $\xi_{w,L,\bm{x}} \in \mathcal{N}(\Omega)^*$. Consider $p=2$ and by the Riesz Representation Theorem, there exists $v_{w,L,\bm{x}} \in \mathcal{N}(\Omega)$ such that $\xi_{w,L,\bm{x}}(u) = \left\langle u, v_{w,L,\bm{x}} \right\rangle_{\mathcal{N}(\Omega)}$, and, as above, $\| \xi_{w,L,\bm{x}} \|_{\mathcal{N}(\Omega)^*} = \| v_{w,L,\bm{x}} \|_{\mathcal{N}(\Omega)}$. Finally, we have the pointwise error estimate on functions $u$ by the approximation operator $L_h$ in the form
 \begin{equation}
-	| \xi_{w,L,x}(u) | \le \| v_{w,L,x} \|_{\mathbb{N}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}
+	| (Lu)(\bm{x}) - (L_h u)(\bm{x}) | = | \xi_{w,L,\bm{x}}(u) | \le \| v_{w,L,\bm{x}} \|_{\mathcal{N}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}.
 \end{equation}
 
 \pagebreak
@@ -157,27 +173,29 @@ Then $\xi_{w,L,x}:=\left( \delta_x \circ \xi_{w,L} \right) \in \mathcal{N} (\Ome
 \section{RBF-FD Method}
 
 \subsection{Local Approximation setup}
-To obtain an approximation of the operator $L$ at point $\bf{z}$, we can approximate $\hat{u} \approx u$ on a neighborhood $\Omega \subseteq \mathbb{R}^d$ of $\bf{z}$ such that we approximate $Lu \approx L\hat{u}$. We define the basis functions in the form $\phi_i(\bm{x}): \Omega \rightarrow \mathbb{R}$ for $i = 1, \hdots , m$. Define the vector space $V_Y = span\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \hdots, \bm{x}_n \right\} \subseteq \Omega$ be a set of stencil nodes for a point $\bf{z}$ in $\Omega$. For the classical approximation scheme, let $m=n$. We can now define $\bm{\Phi} \in \mathbb{R}^{n \times m}$, where $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$. The role of these basis functions will be to approximate the operator $L$. The approximation of $u$ takes the form of:
+To obtain an approximation of the operator $L$ at a point $\bm{z} \in \Omega$, we approximate $u$ by a function $\hat{u}$ on a neighborhood $\Omega_{\bm{z}} \subseteq \Omega$ of $\bm{z}$, so that $Lu(\bm{z}) \approx L\hat{u}(\bm{z})$. Let $Y = \{ \bm{y}_1, \dots, \bm{y}_m \} \subseteq \Omega_{\bm{z}}$ be a set of centers, let $\phi_i:\Omega_{\bm{z}} \rightarrow \mathbb{R}$, $i = 1, \dots, m$, be basis functions, and define the vector space $V_Y = \operatorname{span}\left\{ \phi_1, \dots, \phi_m \right\}$. Let $X = \left\{ \bm{x}_1, \dots, \bm{x}_n \right\} \subseteq \Omega_{\bm{z}}$ be the set of stencil nodes for $\bm{z}$. For the classical approximation scheme, let $m=n$. We define $\bm{\Phi} \in \mathbb{R}^{n \times m}$ by $\bm{\Phi}_{ij} = \phi_j(\bm{x}_i)$ and assume that $\bm{\Phi}$ is invertible (for example, $\bm{y}_i = \bm{x}_i$ and a strictly positive definite kernel). The role of these basis functions will be to approximate the operator $L$. We seek $\hat{u} \in V_Y$ of the form
 \begin{equation}
-	\hat{u}(\bf{x}) =  \sum_{i=1}^n \lambda_i \phi_i(\bf{x}) \in V_Y
+	\hat{u}(\bm{x}) = \sum_{i=1}^n \lambda_i \phi_i(\bm{x}) = \bm{\phi}(\bm{x})^T \bm{\lambda}, \qquad \bm{\phi}(\bm{x}) := [\phi_1(\bm{x}), \dots, \phi_n(\bm{x})]^T,
 \end{equation}
-
-This will lead to the form $\bf{\Phi} \bf{\lambda} = \hat{\bf{u}}$ for $\hat{\bf{u}} = [ u(\bf{x_1}), \hdots, u(\bf{x_n}) ]^T.$ We can simplify for $\lambda$ to obtain:
+that interpolates $u$ on the stencil, $\hat{u}(\bm{x}_i) = u(\bm{x}_i)$ for $i = 1, \dots, n$. This leads to the form $\bm{\Phi} \bm{\lambda} = \bm{u}$ for $\bm{u} = [ u(\bm{x}_1), \dots, u(\bm{x}_n) ]^T$. We can solve for $\bm{\lambda}$ to obtain:
 \begin{equation*}
-\hat{u}(\bf{x}) = \sum_{i=1}^n (\bf{\Phi}^{-1} \bf{u})_i \phi_i(\bf{x}) = \bf{\phi}(\bf{x})^T \bf{\Phi}^{-1} \bf{u}
+	\hat{u}(\bm{x}) = \sum_{i=1}^n (\bm{\Phi}^{-1} \bm{u})_i \, \phi_i(\bm{x}) = \bm{\phi}(\bm{x})^T \bm{\Phi}^{-1} \bm{u}.
 \end{equation*}
 
-The approximation of $Lu$ at $\bm{z}$ is in the form of:
+Applying $L$ (which acts on the argument $\bm{x}$ of $\bm{\phi}$) and evaluating at $\bm{z}$, the approximation of $Lu$ at $\bm{z}$ is
 \begin{equation}
-	Lu (\bf{z}) \approx L \hat{u} (\bf{z}) = L \bf{\phi}^T(\bf{z}) \bf{\lambda} = L \bf{\phi}^T(\bf{z}) \bf{\Phi}^{-1} \bf{u} := w^{L, X}(\bf{z}) \bf{u}
+	Lu (\bm{z}) \approx L \hat{u} (\bm{z}) = (L \bm{\phi})(\bm{z})^T \bm{\lambda} = (L \bm{\phi})(\bm{z})^T \bm{\Phi}^{-1} \bm{u} =: \bm{w}^{L, X}(\bm{z})^T \bm{u},
 \end{equation}
+where $(L \bm{\phi})(\bm{z}) := [ (L\phi_1)(\bm{z}), \dots, (L\phi_n)(\bm{z}) ]^T$ and the weights $\bm{w}^{L, X}(\bm{z}) \in \mathbb{R}^n$ form a column vector.
 
-Thus, approximation the operator turns into local solver for the weights $w_i$ from the form:
+Thus, approximating the operator reduces to a local linear solve for the weights. Transposing the definition of $\bm{w}^{L,X}(\bm{z})$ gives
 \begin{equation*}
-	\bf{\Phi}^T \bf{w^{L, X}(\bf{z})} = L \bf{ \phi} (\bf{z})
+	\bm{\Phi}^T \bm{w}^{L, X}(\bm{z}) = (L \bm{\phi})(\bm{z}).
 \end{equation*}
 
-Through the method of undefined coefficients on the basis $\{\phi_i\}$ we get the same resulting set of weights. Finally, we let the basis for $V_Y$ be constituted by radial basis functions, with $\phi_i(\bm{x}) := \phi(||\bm{x}-\bm{y}_i||)$ and centers $\left\{ \bm{y}_i \right\}_{i=1}^m \subseteq \Omega$. Thus we have defined the Radial Basis Function generated Finite Difference method (RBF-FD). 
+The method of undetermined coefficients on the basis $\{\phi_i\}$ gives the same weights: requiring exactness on each basis function, $\sum_{i=1}^n w_i \, \phi_j(\bm{x}_i) = (L\phi_j)(\bm{z})$ for $j = 1, \dots, n$, is exactly the system above. Finally, we let the basis of $V_Y$ be constituted by radial basis functions, $\phi_i(\bm{x}) := \varphi(\| \bm{x} - \bm{y}_i \|)$, with a radial function $\varphi:[0,\infty) \rightarrow \mathbb{R}$ and the centers $\{ \bm{y}_i \}_{i=1}^m \subseteq \Omega_{\bm{z}}$ introduced above. Thus we have defined the Radial Basis Function--generated Finite Difference method (RBF-FD).\\
+
+\noindent\textbf{Remark.} For $\bm{x} \in \Omega_{\bm{z}}$ let $w_i(\bm{x}) := \bigl( \bm{w}^{L,X}(\bm{x}) \bigr)_i$ be the weights computed with the fixed stencil $X$, and take $\theta_i = \delta_{\bm{x}_i}$. Then $L_h u = \sum_{i=1}^n w_i \, \theta_i(u) = L\hat{u}$ on $\Omega_{\bm{z}}$, that is, $L_h = L \circ I_X$ where $I_X u := \hat{u}$ is the interpolation operator. If $u \in V_Y$, then $I_X u = u$ and hence $L_h u = Lu$. So the exactness assumption of the previous section holds with $\mathcal{V}_h = V_Y$ (working on $\Omega_{\bm{z}}$ in place of $\Omega$ and assuming $V_Y \subseteq \mathcal{N}$).
 
 \subsection{Polynomial Augmentation}
 
@@ -275,6 +293,8 @@ l=\begin{pmatrix}
 
 As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a larger degree than required for the RBF, acting as a correction term while inheriting the non-oscillatory behavior of the RBF at the boundary $\partial \Omega$.
 
+\pagebreak
+
 \subsection{Consistency Error Analysis}
 
 We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s}(\Omega)$ with pointwise bounded evaluations. This defines an RKHS for functions $u \in H^{s}(\Omega)$, $Lu \in H^{s-2}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
@@ -282,12 +302,12 @@ We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref
 	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
 	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
 	\bm{w}^T(\bm{x}) \bm{f} &= \left\langle f, \bm{w}^T(\bm{x}) \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
-	\xi_{w,L,x}(f) :&= Lf(x) - \bm{w}^T(\bm{x}) \bm{f}\\
+	\xi_{w,L,x}(f) :&= Lf(x) - \bm{w}^T(\bm{x}) \bm{f}
 \end{align*}
 
-$L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [k(\bm{z},\bm{x}_1), \hdots, k(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,x}(f) = \left \langle f, v_{w,L,x} \right \rangle$, with $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,x} \|_\mathcal{F_K^*} <\infty$,  with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,x}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
+$L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [k(\bm{z},\bm{x}_1), \hdots, k(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,x}(f) = \left \langle f, v_{w,L,x} \right \rangle$, with $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,x} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,x}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
 \begin{equation}
-\mathcal{P}_{K,L,X}^2(x) = \min \left \{||v_{w,K,L,X,x}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \xi_{w,L,x} p = 0, p \in \Pi_{k-1}^d \right \}
+\mathcal{P}_{K,L,X}^2(x) = \min \left \{||v_{w,K,L,X,x}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \text{, } \xi_{w,L,x} p = 0 \text{ for } p \in \Pi_{k-1}^d \right \}
 \end{equation}
 
 The RKHS norm can be simplified as
@@ -308,7 +328,7 @@ Now we have an error estimate for functions in $\mathcal{F_K}$ of the form:
 	|\xi_{w,L,x}(f)| &\le \| \xi_{w,L,x} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} \\
 	|\xi_{w^*,L,x}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \| \xi_{w,L,x} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K}\\	
 	|\xi_{w^*,L,x}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} ||v_{w,K,L,X,x}||_\mathcal{F_K} ||f||_\mathcal{F_K}\\
-	|\xi_{w^*,L,x}(f)| &\le \mathcal{P}_{K,L,X}^2(\bm{x}) ||f||_\mathcal{F_K}
+	|\xi_{w^*,L,x}(f)| &\le \mathcal{P}_{K,L,X}(\bm{x}) ||f||_\mathcal{F_K}
 \end{align*}
 
 \subsection{Growth Function}
@@ -318,7 +338,7 @@ To define the consistency order, we define the following stencil as the stencil 
 	S_{\bm{z},X} := \bigcup_{i=1}^N[\bm{z}, \bm{x}_i]
 \end{align*}.
 
-Then for $U: S_{\bm{x},X} \times S_{\bm{x},X} \rightarrow \mathbb{R}$, we define a binary H\"{o}der continuity structure in the form:
+Then for $U: S_{\bm{x},X} \times S_{\bm{x},X} \rightarrow \mathbb{R}$, we define a binary H\"{o}der continuity semi-norm in the form:
 \begin{align*}
 	|U|_{\bm{z},X,\gamma}:=\sup_{\substack{\bm{x},\bm{y}\in S_{\bm{z},X} \\ \bm{x} \neq \bm{z}, \bm{y} \neq \bm{z}}} \frac{\left| U(\bm{x},\bm{y}) - U(\bm{x},\bm{z}) - U(\bm{z},\bm{y}) + U(\bm{z},\bm{z}) \right|}{\| \bm{x} - \bm{z}\|_2^\gamma \| \bm{y} - \bm{z} \|_2^\gamma} , 0 < \gamma, \le 1
 \end{align*}
