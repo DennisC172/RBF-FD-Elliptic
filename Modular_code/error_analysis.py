@@ -215,10 +215,10 @@ def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
 
     res_op_max    = max_error_relative(Lu_approx, F)
     res_op_l2     = l2_error_relative(Lu_approx, F)
-    res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, eps, fixed_eps, sparse)
+    #res_energy = energy_error_delaunay_relative(context, u_soln, u_ex, eps, fixed_eps, sparse)
     print("Max u_exact-u Error Rel     = ", err_soln_max)
     print("L2  u_exact-u Error Rel     = ", err_soln_l2)
-    print("Energy Error Rel            = ", res_energy)
+    #print("Energy Error Rel            = ", res_energy)
     print("Max L_h u_exact-f Error Rel = ", res_op_max)
     print("L2  L_h u_exact-f Error Rel = ", res_op_l2)
     print()
@@ -237,7 +237,7 @@ def error_analysis(Nx, shape, num_stencil_nodes, num_centers, eig_1,
     'sparse': sparse,
     'u_exact - u max_error_rel': err_soln_max,
     'u_exact - u l2_error_rel': err_soln_l2,
-    'energy_error_rel': res_energy,
+    #'energy_error_rel': res_energy,
     'Lu_exact - F max_residual_rel': res_op_max,
     'Lu_exact - F l2_residual_rel': res_op_l2,
     }
@@ -301,8 +301,8 @@ def data_output(example_num):
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e0"
     angle = "lambda p: 0.0"    
-    num_stencil_nodes = 5
-    num_centers = 5
+    num_stencil_nodes = 6
+    num_centers = 3
     eps = 3.0
     fixed_eps = True
     
@@ -322,7 +322,7 @@ def data_output(example_num):
     # -----------------------------
     N_ints = [20, 30, 50, 75, 100, 125, 150, 175, 200, 250, 300, 500, 750]
     INV_L_S = [1e-3,5e-3,1e-2,5e-2,1e-1,5e-1,1.0,1.5,2.0]
-    N_S_N = [5,7,10,15,20,25,40,50]
+    N_S_N = [5,7,10,15,20,25]
     N_C_R = [5,7,10,15,20,25,40,50]
     Eig_R_2 = [1e1,5e0,1e0,5e-1,1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5]
     Eig_RAD_24 = [0.0, 4.0, 6.0, 8.0, 12.0, 16.0, 18.0, 20.0, 24.0]
@@ -331,8 +331,8 @@ def data_output(example_num):
     eig_1 = "lambda p: 1e0"
     eig_2 = "lambda p: 1e-4"
     angle = "lambda p: 12.0/24.0*np.pi"
-    eps = 0.050
-    fixed_eps = False
+    eps = 0.951745
+    fixed_eps = True
     num_stencil_nodes = 6
     num_centers = 3
 
@@ -470,7 +470,7 @@ def data_output(example_num):
     append_sheet_to_excel('Eigenvector Angle', rows, output_path)
 
 if __name__ == "__main__":
-    example_nums = [2,3,4,5,6,7,8,9,10,11,12]
+    example_nums = [2]
     
     for example_num in example_nums:
         data_output(example_num)

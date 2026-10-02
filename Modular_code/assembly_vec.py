@@ -227,7 +227,7 @@ def local_weights_ls(context, i, eps0, fixed_eps=False, lam=0.0):
     k = context.centers_info
     dP_norm = np.linalg.norm(Ps - P[i], axis=1)
     r_max   = np.max(dP_norm)
-    points  = geometry.quasi_circle(1.5*r_max, k)
+    points  = geometry.quasi_circle(1.*r_max, k)
     Cs      = P[i] + points
     num_centers = len(Cs)
 
