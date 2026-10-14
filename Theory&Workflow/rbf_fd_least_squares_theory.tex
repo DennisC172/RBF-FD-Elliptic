@@ -353,10 +353,10 @@ K_{YX} &= [K(\bm{x}_i, \bm{y}_j)]_{j,i}\\
 K_{XX} &= [K(\bm{x}_i, \bm{x}_j)]_{i,j}\\
 K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 \end{align*}
- Additionally, instead of assuming exactness of the form $L\phi_j(\bm{x}) = \sum_i^n w_i(\bm{x}) \phi_j(\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
+ Additionally, instead of assuming exactness of the form $LK(\bm{z},\bm{y}_i) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{z}_i,\bm{y}_j)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align*}
-	r_j(\bm{x}) :&= L\phi_j(\bm{x}) - \sum_{i=1}^n w_i(\bm{x}) \phi_j(\bm{x_i})\\
-	r(\bm{x}) &= L\bm{\phi}(\bm{x}) - K_{YX} \bm{w}(\bm{x}), \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{x} \in \Omega.
+	r_{j,z}(\bm{w}) :&= LK(\bm{z},\bm{y_j}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{x_i},\bm{y}_j)\\
+	r_{\bm{z}} &= L\bm{k}(\bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
 \end{align*}
 
 \subsection{Consistency Error Derivation}
@@ -376,14 +376,14 @@ We can now bound the second term by considering $\bm{w}\rightarrow \bm{w_{LS}}$ 
 K_{XY}K_{YX}\bm{w_{LS}}&=K_{XY}\bm{b}\\
 K_{XY}K_{YX}\bm{w_{LS}}-K_{XY}K_{YX}\bm{w}^*&=K_{XY}\bm{b}-K_{XY}K_{YX}\bm{w^*}\\
 K_{XY}K_{YX}(\bm{w_{LS}}-\bm{w}^*)&=K_{XY}(\bm{b}-K_{YX}\bm{w}^*)\\
-K_{XY}K_{YX}(\bm{w_{LS}}-\bm{w}^*)&= K_{YX}^{\dagger} K_{XY}\bm{r}^*\\
+(\bm{w_{LS}}-\bm{w}^*)&= K_{YX}^{\dagger}\bm{r}^*\\
 || \bm{w_{LS}}-\bm{w}^* ||_2 &\le ||K_{YX}^{\dagger} ||_2 || \bm{r}^* ||_2\\
 || \bm{w_{LS}}-\bm{w}^* ||_2 &\le \frac{|| \bm{r}^* ||_2}{\sigma_{min}(K_{XY})}
 \end{align*}
-Finally, we say that $r^*_j=v_{w^*,K,L,X,z}(\bm{y}_j)$. Then $|| \bm{r}^* ||^2_2 = || v_{w^*,K,L,X,z}(Y) ||_2^2$. Applying kernel evaluation on $v_{w^*,K,L,X,z}$ and applying the power function for interpolations onto $v$ we get:
+Finally, we say that $r^*_j=v_{w^*,K,L,X,z}(\bm{y}_j)$. Then $|| \bm{r}^* ||^2_2 = || v_{w^*,K,L,X,z}(Y) ||_2^2$. Applying kernel evaluation on $v_{w^*,K,L,X,z}$ and the power function for interpolations onto $v$ we get:
 \begin{align*}
 || \bm{r}^* ||_2^2 &\le \sum_{i=1}^m v_{w^*,K,L,X,z}^2(y_i)\\
-&\le \sum_{i=1}^m || v_{w^*,K,L,X,z} ||_\mathcal{F_K} \mathcal{P}_{K,I_X,X}^2(\bm{y_i})\\
+&\le \sum_{i=1}^m || v_{w^*,K,L,X,z} ||^2_\mathcal{F_K} \mathcal{P}_{K,I_X,X}^2(\bm{y_i})\\
 &\le \mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})
 \end{align*}
 Therefore, the error estimate (\ref{eq:LeastSquaresEstimate}) for the local Ordinary Least Squares behaves as follows:
@@ -425,27 +425,27 @@ We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem
 
 The resulting KKT equations for this system are then:
 \begin{align*}
-	\nabla_w \mathcal{L} &= 0: \bm{\Phi} L\bm{\phi} = \bm{\Phi} \bm{\Phi}^T \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
+	\nabla_w \mathcal{L} &= 0: K_{XY} L\bm{k} = K_{XY} K_{YX} \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
 	\nabla_\nu \mathcal{L} &= 0: \bm{P}^T \bm{w} = L\bm{p}
 	%\label{eq:constraint}
 \end{align*}
 The augmented matrix then takes the form:
 \begin{equation}
 	\begin{bmatrix}
-		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		K_{XY} K_{YX} & \bm{P} \\
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}
 	\begin{bmatrix}
 		\bm{w} \\ \bm{\nu}
 	\end{bmatrix} =
 	\begin{bmatrix}
-		\bm{\Phi} L\bm{\phi} \\ L\bm{p}
+		X_{XY} L\bm{k} \\ L\bm{p}
 	\end{bmatrix}
 	\label{eq:augmented}
 \end{equation}
 From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution given $L\bm{p} \in Range(\bf{P}^T)$. The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_h f(\bm{x}) := \bm{w}^T (\bm{x}) \bm{f}$ for some function $f$. Thus, we have the following:
 \begin{align*}
-	L_h f(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{f}\\
+	L_w f(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{f}\\
 			&= \begin{bmatrix}
 					\bm{w}^T & \bm{\nu}^T
 				\end{bmatrix}
@@ -454,33 +454,33 @@ From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution giv
 				\end{bmatrix}\\
 			&= \left(
 	\begin{bmatrix}
-		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		K_{XY} K_{YX} & \bm{P} \\
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}^{-1}
 	\begin{bmatrix}
-		\bm{\Phi} L\bm{\phi} \\ L\bm{p}
+		K_{XY} L\bm{k} \\ L\bm{p}
 	\end{bmatrix}
 				\right)^T 
 				\begin{bmatrix}
 					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
-					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
+					L\bm{k}^T \bm{\Phi}^T & L\bm{p}^T
 				\end{bmatrix}
 	\begin{bmatrix}
-		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		K_{XY} K_{YX} & \bm{P} \\
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}^{-T}
 				\begin{bmatrix}
 					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
-					L\bm{\phi}^T \bm{\Phi}^T & L\bm{p}^T
+					L\bm{k}^T K_{XY} & L\bm{p}^T
 				\end{bmatrix}
 				\begin{bmatrix}
 					\bm{q} \\ \bm{\alpha}
 				\end{bmatrix}\\
-			&= L\bm{\phi}^T (\bm{x}) \left(\bm{\Phi}^T \bm{q}\right) + L\bm{p}^T (\bm{x}) \bm{\alpha}
+			&= L\bm{k}^T (\bm{x}) \left(K_{YX} \bm{q}\right) + L\bm{p}^T (\bm{x}) \bm{\alpha}
 \end{align*}
 Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coefficients of $u$ as follows:
 \begin{equation*}
@@ -488,29 +488,29 @@ Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coef
 		\bm{f} \\ \bm{0}
 	\end{bmatrix} = 
 	\begin{bmatrix}
-		\bm{\Phi} \bm{\Phi}^T & \bm{P} \\
+		K_{XY} K_{YX} & \bm{P} \\
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}
 	\begin{bmatrix}
 		\bm{q} \\ \bm{\alpha}
 	\end{bmatrix}
 \end{equation*}
-Define $V_h = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i \phi_i(x) \text{ such that } \lambda \in Range\left(\bm{\Phi}^T \right) \right\} \subseteq V_Y$. Let $s \in V_h + \Pi_k$. Thus, $s(x) = \bm{\phi}^T(\bm{x})\bm{\Phi}^T q + \bm{p}^T(\bm{x}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
+Define $V_m = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i K(x,\bm{y}_i) \text{ and } \lambda \in Range\left(K_{YX} \right), \bm{y}_i \in Y \right\} \subseteq V_Y$. Let $s \in V_m + \Pi_k$. Thus, $s(x) = \bm{k}^T(\bm{x})K_{XY} q + \bm{p}^T(\bm{x}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
 \begin{align*}
-	\bm{s} = s(X) &= \bm{\Phi} \bm{\Phi}^T \bm{q} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
+	\bm{s} = s(X) &= K_{XY} K_{YX} \bm{q} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
 	\bm{P}^T \bm{q} &= \bm{0}
 \end{align*}
-Hence, we get interpolation of $f$ at the node set $X$. Furthermore, from the KKT matrix we can show that $\bm{\Phi} \bm{r} = \bm{P} \bm{\nu}$ which implies that $\bm{\Phi} \bm{r} \in range(\bm{P}) = \left( ker \left(\bm{P}^T \right) \right)^\perp$. Thus, we get the relationship:
+Hence, we get interpolation of $f$ at the node set $X$. Furthermore, from the KKT matrix we can show that $K_{XY} \bm{r} = \bm{P} \bm{\nu}$ which implies that $K_{XY} \bm{r} \in range(\bm{P}) = \left( ker \left(\bm{P}^T \right) \right)^\perp$. Thus, we get the relationship:
 \begin{equation}
-\bm{r}^T \left( \bm{\Phi}^T \bm{z} \right)=\bm{0} \text{ for } \bm{P}^T \bm{z} = \bm{0} \label{eq:res_orth}
+\bm{r}^T \left( K_{YX} \bm{z} \right)=\bm{0} \text{ for } \bm{P}^T \bm{z} = \bm{0} \label{eq:res_orth}
 \end{equation}
 Finally, we check the consistency error for $s \in V_h+\Pi_k$ with $\bm{P}^T \bm{q}=\bm{0}$.
 \begin{align*}
-	Ls(x)-L_hs(x) &= L\left(\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + \bm{p}^T(\bm{x}\right) \bm{\alpha}) - \bm{w}^T(\bm{x})\bm{s}\\
-	&= L\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})(\bm{\Phi} \bm{\Phi}^T \bm{q} + \bm{P} \bm{\alpha})\\
-	&= L\bm{\phi}^T(\bm{x})\bm{\Phi}^T \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})\bm{\Phi} \bm{\Phi}^T \bm{q} - \bm{w}^T(\bm{x}) \bm{P} \bm{\alpha}\\
-	&= \left( L\bm{\phi}(\bm{x}) - \bm{\Phi}^T \bm{w}(\bm{x}) \right)^T \bm{\Phi}^T \bm{q} + \left( L\bm{p}^T(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
-	&= \bm{r}^T \bm{\Phi}^T \bm{q} + \left( L\bm{p}(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
+	Ls(x)-L_hs(x) &= L\left(\bm{k}^T(\bm{x})K_YX \bm{q} + \bm{p}^T(\bm{x}\right) \bm{\alpha}) - \bm{w}^T(\bm{x})\bm{s}\\
+	&= L\bm{k}^T(\bm{x})K_{YX} \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})(K_{XY} K_{YX} \bm{q} + \bm{P} \bm{\alpha})\\
+	&= L\bm{k}^T(\bm{x})K_{YX} \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})K_{XY} K_{YX} \bm{q} - \bm{w}^T(\bm{x}) \bm{P} \bm{\alpha}\\
+	&= \left( L\bm{k}(\bm{x}) - K_{YX} \bm{w}(\bm{x}) \right)^T K_{YX} \bm{q} + \left( L\bm{p}^T(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
+	&= \bm{r}^T K_{YX} \bm{q} + \left( L\bm{p}(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
 \end{align*}
 \begin{equation}
 	Ls(x)-L_hs(x) = 0 \text{ due to (\ref{eq:augmented}) and (\ref{eq:res_orth}}) \label{eq:repro}
