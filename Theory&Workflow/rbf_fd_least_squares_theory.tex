@@ -269,7 +269,7 @@ We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref
 	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
 	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
 	\bm{w}^T(\bm{x}) \bm{f} &= \left\langle f, \bm{w}^T(\bm{x}) \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
-	\xi_{w,L,x}(f) :&= Lf(x) - \bm{w}^T(\bm{x}) \bm{f}
+	\xi_{w,L,z}(f) :&= Lf(z) - \bm{w}^T_{\bm{z}} \bm{f}
 \end{align*}
 According to \cite{Davydov2025}, we have the following proposition:
 \begin{proposition}
@@ -284,7 +284,7 @@ The equation \ref{eq:weight_solve} is consistent
 \end{enumerate}
 Then the kernel-based numerical differentiation formula  satisfies:
 \begin{equation}
-\left| \xi_{w^*,L,x} \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(x) ||f||_\mathcal{F_K}
+\left| \xi_{w^*,L,z} \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
 \end{equation}
 \end{proposition}
 \noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,x}(f) = \left \langle f, v_{w,L,x} \right \rangle$, with $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,x} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,x}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
@@ -295,10 +295,10 @@ The RKHS norm can be simplified as
 \begin{align*}
 	||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left\langle v_{w,K,L,X,z}, v_{w,K,L,X,z} \right\rangle_{\mathcal{F_K}}\\
 	&= \left. \xi_{w,L,y} \xi_{w,L,x} K(y,x) \right|_{y=z=x}\\
-	&= \left\langle L_x K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot), L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot), L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left\langle L_z K(\cdot, \bm{z}), L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_z K(\cdot, \bm{z}) , \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T_{\bm{z}} \bm{k}(\cdot), \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
-	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,\bm{z}} L_x K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_x K(\bm{z}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{z}) \\ &\text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
+	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j)\\
+	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{z}) \\ &\text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
 \end{align*}
 The last two line are carried out by Eq (\ref{eq:weight_solve}).
 
@@ -332,13 +332,13 @@ Growth function is defined as follows:
 \end{equation}
 By \cite{Davydov2018}, the dual form of $\rho$ takes the form
 \begin{equation*}
-	\rho_{k-1,D}(\bm{z},Z,\| \cdot \|) := \inf{\left \{ \| \bm{w} \|: \bm{w} \in \mathbb{R}^n, \xi_{w,L,x} p = 0, p \in \Pi_{k-1}^d  \right \}}
+	\rho_{k-1,D}(\bm{z},Z,\| \cdot \|) := \inf{\left \{ \| \bm{w} \|: \bm{w} \in \mathbb{R}^n, \xi_{w,L,z} p = 0, p \in \Pi_{k-1}^d  \right \}}
 \end{equation*}
 We finally have the following by \cite{Davydov2025}:
 \begin{theorem}
 (Davydov, 2025) Let L be a differential operator of order $k$ and $K$ a cpd kernel of order $s$ on $\Omega$. Given $\bm{z}\in \Omega$ and $\bm{X}=\{ \bm{x}_1, \dots, \bm{x}_n \}$, with $S_{\bm{z},\bm{X}} \subset \Omega$. Assume that \ref{eq:weight_solve} is consistent and, for some $r \ge k$ and $\gamma \in (0,1]$, the kernel $K$ possesses continuous partial derivatives $\partial^{\alpha, \beta}K(\bm{x},\bm{y})$ for all $|\alpha|,|\beta| \le r$ and all $\bm{x},\bm{y} \in S_{\bm{z},\bm{X}}$, and $|K|_{\bm{z},\bm{X},r+\gamma} < \infty$. Define $q=\max\{ s, r+1 \}$. Then for $f \in \mathcal{F_K}$ the kernel-based numerical differentiation satisfies the error bound:
 \begin{equation}
-\left| \xi_{w^*,L,x} \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \rho_{q, L}(\bm{z}, \bm{X}, r+\gamma) |K|_{\bm{z},\bm{X},r+\gamma} || f ||_{\mathcal{F_K}}
+\left| \xi_{w^*,L,z} \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \rho_{q, L}(\bm{z}, \bm{X}, r+\gamma) |K|_{\bm{z},\bm{X},r+\gamma} || f ||_{\mathcal{F_K}}
 \end{equation}
 \end{theorem}
 
@@ -382,7 +382,7 @@ K_{XY}K_{YX}(\bm{w_{LS}}-\bm{w}^*)&=K_{XY}(\bm{b}-K_{YX}\bm{w}^*)\\
 \end{align*}
 Finally, we say that $r^*_j=v_{w^*,K,L,X,z}(\bm{y}_j)$. Then $|| \bm{r}^* ||^2_2 = || v_{w^*,K,L,X,z}(Y) ||_2^2$. Applying kernel evaluation on $v_{w^*,K,L,X,z}$ and the power function for interpolations onto $v$ we get:
 \begin{align*}
-|| \bm{r}^* ||_2^2 &\le \sum_{i=1}^m v_{w^*,K,L,X,z}^2(y_i)\\
+|| \bm{r}^* ||_2^2 &= \sum_{i=1}^m v_{w^*,K,L,X,z}^2(y_i)\\
 &\le \sum_{i=1}^m || v_{w^*,K,L,X,z} ||^2_\mathcal{F_K} \mathcal{P}_{K,I_X,X}^2(\bm{y_i})\\
 &\le \mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})
 \end{align*}
