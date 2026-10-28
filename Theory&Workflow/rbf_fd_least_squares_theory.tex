@@ -99,7 +99,7 @@ In the case that we work on a Hilbert space, we then have for $p=2$ ($W^{s,2} :=
 \end{align*}
 If we want to study cases where $(Lu)(\bm{x})$ is known pointwise, we can formulate the setup by having $f \in W^{s-k,p}(\Omega)$ and, by Morrey Embedding, 
 \begin{equation*}
-	W^{s-k,p} \hookrightarrow C^{\mu,\gamma} \text{, with } \mu := \left \lfloor s-k-\frac{d}{p} \right \rfloor \text{, } \gamma := s-k-\mu-\frac{d}{p}
+	W^{s-k,p}(\Omega) \hookrightarrow C^{\mu,\gamma}(\Omega) \hookrightarrow C^{0}(\Omega) \text{, with } \mu := \left \lfloor s-k-\frac{d}{p} \right \rfloor \text{, } \gamma := s-k-\mu-\frac{d}{p}
 \end{equation*}
 In other words, $s > k + \frac{d}{p}$. Suppose $p=2$ and $k=2$, then $s > 2 + \frac{d}{2}$. Given an operator $L: H^{s}(\Omega) \rightarrow H^{s-2}(\Omega)$, we define an error functional of the form:
 \begin{equation*}
@@ -111,15 +111,13 @@ Then by Riesz Representation, there exists a $v_{L,x} \in H^{s}(\Omega)$ such th
 
 \section{Functional Analysis Aspect}
 
-We examine the structural framework that governs the RBF-FD method. Let $\mathcal{N}(\Omega):=W^{s,p}(\Omega)$ be the native space whose vectors are point-wise bounded. We later assume that $\mathcal{N}(\Omega)$ is a Hilbert space (this holds, for instance, when $\mathcal{N}(\Omega)$ is the native space of a symmetric positive definite kernel). Let $L:\mathcal{N}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ be a bounded linear operator.
-
-\noindent For $n \in \mathbb{N}$, let $\theta_1, \dots, \theta_n \in \mathcal{N}(\Omega)^*$ be bounded linear functionals (for example, point evaluations $\theta_i = \delta_{\bm{x}_i}$), and let $w_1, \dots, w_n \in \mathbb{R}$ be weight functions. Define $L_w:\mathcal{N}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ by
+We examine the structural framework that governs the RBF-FD method. Let $\mathcal{N}(\Omega):=W^{s,p}(\Omega)$ be the native space whose vectors are point-wise bounded. We later assume that $\mathcal{N}(\Omega)$ is a Hilbert space (this holds, for instance, when $\mathcal{N}(\Omega)$ is the native space of a symmetric positive definite kernel). Let $L:\mathcal{N}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ be a bounded linear operator. For $n \in \mathbb{N}$, let $\theta_1, \dots, \theta_n \in \mathcal{L}\bigl(\mathcal{N}(\Omega), W^{s-k,p}(\Omega)\bigr)$ be bounded linear maps. Define $L_w:\mathcal{N}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ by
 \begin{equation}
-	L_w u := \sum_{i=1}^n w_i \, \theta_i(u).
+	L_w u := \sum_{i=1}^n \theta_i(u).
 \end{equation}
 This operator is linear and bounded, since
 \begin{equation*}
-	\| L_w u \|_{W^{s-k,p}(\Omega)} \le \bm{w} \|_{l^2} \, \| \theta_i \|_{\mathcal{N}(\Omega)^*} \, \| u \|_{\mathcal{N}(\Omega)}.
+	\| L_w u \|_{W^{s-k,p}(\Omega)} \le \| \bm{w} \|_{l^2} \, \| \theta \|_{\mathcal{L}\bigl(\mathcal{N}(\Omega), W^{s-k,p}(\Omega)\bigr)} \, \| u \|_{\mathcal{N}(\Omega)}.
 \end{equation*}
 The goal is for $L_w$ to approximate $L$.
 
@@ -127,25 +125,44 @@ We further assume that there is a linear subspace $\mathcal{V}_h(\Omega) \subset
 \begin{equation*}
 	\xi_{w,L}(u) := Lu - L_w u .
 \end{equation*}
-It is linear and bounded because $L$ and $L_w$ are, and it vanishes on $\mathcal{V}_h(\Omega)$. Let $1 < p < \infty$ and let $q$ satisfy $\frac{1}{p} + \frac{1}{q} = 1$. For $g \in W^{s-k,q}(\Omega)$ define the linear functional $l_g$ on $W^{s-k,p}(\Omega)$ by
+It is linear and bounded because $L$ and $L_w$ are, and it vanishes on $\mathcal{V}_w(\Omega)$. Let $1 < p < \infty$ and let $q$ satisfy $\frac{1}{p} + \frac{1}{q} = 1$. For $g \in L^{q}(\Omega)$ define the linear functional $l_g$ on $W^{s-k,p}(\Omega)$ by
 \begin{equation*}
-	l_g(v) := \sum_{|\alpha| \le k} \int_\Omega D^\alpha v \, D^\alpha g \, d\bm{x}.
+	l_g(v) := \sum_{|\alpha| \le k} \int_\Omega v \, g \, d\bm{x}.
 \end{equation*}
 With $\| v \|_{W^{s-k,p}(\Omega)} = \bigl( \sum_{|\alpha| \le k} \| D^\alpha v \|_{L^p(\Omega)}^p \bigr)^{1/p}$, the H\"{o}lder inequality (applied to the integrals and then to the finite sum over $\alpha$) gives
 \begin{equation*}
-	|l_g(v)| \le \| v \|_{W^{s-k,p}(\Omega)} \| g \|_{W^{s-k,q}(\Omega)}.
+	|l_g(v)| \le \| v \|_{W^{s-k,p}(\Omega)} \| g \|_{L^{q}(\Omega)}.
 \end{equation*}
 Set $\xi_{w,L,g} := l_g \circ \xi_{w,L}$. It is linear, and for every $u \in \mathcal{N}(\Omega)$
 \begin{align*}
-	|\xi_{w,L,g}(u)| &\le \| \xi_{w,L}(u) \|_{W^{s-k,p}(\Omega)} \| g \|_{W^{s-k,q}(\Omega)}\\
-	&\le \| \xi_{w,L} \|_{\mathcal{L}(\mathcal{N}, W^{s-k,p})} \| g \|_{W^{s-k,q}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}.
+	|\xi_{w,L,g}(u)| &\le \| \xi_{w,L}(u) \|_{W^{s-k,p}(\Omega)} \| g \|_{L{^q}(\Omega)}\\
+	&\le \| \xi_{w,L} \|_{\mathcal{L}(\mathcal{N}, W^{s-k,p})} \| g \|_{L^{q}(\Omega)} \| u \|_{\mathcal{N}(\Omega)}.
 \end{align*}
 Assuming $\xi_{w,L}$ is bounded, then $\xi_{w,L,g}$ is a bounded functional, $\xi_{w,L,g} \in \mathcal{N}(\Omega)^*$. Furthermore, if $\mathcal{N}(\Omega)$ is a Hilbert space, the Riesz Representation Theorem gives a unique $v_{w,L,g} \in \mathcal{N}(\Omega)$ such that $\xi_{w,L,g}(u) = \left\langle u, v_{w,L,g} \right\rangle_{\mathcal{N}(\Omega)}$ for all $u \in \mathcal{N}(\Omega)$. Moreover,
 \begin{align*}
-	\| \xi_{w,L,g} \|_{\mathcal{N}(\Omega)^*} &= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ \| u \|_{\mathcal{N}(\Omega)} \le 1}} |\xi_{w,L,g}(u)| \\
+	\| \xi_{w,L,g} \|_{\mathcal{N}^*(\Omega)} &= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ \| u \|_{\mathcal{N}(\Omega)} \le 1}} |\xi_{w,L,g}(u)| \\
 	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\xi_{w,L,g}(u)|}{\| u \|_{\mathcal{N}(\Omega)}} \\
-	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\left\langle u, v_{w,L,g} \right\rangle_{\mathcal{N}(\Omega)}|}{\| u \|_{\mathcal{N}(\Omega)}} = \| v_{w,L,g} \|_{\mathcal{N}(\Omega)},
+	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\left\langle u, v_{w,L,g} \right\rangle_{\mathcal{N}(\Omega)}|}{\| u \|_{\mathcal{N}(\Omega)}} = \| v_{w,L,g} \|_{\mathcal{N}(\Omega)}.
 \end{align*}
+
+\subsection{Pointwise Evaluation}
+
+Suppose $s > k + \frac{d}{p}$. By Morrey Embedding, $W^{s-k,p}(\Omega) \hookrightarrow C^{\mu,\gamma}(\Omega) \hookrightarrow C^{0}(\Omega)$  Then we have a bounded functional $\delta_z \in \left(W^{s-k,p}(\Omega) \right)^*$:
+\begin{equation}
+	\xi_{w,L}(u)(z) = \delta_z \left( \xi_{w,L} (u) \right) := \xi_{w,L,z} (u)
+\end{equation}
+Then $\xi_{w,L,z} \in \mathcal{N}^*(\Omega)$ given $\xi_{w,L}$ is bounded. Furthermore, Assuming again $\mathcal{N}(\Omega)$ is Hilbert, then there exists a representer $v_{w,L,z}$ such that
+\begin{align*}
+	\| \xi_{w,L,z} \|_{\mathcal{N}(\Omega)^*} &= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ \| u \|_{\mathcal{N}(\Omega)} \le 1}} |\xi_{w,L,z}(u)| \\
+	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\xi_{w,L,z}(u)|}{\| u \|_{\mathcal{N}(\Omega)}} \\
+	&= \sup_{\substack{u \in \mathcal{N}(\Omega) \\ u \ne 0}} \frac{|\left\langle u, v_{w,L,z} \right\rangle_{\mathcal{N}(\Omega)}|}{\| u \|_{\mathcal{N}(\Omega)}} = \| v_{w,L,z} \|_{\mathcal{N}(\Omega)}.
+\end{align*}
+We can concretely define $\xi_{w,L,z}$ as follows:
+\begin{align*}
+	\xi_{w,L,z}(u) &= Lu(z) - \sum_{i=1}^n \delta_z \circ\theta_i(u)\\
+	\xi_{w,L,z}(u) &= Lu(z) - \sum_{i=1}^n w_{i,z} u(x_i)
+\end{align*}
+Here we set $\delta_z \circ \theta_{i} = w_{i,z} \delta_{x_i}$, with $w_{1,z}, \hdots, w_{n,z} \in \mathbb{R}$.
 
 \pagebreak
 
@@ -262,7 +279,7 @@ As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a lar
 
 \pagebreak
 
-\subsection{Consistency Error Analysis}
+\subsection{Consistency Error Analysis and Local System Derivation}
 
 We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s}(\Omega)$ with pointwise bounded evaluations. This defines an RKHS for functions $u \in H^{s}(\Omega)$, $Lu \in H^{s-k}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
 \begin{align*}
@@ -298,11 +315,9 @@ The RKHS norm can be simplified as
 	&= \left\langle L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot), L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left\langle L_z K(\cdot, \bm{z}), L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_z K(\cdot, \bm{z}) , \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T_{\bm{z}} \bm{k}(\cdot), \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
 	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j)\\
-	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) - \sum_{i=1}^l v_i Lp_i(\bm{z}) \\ &\text{(*Need to check this line since \cite{Davydov2020} cancels the third term.*)}
+	&= 2 \left( \frac{1}{2} \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \frac{1}{2}\sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j) \right)
 \end{align*}
-The last two line are carried out by Eq (\ref{eq:weight_solve}).
-
-Now we have an error estimate for functions in $\mathcal{F_K}$ of the form:
+Minimizing this norm for $w \in \mathbb{R}^n$ with polynomial constraints leads to Eq (\ref{eq:weight_solve}). An error estimate for functions in $\mathcal{F_K}$ of the form:
 \begin{align*}
 	|\xi_{w,L,z}(f)| &\le \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} \\
 	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} |\xi_{w,L,z}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K}\\	
@@ -353,17 +368,21 @@ K_{YX} &= [K(\bm{x}_i, \bm{y}_j)]_{j,i}\\
 K_{XX} &= [K(\bm{x}_i, \bm{x}_j)]_{i,j}\\
 K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 \end{align*}
- Additionally, instead of assuming exactness of the form $LK(\bm{z},\bm{y}_i) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{z}_i,\bm{y}_j)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
+ Additionally, instead of assuming exactness of the form $L_zK(\bm{y}_j,\bm{z}) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_j)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align*}
-	r_{j,z}(\bm{w}) :&= LK(\bm{z},\bm{y_j}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{x_i},\bm{y}_j)\\
-	r_{\bm{z}} &= L\bm{k}(\bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
+	r_{j,z}(\bm{w}) :&= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
+	r_{\bm{z}} &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
 \end{align*}
 
-\subsection{Consistency Error Derivation}
+\subsection{Consistency Error Analysis through Center-Based Kernel}
 
-We use the solution of the interpolation scheme to compare with the ordinary least squares, where $K_{XX} \bm{w}^* = L\bm{k}:=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
+
+
+\subsection{Consistency Error Derivation through Standard RBF-FD}
+
+We use the solution of the interpolation scheme to compare with the ordinary least squares, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
 \begin{align*}
-||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_i(\bm{x}) L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_i(\bm{x})w_j(\bm{x}) K(\bm{x}_i, \bm{x}_j)\\
+||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w}\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^* - \bm{b}^T K_{XX}^{-1} \bm{b}\\
 &= \left. L_y L_z K(y,z) \right. - \bm{b}^T \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
@@ -393,17 +412,20 @@ Therefore, the error estimate (\ref{eq:LeastSquaresEstimate}) for the local Ordi
 &\le \mathcal{P}_{K,L,X}^2(\bm{z}) \left(1 + \frac{\lambda_{max}(K_{XX})\sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})}{\sigma_{min}^2(K_{XY})} \right)
 \label{eq:LeastSquaresEstimate}
 \end{align}
+
+\subsection{Least Squares Finite Spaces and Interpolation Results}
+
 Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials augmenting the radial basis functions. Let $\Pi_k=span\left\{p_i\right\}_{i=1}^l$ with polynomial degree up to $k$. We want to reproduce the operator exactly on the polynomial basis: 
 \begin{align*}
-	Lp_j(\bm{x}) :&= \sum_{i=1}^n w_i(\bm{x}) p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
-	L\bm{p}(\bm{x}) &= \bm{P^T} \bm{w}
+	Lp_j(\bm{z}) :&= \sum_{i=1}^n w_{i,z} p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
+	L\bm{p}(\bm{z}) &= \bm{P^T} \bm{w}_z
 \end{align*}
 where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. Thus, we have a constrained least squares problem in the form:
 \begin{equation}
 	\left\{
 	\begin{aligned}
-		&\min J(\bm{w}(\bm{x})) := \min \frac{1}{2}\|\bm{r}(\bm{x})\|_2^2 \quad \text{for } \bm{x} \in \Omega \\
-		&\text{subject to } K_{YX} \bm{w} = L\bm{p}
+		&\min J(\bm{w}_z) := \min \frac{1}{2}\|\bm{r}(\bm{w}_z)\|_2^2 \quad \text{for } \bm{x} \in \Omega \\
+		&\text{subject to } K_{YX} \bm{w}_z = L\bm{p}(\bm{z})
 	\end{aligned}
 	\right.
 \end{equation}
@@ -411,21 +433,18 @@ We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem
 \begin{align*}
 \mathcal{L}(\bm{w},\bm{\nu})
 &:= J(\bm{w})
-+ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{x}) \right\rangle \\
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{z}) \right\rangle \\
 &= \frac{1}{2}
 \left\langle K_{YX}\bm{w},\,K_{YX}\bm{w} \right\rangle
-- \left\langle K_{YX}\bm{w},\,L\bm{k} \right\rangle
+- \left\langle K_{YX}\bm{w},\,L_z K(Y, \bm{z}) \right\rangle
 + \frac{1}{2}
-\left\langle L\bm{k},\,L\bm{\phi} \right\rangle \\
+\left\langle L_z K(Y,\bm{z}),\,L_z K(Y,\bm{z}) \right\rangle \\
 &\qquad
-+ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{x}) \right\rangle.
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{z}) \right\rangle.
 \end{align*}
-
-\subsection{Least Squares Finite Spaces and Interpolation Results}
-
 The resulting KKT equations for this system are then:
 \begin{align*}
-	\nabla_w \mathcal{L} &= 0: K_{XY} L\bm{k} = K_{XY} K_{YX} \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
+	\nabla_w \mathcal{L} &= 0: K_{XY} L_z K(Y,\bm{z}) = K_{XY} K_{YX} \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
 	\nabla_\nu \mathcal{L} &= 0: \bm{P}^T \bm{w} = L\bm{p}
 	%\label{eq:constraint}
 \end{align*}
@@ -439,15 +458,15 @@ The augmented matrix then takes the form:
 		\bm{w} \\ \bm{\nu}
 	\end{bmatrix} =
 	\begin{bmatrix}
-		X_{XY} L\bm{k} \\ L\bm{p}
+		X_{XY} L_z K(Y,\bm{z}) \\ L\bm{p}(\bm{z})
 	\end{bmatrix}
 	\label{eq:augmented}
 \end{equation}
-From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution given $L\bm{p} \in Range(\bf{P}^T)$. The primary goal is to approximate $Lu(\bm{x}) \approx \bm{w}^T(\bm{x}) \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_h f(\bm{x}) := \bm{w}^T (\bm{x}) \bm{f}$ for some function $f$. Thus, we have the following:
+From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution given $L\bm{p} \in Range(\bf{P}^T)$. The primary goal is to approximate $Lu(\bm{z}) \approx \bm{w}^T_z \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_w f(\bm{z}) := \bm{w}^T_z \bm{f}$ for some function $f$. Thus, we have the following:
 \begin{align*}
-	L_w f(\bm{x}) &= \bm{w}^T(\bm{x}) \bm{f}\\
+	L_w f(\bm{z}) &= \bm{w}^T_z \bm{f}\\
 			&= \begin{bmatrix}
-					\bm{w}^T & \bm{\nu}^T
+					\bm{w}^T_z & \bm{\nu}^T
 				\end{bmatrix}
 				\begin{bmatrix}
 					\bm{f} \\ \bm{0}
@@ -458,14 +477,14 @@ From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution giv
 		\bm{P}^T & \bm{0}
 	\end{bmatrix}^{-1}
 	\begin{bmatrix}
-		K_{XY} L\bm{k} \\ L\bm{p}
+		K_{XY} L_z K(Y,\bm{z}) \\ L\bm{p}(\bm{z})
 	\end{bmatrix}
 				\right)^T 
 				\begin{bmatrix}
 					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
-					L\bm{k}^T \bm{\Phi}^T & L\bm{p}^T
+					L_z K(\bm{z},Y) K_{XY} & L\bm{p}^T(\bm{z})
 				\end{bmatrix}
 	\begin{bmatrix}
 		K_{XY} K_{YX} & \bm{P} \\
@@ -475,12 +494,12 @@ From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution giv
 					\bm{f} \\ \bm{0}
 				\end{bmatrix}\\
 			&= \begin{bmatrix}
-					L\bm{k}^T K_{XY} & L\bm{p}^T
+					L_z K(\bm{z},Y) K_{XY} & L\bm{p}^T(\bm{z})
 				\end{bmatrix}
 				\begin{bmatrix}
 					\bm{q} \\ \bm{\alpha}
 				\end{bmatrix}\\
-			&= L\bm{k}^T (\bm{x}) \left(K_{YX} \bm{q}\right) + L\bm{p}^T (\bm{x}) \bm{\alpha}
+			&= L_z K(\bm{z},Y) \left(K_{YX} \bm{q}\right) + L\bm{p}^T (\bm{z}) \bm{\alpha}
 \end{align*}
 Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coefficients of $u$ as follows:
 \begin{equation*}
@@ -495,39 +514,24 @@ Next, we can show that the coefficients $\bm{q}, \bm{\alpha}$ relate to the coef
 		\bm{q} \\ \bm{\alpha}
 	\end{bmatrix}
 \end{equation*}
-Define $V_m = \left\{ \rho(x) : \rho(x) = \sum_{i=1}^m \lambda_i K(x,\bm{y}_i) \text{ and } \lambda \in Range\left(K_{YX} \right), \bm{y}_i \in Y \right\} \subseteq V_Y$. Let $s \in V_m + \Pi_k$. Thus, $s(x) = \bm{k}^T(\bm{x})K_{XY} q + \bm{p}^T(\bm{x}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
+Define $V_m = \left\{ \rho(z) : \rho(\bm{z}) = \sum_{i=1}^m \lambda_i K(\bm{z},\bm{y}_i) \text{ and } \lambda \in Range\left(K_{YX} \right), \bm{y}_i \in Y \right\} \subseteq V_Y$. Let $s \in V_m + \Pi_k$. Thus, $s(\bm{z}) = K(\bm{z},Y)K_{XY} q + \bm{p}^T(\bm{z}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
 \begin{align*}
 	\bm{s} = s(X) &= K_{XY} K_{YX} \bm{q} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
 	\bm{P}^T \bm{q} &= \bm{0}
 \end{align*}
 Hence, we get interpolation of $f$ at the node set $X$. Furthermore, from the KKT matrix we can show that $K_{XY} \bm{r} = \bm{P} \bm{\nu}$ which implies that $K_{XY} \bm{r} \in range(\bm{P}) = \left( ker \left(\bm{P}^T \right) \right)^\perp$. Thus, we get the relationship:
 \begin{equation}
-\bm{r}^T \left( K_{YX} \bm{z} \right)=\bm{0} \text{ for } \bm{P}^T \bm{z} = \bm{0} \label{eq:res_orth}
+\bm{r}^T \left( K_{YX} \bm{q} \right)=\bm{0} \text{ for } \bm{P}^T \bm{q} = \bm{0} \label{eq:res_orth}
 \end{equation}
 Finally, we check the consistency error for $s \in V_h+\Pi_k$ with $\bm{P}^T \bm{q}=\bm{0}$.
 \begin{align*}
-	Ls(x)-L_hs(x) &= L\left(\bm{k}^T(\bm{x})K_YX \bm{q} + \bm{p}^T(\bm{x}\right) \bm{\alpha}) - \bm{w}^T(\bm{x})\bm{s}\\
-	&= L\bm{k}^T(\bm{x})K_{YX} \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})(K_{XY} K_{YX} \bm{q} + \bm{P} \bm{\alpha})\\
-	&= L\bm{k}^T(\bm{x})K_{YX} \bm{q} + L\bm{p}^T(\bm{x}) \bm{\alpha} - \bm{w}^T(\bm{x})K_{XY} K_{YX} \bm{q} - \bm{w}^T(\bm{x}) \bm{P} \bm{\alpha}\\
-	&= \left( L\bm{k}(\bm{x}) - K_{YX} \bm{w}(\bm{x}) \right)^T K_{YX} \bm{q} + \left( L\bm{p}^T(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
-	&= \bm{r}^T K_{YX} \bm{q} + \left( L\bm{p}(\bm{x}) - \bm{P}^T \bm{w}(\bm{x}) \right)^T \bm{\alpha}\\
+	Ls(\bm{z})-L_hs(\bm{z}) &= L\left[K(\bm{z},Y)K_YX \bm{q} + \bm{p}^T(\bm{z}) \bm{\alpha}\right] - \bm{w}^T_z\bm{s}\\
+	&= L_z K(\bm{z},Y)K_{YX} \bm{q} + L\bm{p}^T(\bm{z}) \bm{\alpha} - \bm{w}^T_z(K_{XY} K_{YX} \bm{q} + \bm{P} \bm{\alpha})\\
+	&= L_z K(\bm{z},Y)K_{YX} \bm{q} + L\bm{p}^T(\bm{z}) \bm{\alpha} - \bm{w}^T_z K_{XY} K_{YX} \bm{q} - \bm{w}^T_z \bm{P} \bm{\alpha}\\
+	&= \left[ L_z K(\bm{z},Y) - K_{YX} \bm{w}_z \right]^T K_{YX} \bm{q} + \left[ L\bm{p}(\bm{z}) - \bm{P}^T \bm{w}_z \right]^T \bm{\alpha}\\
+	&= \bm{r}^T K_{YX} \bm{q} + \left[ L\bm{p}(\bm{z}) - \bm{P}^T \bm{w}_z \right]^T \bm{\alpha}\\
 \end{align*}
-\begin{equation}
-	Ls(x)-L_hs(x) = 0 \text{ due to (\ref{eq:augmented}) and (\ref{eq:res_orth}}) \label{eq:repro}
-\end{equation}
-
-\subsection{Exactness of Approximation on Discrete Spaces}.
-
-Let $u$ be a solution to (\ref{eq:PDE}) and $s \in V_h+\Pi_k$. We can say $u = s + (u - s)$ to get the following:
-\begin{align*}
-\mathcal{E}[u](\bm{x}) :&= Lu(\bm{x}) - L_hu(\bm{x})\\
-	&= Lu(\bm{x}) - \bm{w}^T(\bm{x})\bm{u}\\
-	&= L((u-s) + s)(\bm{x}) - \bm{w}^T(\bm{x})\bm{u} - L_h s(\bm{x}) + L_h s(\bm{x})\\
-	&= L(u-s)(\bm{x}) + (L s(\bm{x}) - L_h s(\bm{x})) + L_h(s-u)(\bm{x})\\
-	&= L(u-s)(\bm{x}) - \bm{w}^T(\bm{x})(\bm{u}-\bm{s}) \text{, by (\ref{eq:repro})}\\
-	&= Le(\bm{x}) - \bm{w}^T(\bm{x})\bm{e} \text{, } e(\bm{x})=u(\bm{x})-s(\bm{x})\\
-	&= \mathcal{E}[e](\bm{x})
-\end{align*}
+Hence, we conclude $Ls(\bm{z})-L_hs(\bm{z}) = 0 \text{ due to (\ref{eq:augmented}) and (\ref{eq:res_orth}}) \label{eq:repro}$.
 
 \pagebreak
 
