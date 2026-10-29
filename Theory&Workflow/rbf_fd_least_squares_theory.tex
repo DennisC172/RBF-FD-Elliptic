@@ -62,7 +62,7 @@
 \title{RBF-FD Solver: Least Squares Method for Operator Reproduction}
 \author{Dennis Corraliza}
 \date{Began: 9/2/2026}
-\date{Updated: 9/16/25}
+\date{Updated: 10/29/25}
 
 \begin{document}
 \maketitle
@@ -189,7 +189,7 @@ Thus, approximating the operator reduces to a local linear solve for the weights
 \end{equation*}
 The method of undetermined coefficients on the basis $\{\phi_i\}$ gives the same weights: requiring exactness on each basis function, $\sum_{i=1}^n w_i \, \phi_j(\bm{x}_i) = (L\phi_j)(\bm{z})$ for $j = 1, \dots, n$, is exactly the system above. Finally, we let the basis of $V_Y$ be defined by radial basis functions, $\phi_i(\cdot):=\varphi(\| \cdot - \bm{y}_i \|)$, with a radial function $\varphi:[0,\infty) \rightarrow \mathbb{R}$ and centers $\{ \bm{y}_i \}_{i=1}^m \subseteq \Omega_{\bm{z}}$ introduced above. Thus we have defined the Radial Basis Function--generated Finite Difference method (RBF-FD).
 \\
-\noindent\textbf{Remark.} For $\bm{x} \in \Omega_{\bm{z}}$ let $w_i(\bm{x}) := \bigl( \bm{w}^{L,X}(\bm{x}) \bigr)_i$ be the weights computed with the fixed stencil $X$, and take $\theta_i = \delta_{\bm{x}_i}$. Then $L_w u = \sum_{i=1}^n w_i \, \theta_i(u) = L\hat{u}$ on $\Omega_{\bm{z}}$, that is, $L_w = L \circ I_X$ where $I_X u := \hat{u}$ is the interpolation operator. If $u \in V_Y$, then $I_X u = u$ and hence $L_w u = Lu$. So the exactness assumption of the previous section holds with $\mathcal{V}_h = V_Y$ (working on $\Omega_{\bm{z}}$ in place of $\Omega$ and assuming $V_Y \subseteq \mathcal{N}$).
+\noindent\textbf{Remark.} For $\bm{x} \in \Omega_{\bm{z}}$ let $w_{i,z} := \bigl( \bm{w}^{L,X}_z \bigr)_i$ be the weights computed with the fixed stencil $X$, and take $\theta_i = \delta_{\bm{x}_i}$. Then $L_w u = \sum_{i=1}^n w_i \, \theta_i(u) = L\hat{u}$ on $\Omega_{\bm{z}}$, that is, $L_w = L \circ I_X$ where $I_X u := \hat{u}$ is the interpolation operator. If $u \in V_Y$, then $I_X u = u$ and hence $L_w u = Lu$. The exactness assumption of the previous section holds with $\mathcal{V}_w = V_Y$ (working on $\Omega_{\bm{z}}$ in place of $\Omega$ and assuming $V_Y \subseteq \mathcal{N}$).
 
 \subsection{Polynomial Augmentation}
 
@@ -214,9 +214,9 @@ We can generate a Gram matrix equation as follows:
 \end{equation*}
 Hence, we can approximate the operator as below:
 \begin{equation}\
-	(L\hat{u})(\bm{x}) =
+	(L\hat{u})(\bm{z}) =
 	\begin{bmatrix}
-		\bm{(L\phi)(\bm{x})} \\ \bm{(Lp)(\bm{x})}
+		\bm{(L\phi)(\bm{z})} \\ \bm{(Lp)(\bm{z})}
 	\end{bmatrix}^T 
 	\begin{bmatrix}
 		\bm{\Phi} & \bm{P} \\
@@ -226,28 +226,28 @@ Hence, we can approximate the operator as below:
 		\bm{\hat{u}} \\ \bm{0}
 	\end{bmatrix} :=
 	\begin{bmatrix}
-		\bm{w}(\bm{x}) \\ \bm{\nu}(\bm{x})
+		\bm{w}_z \\ \bm{\nu}_z
 	\end{bmatrix}^T 
 	\begin{bmatrix}
 		\bm{\hat{u}} \\ \bm{0}
 	\end{bmatrix} =
-	\bm{w}^T(\bm{x}) \bm{\hat{u}}
+	\bm{w}^T_z \bm{\hat{u}}
 	\label{eq:operator_approx}
 \end{equation}
 Thus, we get the local augmented operator reproduction scheme:
 \begin{equation}
 	\begin{bmatrix}
-		\bm{(L\phi)(\bm{x})} \\ \bm{(Lp)(\bm{x})}
+		\bm{(L\phi)(\bm{z})} \\ \bm{(Lp)(\bm{z})}
 	\end{bmatrix} =
 	\begin{bmatrix}
 		\bm{\Phi}^T & \bm{P} \\
 		\bm{P}^T & \bm{0}
 	\end{bmatrix} \begin{bmatrix}
-		\bm{w}(\bm{x}) \\ \bm{\nu}(\bm{x})
+		\bm{w}_z \\ \bm{\nu}_z
 	\end{bmatrix}
 	\label{eq:weight_solve}
 \end{equation}
-The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_Y$, $(L\bm{p})(\bm{x}) \in Range(\bm{P}^T)$ $\iff$ Eq. (\ref{eq:weight_solve}) is uniquely solvable, for any set $X$. Additionally, by \cite{Davydov2020}, Eq. (\ref{eq:operator_approx}) hold $\iff$ Eq. (\ref{eq:weight_solve}) holds. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_Y$, $(L\bm{p})(\bm{z}) \in Range(\bm{P}^T)$ $\iff$ Eq. (\ref{eq:weight_solve}) is uniquely solvable, for any set $X$. Additionally, by \cite{Davydov2020}, Eq. (\ref{eq:operator_approx}) hold $\iff$ Eq. (\ref{eq:weight_solve}) holds. Note that depending on the the basis $V_Y$, we get the degree of $p \in \Pi_{k-1}^d$. Below are common RBFs and their respective cpd orders:
 \begin{table}[ht]
     \centering
     \caption{Common radial basis functions and their minimal CPD order.}
@@ -283,9 +283,9 @@ As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a lar
 
 We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s}(\Omega)$ with pointwise bounded evaluations. This defines an RKHS for functions $u \in H^{s}(\Omega)$, $Lu \in H^{s-k}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
 \begin{align*}
-	f(x) &= \left\langle f, K(\cdot, x) \right\rangle_{\mathcal{F_K}}\\
-	(Lf)(x) &= \left\langle f, L_x K(\cdot, \bm{x}) \right\rangle_{\mathcal{F_K}}\\
-	\bm{w}^T(\bm{x}) \bm{f} &= \left\langle f, \bm{w}^T(\bm{x}) \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
+	f(\bm{z}) &= \left\langle f, K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
+	(Lf)(\bm{z}) &= \left\langle f, L_x K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
+	\bm{w}^T_z \bm{f} &= \left\langle f, \bm{w}^T_z \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
 	\xi_{w,L,z}(f) :&= Lf(z) - \bm{w}^T_{\bm{z}} \bm{f}
 \end{align*}
 According to \cite{Davydov2025}, we have the following proposition:
@@ -301,12 +301,12 @@ The equation \ref{eq:weight_solve} is consistent
 \end{enumerate}
 Then the kernel-based numerical differentiation formula  satisfies:
 \begin{equation}
-\left| \xi_{w^*,L,z} \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
+\left| \xi_{w^*,L,z}(f) \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
 \end{equation}
 \end{proposition}
-\noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_x$ indicates applying the operator acted on the variable $\bm{x}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,x}(f) = \left \langle f, v_{w,L,x} \right \rangle$, with $v_{w,L,x} = L_x K(\cdot, \bm{x}) - \bm{w}^T(\bm{x}) \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,x} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,x} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,x}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
+\noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_z$ indicates applying the operator acted on the variable $\bm{z}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,z}(f) = \left \langle f, v_{w,L,z} \right \rangle$, with $v_{w,L,z} = L_z K(\cdot, \bm{z}) - \bm{w}^T_z \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,z} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,z} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,z}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
 \begin{equation}
-\mathcal{P}_{K,L,X}^2(x) = \min \left \{||v_{w,K,L,X,x}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \text{, } \xi_{w,L,x} p = 0 \text{ for } p \in \Pi_{k-1}^d \right \}
+\mathcal{P}_{K,L,X}^2(z) = \min \left \{||v_{w,K,L,X,z}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \text{, } \xi_{w,L,z} p = 0 \text{ for } p \in \Pi_{k-1}^d \right \}
 \end{equation}
 The RKHS norm can be simplified as
 \begin{align*}
@@ -357,7 +357,7 @@ We finally have the following by \cite{Davydov2025}:
 \end{equation}
 \end{theorem}
 
-\section{Local Least Square Weights RBF-FD}
+\section{Local Least Square for RBF-FD Weights}
 
 \subsection{Weight Constraint Setup}
 
@@ -376,13 +376,28 @@ K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 
 \subsection{Consistency Error Analysis through Center-Based Kernel}
 
-
+Similar to the local interpolation scheme to derive the error functional, we begin by defining the kernel used for the reproduction scheme. Rather than using the interpolation kernel $K$, we define the following kernel:
+\begin{equation}
+	\tilde{K}(\bm{z}_1,\bm{z}_2) := \sum_{i=1}^m K(\bm{z}_1, \bm{y}_i) K(\bm{y}_i, \bm{z}_2) = K(\bm{z}_1, Y) K(Y, \bm{z}_2)
+\end{equation}
+We can show this is a positive semi-definite kernel and positive definite onto the set of nodes $X$, as long as $n<=m$. (NEED TO SHOW)
+\begin{align*}
+	\xi_{w,L,\tilde{K},X,Y,z}(f) = \xi_{w,z}(f) :&= Lf(z) -\sum_{i=1}^n w_{i,z} f(\bm{x}_i)\\
+	&= L_z \left \langle f, \, K(\cdot, Y) K(Y, \bm{z}) \right \rangle_\mathcal{F_K} - \sum_{i=1}^n w_{i,z} \left \langle f, \, K(\cdot, Y) K(Y, \bm{x_i}) \right \rangle_\mathcal{F_K}\\
+	&=  \left \langle f, \, K(\cdot, Y) L_z K(Y, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, Y) K(Y, \bm{x_i}) \right \rangle_\mathcal{F_K}\\
+	&=  \left \langle f, \, K(\cdot, Y) L_z K(Y, \bm{z}) - K(\cdot, Y) K(Y, X) \bm{w}_{z} \right \rangle_\mathcal{F_K}\\
+	&:=  \left \langle f, \, v_{w,L,\tilde{K},X,Y,z} \right \rangle_\mathcal{F_K}, \\ \text{ with } v_{w,L,\tilde{K},X,Y,z} &:= K(\cdot, Y) L_z K(Y, \bm{z}) - K(\cdot, Y) K(Y, X) \bm{w}_{z}
+\end{align*}
+Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} = v_{w,z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with establish theory, we proceed by exploiting the kernel structure.
+\begin{align*}
+	\| v_{w,z} \|_{\mathcal{K}}^2 = \left \langle v_{w,z}, v_{w,z} \right \rangle_{\mathcal{F_K}}
+\end{align*}
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
 
 We use the solution of the interpolation scheme to compare with the ordinary least squares, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
 \begin{align*}
-||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_x K(\bm{x}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
+||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w}\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^* - \bm{b}^T K_{XX}^{-1} \bm{b}\\
 &= \left. L_y L_z K(y,z) \right. - \bm{b}^T \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
