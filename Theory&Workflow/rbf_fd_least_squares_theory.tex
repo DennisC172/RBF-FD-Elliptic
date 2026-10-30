@@ -330,7 +330,7 @@ Minimizing this norm for $w \in \mathbb{R}^n$ with polynomial constraints leads 
 To define the consistency order, we define the following stencil as the stencil set.
 \begin{align*}
 	S_{\bm{z},X} := \bigcup_{i=1}^N[\bm{z}, \bm{x}_i]
-\end{align*}.
+\end{align*}
 Then for $U: S_{\bm{x},X} \times S_{\bm{x},X} \rightarrow \mathbb{R}$, we define a binary H\"{o}der continuity semi-norm in the form:
 \begin{align*}
 	|U|_{\bm{z},X,\gamma}:=\sup_{\substack{\bm{x},\bm{y}\in S_{\bm{z},X} \\ \bm{x} \neq \bm{z}, \bm{y} \neq \bm{z}}} \frac{\left| U(\bm{x},\bm{y}) - U(\bm{x},\bm{z}) - U(\bm{z},\bm{y}) + U(\bm{z},\bm{z}) \right|}{\| \bm{x} - \bm{z}\|_2^\gamma \| \bm{y} - \bm{z} \|_2^\gamma} , 0 < \gamma, \le 1
