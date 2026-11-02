@@ -7,6 +7,7 @@
 \usepackage{geometry}
 \usepackage{booktabs}
 \usepackage{listings}
+\usepackage{comment}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{enumitem}
@@ -378,19 +379,40 @@ K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 
 Similar to the local interpolation scheme to derive the error functional, we begin by defining the kernel used for the reproduction scheme. Rather than using the interpolation kernel $K$, we define the following kernel:
 \begin{equation}
-	\tilde{K}(\bm{z}_1,\bm{z}_2) := \sum_{i=1}^m K(\bm{z}_1, \bm{y}_i) K(\bm{y}_i, \bm{z}_2) = K(\bm{z}_1, Y) K(Y, \bm{z}_2)
+	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{z}_1, \bm{y}) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
 \end{equation}
-We can show this is a positive semi-definite kernel and positive definite onto the set of nodes $X$, as long as $n<=m$. (NEED TO SHOW)
+Here we define a measure $\mu$ and a domain $\Omega' \in \mathbb{R}^d$. THis idea was initially proposed in \cite{Shaback2003} in the interpolation scheme and without further analysis. We can show this is a positive semi-definite kernel and positive definite on the set of nodes $X$ and the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
 \begin{align*}
-	\xi_{w,L,\tilde{K},X,Y,z}(f) = \xi_{w,z}(f) :&= Lf(z) -\sum_{i=1}^n w_{i,z} f(\bm{x}_i)\\
-	&= L_z \left \langle f, \, K(\cdot, Y) K(Y, \bm{z}) \right \rangle_\mathcal{F_K} - \sum_{i=1}^n w_{i,z} \left \langle f, \, K(\cdot, Y) K(Y, \bm{x_i}) \right \rangle_\mathcal{F_K}\\
-	&=  \left \langle f, \, K(\cdot, Y) L_z K(Y, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, Y) K(Y, \bm{x_i}) \right \rangle_\mathcal{F_K}\\
-	&=  \left \langle f, \, K(\cdot, Y) L_z K(Y, \bm{z}) - K(\cdot, Y) K(Y, X) \bm{w}_{z} \right \rangle_\mathcal{F_K}\\
-	&:=  \left \langle f, \, v_{w,L,\tilde{K},X,Y,z} \right \rangle_\mathcal{F_K}, \\ \text{ with } v_{w,L,\tilde{K},X,Y,z} &:= K(\cdot, Y) L_z K(Y, \bm{z}) - K(\cdot, Y) K(Y, X) \bm{w}_{z}
+	\xi_{w,L,\tilde{K},X,z}(f) :&= Lf(z) -\sum_{i=1}^n w_{i,z} f(\bm{x}_i)\\
+	&= L_z \left \langle f, \, \tilde{K}(\cdot,\bm{z}) \right \rangle_\mathcal{F_{\tilde{K}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot,\bm{x}_i) \right \rangle_\mathcal{F_{\tilde{K}}}\\
+	&= L_z \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) K(\bm{y}, \bm{z}) d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) K(\bm{y}, \bm{x}_i) d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
+	&= \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) \left[ L_z K(\bm{y}, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right] \, d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
+	&= \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
+	:&=  \left \langle f, \, v_{w,L,\tilde{K},X,\Omega',z} \right \rangle_\mathcal{F_{\tilde{K}}},
 \end{align*}
-Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} = v_{w,z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with establish theory, we proceed by exploiting the kernel structure.
+with $v_{w,L,\tilde{K},X,\Omega',z} := \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y})$. Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} := v_{w,\tilde{K},z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with establish theory, we proceed by exploiting the kernel structure. Let $T(g) := \int_{\Omega'} K(\cdot,\bm{y}) g(\bm{y}) \, d\mu(\bm{y})$.
+\begin{comment}
 \begin{align*}
-	\| v_{w,z} \|_{\mathcal{K}}^2 = \left \langle v_{w,z}, v_{w,z} \right \rangle_{\mathcal{F_K}}
+	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,z}, v_{w,z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left \langle \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}), \, \int_{\Omega'} K(\cdot, \bm{y}') r_{w_z}(\bm{y}') \, d\mu(\bm{y}') \right \rangle_\mathcal{F_{\tilde{K}}}\\
+	&= \int_{\Omega'} \int_{\Omega'} r_{w_z}(\bm{y}) K(\bm{y}, \bm{y}') r_{w_z}(\bm{y}') \, d\mu(\bm{y})
+\end{align*}
+\end{comment}
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}}\\
+	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega', \mu)}\\
+	&\le \| r_{w_z} \|_{L^2(\Omega', \mu)}\\
+	&\le \left( \int_{\Omega'} | r_{w_z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
+	&\le \left( \int_{\Omega'} | v_{w,K,z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
+	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2}\\
+	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}\\
+\end{align*}
+Finally, for a uniform, normalized meassure and a translation-invariant kernel, then \\
+$\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$. In another perspective, we can define the OLS to solve for the local weights $w$ from the following:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}}\\
+	&\le \int_{\Omega'} \left \| K(\cdot, \bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}} | r_{w_z}(\bm{y}) | \, d\mu(\bm{y}) \\
+	&\le \left( \int_{\Omega'} \left \| K(\cdot, \bm{y}) \right \|^2_{\mathcal{F_{\tilde{K}}}}  \, d\mu(\bm{y}) \right)^{1/2}  \\
 \end{align*}
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
@@ -416,15 +438,15 @@ K_{XY}K_{YX}(\bm{w_{LS}}-\bm{w}^*)&=K_{XY}(\bm{b}-K_{YX}\bm{w}^*)\\
 \end{align*}
 Finally, we say that $r^*_j=v_{w^*,K,L,X,z}(\bm{y}_j)$. Then $|| \bm{r}^* ||^2_2 = || v_{w^*,K,L,X,z}(Y) ||_2^2$. Applying kernel evaluation on $v_{w^*,K,L,X,z}$ and the power function for interpolations onto $v$ we get:
 \begin{align*}
-|| \bm{r}^* ||_2^2 &= \sum_{i=1}^m v_{w^*,K,L,X,z}^2(y_i)\\
-&\le \sum_{i=1}^m || v_{w^*,K,L,X,z} ||^2_\mathcal{F_K} \mathcal{P}_{K,I_X,X}^2(\bm{y_i})\\
-&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})
+\| \bm{r}^* \|_2^2 &= \sum_{i=1}^m v_{w^*,K,L,X,z}^2(\bm{y}_i)\\
+&\le \sum_{i=1}^m \| v_{w^*,K,L,X,z} \|^2_\mathcal{F_K} \| K(\cdot,\bm{y}_i) \|^2_\mathcal{F_K} \\
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)
 \end{align*}
 Therefore, the error estimate (\ref{eq:LeastSquaresEstimate}) for the local Ordinary Least Squares behaves as follows:
 \begin{align}
 ||v_{w_{LS},K,L,X,z}||_\mathcal{F_K}^2 &\le \mathcal{P}_{K,L,X}^2(\bm{z}) +  \lambda_{max}(K_{XX}) || \bm{w} - \bm{w}^* ||_2^2 \nonumber \\
-&\le \mathcal{P}_{K,L,X}^2(\bm{z}) + \lambda_{max}(K_{XX}) \frac{\mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})}{\sigma_{min}^2(K_{XY})} \nonumber \\
-&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \left(1 + \frac{\lambda_{max}(K_{XX})\sum_{i=1}^m \mathcal{P}_{K,I_X,X}^2(\bm{y_i})}{\sigma_{min}^2(K_{XY})} \right)
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) + \lambda_{max}(K_{XX}) \frac{\mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)}{\sigma_{min}^2(K_{XY})} \nonumber \\
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \left(1 + \frac{\lambda_{max}(K_{XX})\sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)}{\sigma_{min}^2(K_{XY})} \right)
 \label{eq:LeastSquaresEstimate}
 \end{align}
 
@@ -618,6 +640,10 @@ Poisson equation. Comput. Methods Appl. Mech. Eng., 198(3-4):592–601, 2008.
 \bibitem{Stetter1973}
 H. J. Stetter. Analysis of Discretization Methods for Ordinary Differential Equa-
 tions. Springer, New York, 1973.
+
+\bibitem{Shaback2003}
+Schaback, R. (2003). Reconstruction of multivariate functions from scattered data.
+University of Göttingen. \\ \url{https://num.math.uni-goettingen.de/schaback/teaching/rbfbook.pdf}
 
 \end{thebibliography}
 
