@@ -393,17 +393,17 @@ We finally have the following by \cite{Davydov2025}:
 
 \subsection{Weight Constraint Setup}
 
-Rather than assuming a form for the solution, our goal is to approximate the operator through weights dual to $u$ sampled at nodes. Suppose $m > n$ (for the case of $m < n$, refer to \cite{Slak}), thus more center nodes than stencil nodes per stencil. Let $\phi_j(\bm{z}) = K(\bm{z}, \bm{y}_j)$. The following notation for the systems of equations will be used, where $X$ is the stencil nodes and $Y$ is the center nodes:
+An idea relevent to a least square procedure within the RBFFD machinery was initially proposed in \cite{Shaback2003}, targeting the interpolator function. We propose instead analyzing the least squares in the direction of the numerical differentiation weights which leads to a minimum norm in the approximate solutions. Hence, rather than assuming a form for the solution, our goal is to approximate instead the operator through weights dual to $u$ sampled at nodes $X$. Suppose $m \ge n$ (for the case of $m < n$, refer to \cite{Slak}), thus more center nodes than stencil nodes per stencil. Let $\phi_j(\bm{z}) = K(\bm{z}, \bm{y}_j)$. The following notation for the systems of equations will be used, where $X$ is the stencil nodes and $Y$ is the center nodes:
 \begin{align*}
 K_{XY} &= [K(\bm{x}_i, \bm{y}_j)]_{i,j}\\
 K_{YX} &= [K(\bm{x}_i, \bm{y}_j)]_{j,i}\\
 K_{XX} &= [K(\bm{x}_i, \bm{x}_j)]_{i,j}\\
 K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 \end{align*}
- Additionally, instead of assuming exactness of the form $L_zK(\bm{y}_j,\bm{z}) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_j)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
+ Additionally, instead of assuming exactness of the form $L_zK(\bm{y}_j,\bm{z}) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align*}
 	r_{w_z}(\bm{y}_j) :&= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
-	r_{w_z} (Y) &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
+	r_{w_z} (Y) &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w} \in \mathbb{R}^n \text{ and } \bm{z} \in \Omega.
 \end{align*}
 
 \subsection{Consistency Error Analysis through Center-Based Kernel}
@@ -412,7 +412,7 @@ Similar to the local interpolation scheme to derive the error functional, we beg
 \begin{equation}
 	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
 \end{equation}
-Here we define a measure $\mu$ and a domain $\Omega' \in \mathbb{R}^d$. An idea relevent to a least square procedure within the RBFFD machinery was initially proposed in \cite{Shaback2003}, in the direction of the interpolator function. We can show this is a positive semi-definite kernel and positive definite on the set of nodes $X$ and the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
+Here we set $\mu$ to be a measure and $\Omega' \subseteq \mathbb{R}^d$. We can show this is a positive semi-definite kernel, and positive definite on the set of nodes $X$ by showing that the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
 \begin{align*}
 	\xi_{w,L,\tilde{K},X,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
 	&= L_z \left \langle f, \, \tilde{K}(\cdot, \bm{z}) \right \rangle_{\mathcal{F_{\tilde{K}}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
@@ -430,7 +430,7 @@ with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}
 	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2 \, d\mu(\bm{y})\\
 	&= \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
 	\inf_{\bm{w}\in \mathbb{R}^n} \| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
-	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \|  r_{w_z} \|_{L^2(\Omega', \, \mu)} \\
+	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \|  r_{w_z} \|_{L^2(\Omega', \, \mu)}
 \end{align*}
 Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y}) \, d\mu(\bm{y})$, then:
 \begin{align*}
