@@ -63,7 +63,7 @@
 \title{RBF-FD Solver: Least Squares Method for Operator Reproduction}
 \author{Dennis Corraliza}
 \date{Began: 9/2/2026}
-\date{Updated: 10/29/25}
+\date{Updated: 11/03/25}
 
 \begin{document}
 \maketitle
@@ -185,12 +185,61 @@ Applying $L$ (which acts on the argument $\bm{x}$ of $\bm{\phi}$) and evaluating
 where $(L \bm{\phi})(\bm{z}) := [ (L\phi_1)(\bm{z}), \dots, (L\phi_n)(\bm{z}) ]^T$ and the weights $\bm{w}^{L, X}(\bm{z}) \in \mathbb{R}^n$ form a column vector.
 
 Thus, approximating the operator reduces to a local linear solve for the weights. Transposing the definition of $\bm{w}^{L,X}(\bm{z})$ gives
-\begin{equation*}
+\begin{equation}
 	\bm{\Phi}^T \bm{w}^{L, X}(\bm{z}) = (L \bm{\phi})(\bm{z}).
-\end{equation*}
+	\label{eq:pd_local}
+\end{equation}
 The method of undetermined coefficients on the basis $\{\phi_i\}$ gives the same weights: requiring exactness on each basis function, $\sum_{i=1}^n w_i \, \phi_j(\bm{x}_i) = (L\phi_j)(\bm{z})$ for $j = 1, \dots, n$, is exactly the system above. Finally, we let the basis of $V_Y$ be defined by radial basis functions, $\phi_i(\cdot):=\varphi(\| \cdot - \bm{y}_i \|)$, with a radial function $\varphi:[0,\infty) \rightarrow \mathbb{R}$ and centers $\{ \bm{y}_i \}_{i=1}^m \subseteq \Omega_{\bm{z}}$ introduced above. Thus we have defined the Radial Basis Function--generated Finite Difference method (RBF-FD).
 \\
 \noindent\textbf{Remark.} For $\bm{x} \in \Omega_{\bm{z}}$ let $w_{i,z} := \bigl( \bm{w}^{L,X}_z \bigr)_i$ be the weights computed with the fixed stencil $X$, and take $\theta_i = \delta_{\bm{x}_i}$. Then $L_w u = \sum_{i=1}^n w_i \, \theta_i(u) = L\hat{u}$ on $\Omega_{\bm{z}}$, that is, $L_w = L \circ I_X$ where $I_X u := \hat{u}$ is the interpolation operator. If $u \in V_Y$, then $I_X u = u$ and hence $L_w u = Lu$. The exactness assumption of the previous section holds with $\mathcal{V}_w = V_Y$ (working on $\Omega_{\bm{z}}$ in place of $\Omega$ and assuming $V_Y \subseteq \mathcal{N}$).
+
+\subsubsection{PD Consistency Error Analysis and Local System Derivation}
+
+We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s}(\Omega)$ with pointwise bounded evaluations. This defines an RKHS for functions $u \in H^{s}(\Omega)$, $Lu \in H^{s-k}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
+\begin{align*}
+	f(\bm{z}) &= \left\langle f, K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
+	(Lf)(\bm{z}) &= \left\langle f, L_x K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
+	\bm{w}^T_z \bm{f} &= \left\langle f, \bm{w}^T_z \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
+	\xi_{w,L,z}(f) :&= Lf(z) - \bm{w}^T_{\bm{z}} \bm{f}
+\end{align*}
+According to \cite{Davydov2025}, we have the following proposition:
+\begin{proposition}
+(Davydov, 2025)Let D be a differential operator of order $k$, and $K$ a cpd kernel of order s on $\Omega \subseteq \mathbb{R}^d$ and $\bm{X}=\{ x_1, \dots, x_n\}$, assume that
+\begin{enumerate}
+\item
+$\partial^{\alpha,\beta}K(\bm{z},\bm{z})$ exists for all $|\alpha|, |\beta| \le k$
+\item
+$L_zK(\bm{z},\bm{x}_i)$ exists for all $i=1,\dots,N$ and
+\item
+The equation \ref{eq:weight_solve} is consistent
+\end{enumerate}
+Then the kernel-based numerical differentiation formula  satisfies:
+\begin{equation}
+\left| \xi_{w^*,L,z}(f) \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
+\end{equation}
+\end{proposition}
+\noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_z$ indicates applying the operator acted on the variable $\bm{z}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,z}(f) = \left \langle f, v_{w,L,z} \right \rangle$, with $v_{w,L,z} = L_z K(\cdot, \bm{z}) - \bm{w}^T_z \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,z} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,z} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,z}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
+\begin{equation}
+\mathcal{P}_{K,L,X}^2(z) = \min \left \{||v_{w,K,L,X,z}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \text{, } \xi_{w,L,z} p = 0 \text{ for } p \in \Pi_{k-1}^d \right \}
+\end{equation}
+The RKHS norm can be simplified as
+\begin{align*}
+	||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left\langle v_{w,K,L,X,z}, v_{w,K,L,X,z} \right\rangle_{\mathcal{F_K}}\\
+	&= \left. \xi_{w,L,y} \xi_{w,L,x} K(y,x) \right|_{y=z=x}\\
+	&= \left\langle L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot), L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_z K(\cdot, \bm{z}), L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_z K(\cdot, \bm{z}) , \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T_{\bm{z}} \bm{k}(\cdot), \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j)\\
+	&= 2 \left( \frac{1}{2} \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \frac{1}{2}\sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j) \right)
+\end{align*}
+Minimizing this norm for $w \in \mathbb{R}^n$ with polynomial constraints leads to Eq (\ref{eq:pd_local}). An error estimate for functions in $\mathcal{F_K}$ of the form:
+\begin{align*}
+	|\xi_{w,L,z}(f)| &\le \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} \\
+	\inf_{\bm{w}\in \mathbb{R}^n} |\xi_{w,L,z}(f)| &\le \inf_{\bm{w}\in \mathbb{R}^n} \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K}\\	
+	|\xi_{w^*,L,z}(f)| &\le \inf_{\bm{w}\in \mathbb{R}^n} ||v_{w,K,L,X,z}||_\mathcal{F_K} ||f||_\mathcal{F_K}\\
+	|\xi_{w^*,L,z}(f)| &\le \mathcal{P}_{K,L,X}(\bm{z}) ||f||_\mathcal{F_K}
+\end{align*}
+
+\pagebreak
 
 \subsection{Polynomial Augmentation}
 
@@ -278,53 +327,33 @@ l=\begin{pmatrix}
 \end{equation*}
 As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a larger degree than required for the RBF, acting as a correction term while inheriting the non-oscillatory behavior of the RBF at the boundary $\partial \Omega$.
 
-\pagebreak
+\subsubsection{CPD Consistency Error Analysis and Local System Derivation}
 
-\subsection{Consistency Error Analysis and Local System Derivation}
-
-We begin by defining the native space of solutions for (\ref{eq:PDE}) with (\ref{eq:neumann-bc}). Suppose $\mathcal{F_K} = H^{s}(\Omega)$ with pointwise bounded evaluations. This defines an RKHS for functions $u \in H^{s}(\Omega)$, $Lu \in H^{s-k}(\Omega)$. We can also define a \textit{Kernel} $K: \Omega \times \Omega \rightarrow \mathbb{R}$ such that:
+Due to the positive semidefiniteness of the cpd kernels, the polynomial augmentation plays the role of filling the nullspace the kernel does not span. We define the RKHS $\mathcal{F_K}_c = \mathcal{F_K} / \Pi_{k-1}^d$, with the equivalence relation $u ~ v \rightarrow u-v \in \Pi_{k-1}^d$. We define the semi-norm $| \cdot |_{\mathcal{F_K}}$ as:
+\begin{equation}
+	\left | u \right |_{\mathcal{F_K}} := \| [u] \|_{\mathcal{F_K} / \Pi_{k-1}^d} \text{, with } [u] \in \mathcal{F_K} / \Pi_{k-1}^d
+\end{equation}
+Thus, $| p |_{\mathcal{F_K}} = 0$ for $p \in \Pi_{k-1}^d$. Similar to the pd case, we develop the error estimate:
 \begin{align*}
-	f(\bm{z}) &= \left\langle f, K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
-	(Lf)(\bm{z}) &= \left\langle f, L_x K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
-	\bm{w}^T_z \bm{f} &= \left\langle f, \bm{w}^T_z \bm{k(\cdot)} \right\rangle_{\mathcal{F_K}}\\
-	\xi_{w,L,z}(f) :&= Lf(z) - \bm{w}^T_{\bm{z}} \bm{f}
+	\xi_{w,L,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
+	&= L_z \left \langle f, \, K(\cdot, \bm{z}) \right \rangle_{\mathcal{F_K}_c} - \sum_{i=1}^n w_{i,z} \left \langle f, \, K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	&= \left \langle f, \, L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	&= \left \langle f, \, v_{w,L,K,X,z} \right \rangle_{\mathcal{F_K}_c}
 \end{align*}
-According to \cite{Davydov2025}, we have the following proposition:
-\begin{proposition}
-(Davydov, 2025)Let D be a differential operator of order $k$, and $K$ a cpd kernel of order s on $\Omega \subseteq \mathbb{R}^d$ and $\bm{X}=\{ x_1, \dots, x_n\}$, assume that
-\begin{enumerate}
-\item
-$\partial^{\alpha,\beta}K(\bm{z},\bm{z})$ exists for all $|\alpha|, |\beta| \le k$
-\item
-$L_zK(\bm{z},\bm{x}_i)$ exists for all $i=1,\dots,N$ and
-\item
-The equation \ref{eq:weight_solve} is consistent
-\end{enumerate}
-Then the kernel-based numerical differentiation formula  satisfies:
-\begin{equation}
-\left| \xi_{w^*,L,z}(f) \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
-\end{equation}
-\end{proposition}
-\noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_z$ indicates applying the operator acted on the variable $\bm{z}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,z}(f) = \left \langle f, v_{w,L,z} \right \rangle$, with $v_{w,L,z} = L_z K(\cdot, \bm{z}) - \bm{w}^T_z \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,z} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,z} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,z}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
-\begin{equation}
-\mathcal{P}_{K,L,X}^2(z) = \min \left \{||v_{w,K,L,X,z}||_\mathcal{F_K}^2: \bm{w}\in \mathbb{R}^n \text{, } \xi_{w,L,z} p = 0 \text{ for } p \in \Pi_{k-1}^d \right \}
-\end{equation}
-The RKHS norm can be simplified as
+The main difference between the cpd and pd error estimates is the norm/semi-norm used for $v_{w,K,L,z} := v_{w,K,z}$. We then state the following:
 \begin{align*}
-	||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left\langle v_{w,K,L,X,z}, v_{w,K,L,X,z} \right\rangle_{\mathcal{F_K}}\\
-	&= \left. \xi_{w,L,y} \xi_{w,L,x} K(y,x) \right|_{y=z=x}\\
-	&= \left\langle L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot), L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
-	&= \left\langle L_z K(\cdot, \bm{z}), L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_z K(\cdot, \bm{z}) , \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T_{\bm{z}} \bm{k}(\cdot), \bm{w}^T_{\bm{z}} \bm{k}(\cdot) \right\rangle_{\mathcal{F_K}}\\
-	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j)\\
-	&= 2 \left( \frac{1}{2} \left. L_y L_x K(y,x) \right|_{y=z=x} - \sum_{i=1}^n w_{i,\bm{z}} L_z K(\bm{z}, \bm{x}_i) + \frac{1}{2}\sum_{i,j=1}^n w_{i,\bm{z}}w_{i,\bm{z}} K(\bm{x}_i, \bm{x}_j) \right)
+	\| v_{w,K,z} \|_{\mathcal{F_K}_c}^2 &= \left \langle v_{w,K,z}, \, v_{w,K,z} \right \rangle_{\mathcal{F_K}_c}\\
+	\| v_{w,K,z} \|_{\mathcal{F_K}_c}^2 &= \left \langle L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i), \, L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	\| v_{w,K,z} \|_{\mathcal{F_K}_c}^2 &= \left. L_x L_y K(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} K(\bm{x}_i, \bm{z}) + \sum_{i,j=1}^n w_{j,z} w_{i,z} K(\bm{x}_i, \bm{x}_j)\\
+	\| v_{w^*,K,z} \|_{\mathcal{F_K}_c}^2 &= \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \left ( \left. L_x L_y K(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} K(\bm{x}_i, \bm{z}) + \sum_{i,j=1}^n w_{j,z} w_{i,z} K(\bm{x}_i, \bm{x}_j) \right)
 \end{align*}
 Minimizing this norm for $w \in \mathbb{R}^n$ with polynomial constraints leads to Eq (\ref{eq:weight_solve}). An error estimate for functions in $\mathcal{F_K}$ of the form:
 \begin{align*}
-	|\xi_{w,L,z}(f)| &\le \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} \\
-	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} |\xi_{w,L,z}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \| \xi_{w,L,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K}\\	
-	|\xi_{w^*,L,z}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} ||v_{w,K,L,X,z}||_\mathcal{F_K} ||f||_\mathcal{F_K}\\
-	|\xi_{w^*,L,z}(f)| &\le \mathcal{P}_{K,L,X}(\bm{z}) ||f||_\mathcal{F_K}
+	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} |\xi_{w,L,z}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} ||v_{w,K,z}||_{\mathcal{F_K}_c} ||f||_{\mathcal{F_K}_c}\\
+	|\xi_{w^*,L,z}(f)| &\le ||v_{w^*,K,z}||_{\mathcal{F_K}_c} ||f||_{\mathcal{F_K}_c}\\
 \end{align*}
+
+\pagebreak
 
 \subsection{Growth Function}
 
@@ -371,49 +400,49 @@ K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 \end{align*}
  Additionally, instead of assuming exactness of the form $L_zK(\bm{y}_j,\bm{z}) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_j)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align*}
-	r_{j,z}(\bm{w}) :&= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
-	r_{\bm{z}} &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
+	r_{w_z}(\bm{y}_j) :&= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
+	r_{w_z} (Y) &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w}: \mathbb{R}^d \rightarrow \mathbb{R}^n \text{ for } \bm{z} \in \Omega.
 \end{align*}
 
 \subsection{Consistency Error Analysis through Center-Based Kernel}
 
 Similar to the local interpolation scheme to derive the error functional, we begin by defining the kernel used for the reproduction scheme. Rather than using the interpolation kernel $K$, we define the following kernel:
 \begin{equation}
-	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{z}_1, \bm{y}) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
+	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
 \end{equation}
 Here we define a measure $\mu$ and a domain $\Omega' \in \mathbb{R}^d$. THis idea was initially proposed in \cite{Shaback2003} in the interpolation scheme and without further analysis. We can show this is a positive semi-definite kernel and positive definite on the set of nodes $X$ and the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
 \begin{align*}
-	\xi_{w,L,\tilde{K},X,z}(f) :&= Lf(z) -\sum_{i=1}^n w_{i,z} f(\bm{x}_i)\\
-	&= L_z \left \langle f, \, \tilde{K}(\cdot,\bm{z}) \right \rangle_\mathcal{F_{\tilde{K}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot,\bm{x}_i) \right \rangle_\mathcal{F_{\tilde{K}}}\\
-	&= L_z \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) K(\bm{y}, \bm{z}) d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) K(\bm{y}, \bm{x}_i) d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
-	&= \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) \left[ L_z K(\bm{y}, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right] \, d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
-	&= \left \langle f, \, \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \rangle_\mathcal{F_{\tilde{K}}}\\
-	:&=  \left \langle f, \, v_{w,L,\tilde{K},X,\Omega',z} \right \rangle_\mathcal{F_{\tilde{K}}},
+	\xi_{w,L,\tilde{K},X,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
+	&= L_z \left \langle f, \, \tilde{K}(\cdot, \bm{z}) \right \rangle_{\mathcal{F_{\tilde{K}}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left \langle f, \, L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left \langle f, \, v_{w,L,\tilde{K},X,z} \right \rangle_{\mathcal{F_{\tilde{K}}}}
 \end{align*}
-with $v_{w,L,\tilde{K},X,\Omega',z} := \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y})$. Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} := v_{w,\tilde{K},z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with establish theory, we proceed by exploiting the kernel structure. Let $T(g) := \int_{\Omega'} K(\cdot,\bm{y}) g(\bm{y}) \, d\mu(\bm{y})$.
 \begin{comment}
-\begin{align*}
-	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,z}, v_{w,z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
-	&= \left \langle \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}), \, \int_{\Omega'} K(\cdot, \bm{y}') r_{w_z}(\bm{y}') \, d\mu(\bm{y}') \right \rangle_\mathcal{F_{\tilde{K}}}\\
-	&= \int_{\Omega'} \int_{\Omega'} r_{w_z}(\bm{y}) K(\bm{y}, \bm{y}') r_{w_z}(\bm{y}') \, d\mu(\bm{y})
-\end{align*}
+	&= \left \langle L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i), \, L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \rangle_\mathcal{F_{\tilde{K}}}\\
 \end{comment}
+with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i)$. Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} := v_{w,\tilde{K},z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with established theory, we proceed by exploiting the kernel structure.
 \begin{align*}
-	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}}\\
+	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,\tilde{K},z}, v_{w,\tilde{K},z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left. L_x L_y \tilde{K}(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} L_z \tilde{K}(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z} w_{j,z} \tilde{K}(\bm{x}_i, \bm{x}_j)\\
+	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) \, d\mu(\bm{y}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \, d\mu(\bm{y}) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j) \, d\mu(\bm{y})\\
+	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2 \, d\mu(\bm{y}) = \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})
+\end{align*}
+Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y}) \, d\mu(\bm{y})$, then:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} &= \left \| L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \|_{\mathcal{F_{K}}}\\
+	&= \left \| \int_{\Omega'} K(\bm{y}, \cdot) \left ( L_z K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right) d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
+	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
 	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega', \mu)}\\
 	&\le \| r_{w_z} \|_{L^2(\Omega', \mu)}\\
 	&\le \left( \int_{\Omega'} | r_{w_z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
 	&\le \left( \int_{\Omega'} | v_{w,K,z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
 	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2}\\
-	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}\\
+	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}
 \end{align*}
-Finally, for a uniform, normalized meassure and a translation-invariant kernel, then \\
-$\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$. In another perspective, we can define the OLS to solve for the local weights $w$ from the following:
-\begin{align*}
-	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}}\\
-	&\le \int_{\Omega'} \left \| K(\cdot, \bm{y}) \right \|_{\mathcal{F_{\tilde{K}}}} | r_{w_z}(\bm{y}) | \, d\mu(\bm{y}) \\
-	&\le \left( \int_{\Omega'} \left \| K(\cdot, \bm{y}) \right \|^2_{\mathcal{F_{\tilde{K}}}}  \, d\mu(\bm{y}) \right)^{1/2}  \\
-\end{align*}
+\begin{comment}
+Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
+\end{comment}
+Finally, for a uniform, normalized measure and a translation-invariant kernel, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
 
