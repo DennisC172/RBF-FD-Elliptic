@@ -412,7 +412,7 @@ Similar to the local interpolation scheme to derive the error functional, we beg
 \begin{equation}
 	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
 \end{equation}
-Here we define a measure $\mu$ and a domain $\Omega' \in \mathbb{R}^d$. THis idea was initially proposed in \cite{Shaback2003} in the interpolation scheme and without further analysis. We can show this is a positive semi-definite kernel and positive definite on the set of nodes $X$ and the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
+Here we define a measure $\mu$ and a domain $\Omega' \in \mathbb{R}^d$. An idea relevent to a least square procedure within the RBFFD machinery was initially proposed in \cite{Shaback2003}, in the direction of the interpolator function. We can show this is a positive semi-definite kernel and positive definite on the set of nodes $X$ and the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
 \begin{align*}
 	\xi_{w,L,\tilde{K},X,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
 	&= L_z \left \langle f, \, \tilde{K}(\cdot, \bm{z}) \right \rangle_{\mathcal{F_{\tilde{K}}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
@@ -666,16 +666,14 @@ problems with point singularities in 2D. Preprint, 2016.
 R. Schaback. Error analysis of nodal meshless methods. Preprint, 2016.
 
 \bibitem{Seibold2006}
-B. Seibold. M-Matrices in Meshless Finite Difference Methods. Dissertation, Uni-
-versity of Kaiserslautern, 2006.
+B. Seibold. M-Matrices in Meshless Finite Difference Methods. Dissertation, University of Kaiserslautern, 2006.
 
 \bibitem{Seibold2008}
 B. Seibold. Minimal positive stencils in meshfree finite difference methods for the
 Poisson equation. Comput. Methods Appl. Mech. Eng., 198(3-4):592–601, 2008.
 
 \bibitem{Stetter1973}
-H. J. Stetter. Analysis of Discretization Methods for Ordinary Differential Equa-
-tions. Springer, New York, 1973.
+H. J. Stetter. Analysis of Discretization Methods for Ordinary Differential Equations. Springer, New York, 1973.
 
 \bibitem{Shaback2003}
 Schaback, R. (2003). Reconstruction of multivariate functions from scattered data.
