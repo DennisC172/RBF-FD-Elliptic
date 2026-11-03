@@ -387,6 +387,8 @@ We finally have the following by \cite{Davydov2025}:
 \end{equation}
 \end{theorem}
 
+\pagebreak
+
 \section{Local Least Square for RBF-FD Weights}
 
 \subsection{Weight Constraint Setup}
@@ -425,15 +427,18 @@ with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}
 	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,\tilde{K},z}, v_{w,\tilde{K},z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
 	&= \left. L_x L_y \tilde{K}(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} L_z \tilde{K}(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z} w_{j,z} \tilde{K}(\bm{x}_i, \bm{x}_j)\\
 	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) \, d\mu(\bm{y}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \, d\mu(\bm{y}) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j) \, d\mu(\bm{y})\\
-	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2 \, d\mu(\bm{y}) = \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})
+	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2 \, d\mu(\bm{y})\\
+	&= \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
+	\inf_{\bm{w}\in \mathbb{R}^n} \| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
+	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \|  r_{w_z} \|_{L^2(\Omega', \, \mu)} \\
 \end{align*}
 Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y}) \, d\mu(\bm{y})$, then:
 \begin{align*}
 	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} &= \left \| L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \|_{\mathcal{F_{K}}}\\
 	&= \left \| \int_{\Omega'} K(\bm{y}, \cdot) \left ( L_z K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right) d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
 	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
-	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega', \mu)}\\
-	&\le \| r_{w_z} \|_{L^2(\Omega', \mu)}\\
+	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega', \, \mu)}\\
+	&\le \| r_{w_z} \|_{L^2(\Omega', \, \mu)}\\
 	&\le \left( \int_{\Omega'} | r_{w_z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
 	&\le \left( \int_{\Omega'} | v_{w,K,z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
 	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2}\\
@@ -443,6 +448,8 @@ Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Om
 Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
 \end{comment}
 Finally, for a uniform, normalized measure and a translation-invariant kernel, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
+
+\pagebreak
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
 
