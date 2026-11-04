@@ -402,17 +402,17 @@ K_{YY} &= [K(\bm{y}_i, \bm{y}_j)]_{i,j}
 \end{align*}
  Additionally, instead of assuming exactness of the form $L_zK(\bm{y}_j,\bm{z}) = \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{x}_i)$ for $j = 1, \hdots, m$ as in the classical RBF-FD, we define a residual function:
 \begin{align*}
-	r_{w_z}(\bm{y}_j) :&= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
-	r_{w_z} (Y) &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_{\bm{z}}, \text{ } \bm{w} \in \mathbb{R}^n \text{ and } \bm{z} \in \Omega.
+	r_{w_z}(\bm{y}_j) &:= L_zK(\bm{y_j},\bm{z}) - \sum_{i=1}^n w_{i,\bm{z}} K(\bm{y}_j,\bm{y}_i)\\
+	r_{w_z} (Y) &= L_zK(Y, \bm{z}) - K_{YX} \bm{w}_z, \text{ } \bm{w}_z \in \mathbb{R}^n \text{ and } \bm{z} \in \Omega.
 \end{align*}
 
 \subsection{Consistency Error Analysis through Center-Based Kernel}
 
 Similar to the local interpolation scheme to derive the error functional, we begin by defining the kernel used for the reproduction scheme. Rather than using the interpolation kernel $K$, we define the following kernel:
 \begin{equation}
-	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2) d\mu(\bm{y})
+	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2)
 \end{equation}
-Here we set $\mu$ to be a measure and $\Omega' \subseteq \mathbb{R}^d$. We can show this is a positive semi-definite kernel, and positive definite on the set of nodes $X$ by showing that the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega', \mu)$. (NEED TO SHOW)
+Here we set $\Omega' \subseteq \mathbb{R}^d$. We can show this is a positive semi-definite kernel, and positive definite on the set of nodes $X$ by showing that the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega')$. (NEED TO SHOW)
 \begin{align*}
 	\xi_{w,L,\tilde{K},X,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
 	&= L_z \left \langle f, \, \tilde{K}(\cdot, \bm{z}) \right \rangle_{\mathcal{F_{\tilde{K}}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
@@ -426,34 +426,40 @@ with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}
 \begin{align*}
 	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,\tilde{K},z}, v_{w,\tilde{K},z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
 	&= \left. L_x L_y \tilde{K}(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} L_z \tilde{K}(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z} w_{j,z} \tilde{K}(\bm{x}_i, \bm{x}_j)\\
-	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) \, d\mu(\bm{y}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \, d\mu(\bm{y}) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j) \, d\mu(\bm{y})\\
-	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2 \, d\mu(\bm{y})\\
-	&= \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
-	\inf_{\bm{w}\in \mathbb{R}^n} \| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \int_{\Omega'} r_{w_z}^2(\bm{y}) \, d\mu(\bm{y})\\
-	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \|  r_{w_z} \|_{L^2(\Omega', \, \mu)}
+	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j)\\
+	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2\\
+	&= \int_{\Omega'} r_{w_z}^2(\bm{y})\\
+	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \left( \int_{\Omega'} r_{w_z}^2(\bm{y}) \right)^{1/2}
 \end{align*}
-Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y}) \, d\mu(\bm{y})$, then:
+Solving the minimizer for the residual in $L^2$ leads to:
+\begin{equation}
+	\left \langle K(X,\cdot), \, K(\cdot, X) \right \rangle_{L^2(\Omega')} \bm{w}_z^* = \left \langle K(X, \cdot), \, L_z K(\cdot, \bm{z}) \right \rangle_{L^2(\Omega')}
+\end{equation}
+Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y})$, then:
 \begin{align*}
 	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} &= \left \| L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \|_{\mathcal{F_{K}}}\\
-	&= \left \| \int_{\Omega'} K(\bm{y}, \cdot) \left ( L_z K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right) d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
-	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \, d\mu(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
-	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega', \, \mu)}\\
-	&\le \| r_{w_z} \|_{L^2(\Omega', \, \mu)}\\
-	&\le \left( \int_{\Omega'} | r_{w_z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
-	&\le \left( \int_{\Omega'} | v_{w,K,z}(\bm{y}) |^2 \, d\mu(\bm{y}) \right)^{1/2}\\
-	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2}\\
-	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \, d\mu(\bm{y}) \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}
+	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
+	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega'}\\
+	&\le \| v_{w,K,z} \|_{L^2(\Omega')}\\
+	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2}\\
+	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}
 \end{align*}
 \begin{comment}
 Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
 \end{comment}
-Finally, for a uniform, normalized measure and a translation-invariant kernel, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
+By letting $\Omega'$ by of unit volume for $L^2(\Omega')$ and $K$ be a translation-invariant kernel with unit value at $\|\bm{x} - \bm{y} \|_{\mathbb{R}^d} = \bm{0}$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$. We can also share relate the 2 representers under their respective norms by assuming $\Omega' \subseteq \Omega$:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \| r_{w_z} \|_{L^2(\Omega')}\\
+	&= \| v_{w,K,z} \|_{L^2(\Omega')}\\
+	&\le \| v_{w,K,z} \|_{L^2(\Omega)}\\
+	&\le \| v_{w,K,z} \|_{\mathcal{F_{K}}(\Omega)}\\	
+\end{align*}
 
 \pagebreak
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
 
-We use the solution of the interpolation scheme to compare with the ordinary least squares, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
+We use the solution of the interpolation scheme to compare with the discrete ordinary least squares from the uniform measure $\mu$, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
 \begin{align*}
 ||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w}\\
@@ -461,7 +467,7 @@ We use the solution of the interpolation scheme to compare with the ordinary lea
 &= \left. L_y L_z K(y,z) \right. - \bm{b}^T \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{b}^T \bm{w}^* + \bm{w}^{*T} K_{XX} \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
 &= \mathcal{P}_{K,L,X}^2(\bm{z}) - \bm{w}^T K_{XX} \bm{w}^{*} - \bm{w}^{*T} K_{XX} \bm{w} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
-&= \mathcal{P}_{K,L,X}^2(\bm{z}) +  \left( \bm{w} - \bm{w}^* \right)^T K_{XX} \left( \bm{w} - \bm{w}^* \right)\\
+&= \mathcal{P}_{K,L,X}^2(\bm{z}) +  \left( \bm{w} - \bm{w}^* \right)^T K_{XX} \left( \bm{w} - \bm{w}^* \right)
 \end{align*}
 We can now bound the second term by considering $\bm{w}\rightarrow \bm{w_{LS}}$ obtained from a least squares result: 
 \begin{align*}
@@ -493,7 +499,7 @@ Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials augmenting the radi
 	Lp_j(\bm{z}) :&= \sum_{i=1}^n w_{i,z} p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
 	L\bm{p}(\bm{z}) &= \bm{P^T} \bm{w}_z
 \end{align*}
-where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. Thus, we have a constrained least squares problem in the form:
+where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. By using a uniform measure $\mu$ for the set of centers $Y$, we have a constrained least squares problem in the form:
 \begin{equation}
 	\left\{
 	\begin{aligned}
