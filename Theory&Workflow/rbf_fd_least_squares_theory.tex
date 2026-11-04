@@ -429,7 +429,7 @@ with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}
 	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j)\\
 	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2\\
 	&= \int_{\Omega'} r_{w_z}^2(\bm{y})\\
-	\inf_{\bm{w}\in \mathbb{R}^n} \| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \left( \int_{\Omega'} r_{w_z}^2(\bm{y}) \right)^{1/2}
+	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \left( \int_{\Omega'} r_{w_z}^2(\bm{y}) \right)^{1/2}
 \end{align*}
 Solving the minimizer for the residual in $L^2$ leads to:
 \begin{equation}
@@ -449,13 +449,13 @@ Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Om
 \begin{comment}
 Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
 \end{comment}
-Finally, for a uniform, normalized measure $\mu$ for $L^2(\Omega',\mu)$ and a translation-invariant kernel $K$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
+By letting $\Omega'$ by of unit volume for $L^2(\Omega')$ and $K$ be a translation-invariant kernel with unit value at $\|\bm{x} - \bm{y} \|_{\mathbb{R}^d} = \bm{0}$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
 
 \pagebreak
 
 \subsection{Consistency Error Derivation through Standard RBF-FD}
 
-We use the solution of the interpolation scheme to compare with the ordinary least squares, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
+We use the solution of the interpolation scheme to compare with the discrete ordinary least squares from the uniform measure $\mu$, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
 \begin{align*}
 ||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w}\\
@@ -463,7 +463,7 @@ We use the solution of the interpolation scheme to compare with the ordinary lea
 &= \left. L_y L_z K(y,z) \right. - \bm{b}^T \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
 &= \left. L_y L_z K(y,z) \right. - 2 \bm{b}^T \bm{w}^* + \bm{w}^{*T} K_{XX} \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
 &= \mathcal{P}_{K,L,X}^2(\bm{z}) - \bm{w}^T K_{XX} \bm{w}^{*} - \bm{w}^{*T} K_{XX} \bm{w} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
-&= \mathcal{P}_{K,L,X}^2(\bm{z}) +  \left( \bm{w} - \bm{w}^* \right)^T K_{XX} \left( \bm{w} - \bm{w}^* \right)\\
+&= \mathcal{P}_{K,L,X}^2(\bm{z}) +  \left( \bm{w} - \bm{w}^* \right)^T K_{XX} \left( \bm{w} - \bm{w}^* \right)
 \end{align*}
 We can now bound the second term by considering $\bm{w}\rightarrow \bm{w_{LS}}$ obtained from a least squares result: 
 \begin{align*}
@@ -495,7 +495,7 @@ Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials augmenting the radi
 	Lp_j(\bm{z}) :&= \sum_{i=1}^n w_{i,z} p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
 	L\bm{p}(\bm{z}) &= \bm{P^T} \bm{w}_z
 \end{align*}
-where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. Thus, we have a constrained least squares problem in the form:
+where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. By using a uniform measure $\mu$ for the set of centers $Y$, we have a constrained least squares problem in the form:
 \begin{equation}
 	\left\{
 	\begin{aligned}
