@@ -211,11 +211,11 @@ $\partial^{\alpha,\beta}K(\bm{z},\bm{z})$ exists for all $|\alpha|, |\beta| \le 
 \item
 $L_zK(\bm{z},\bm{x}_i)$ exists for all $i=1,\dots,N$ and
 \item
-The equation \ref{eq:weight_solve} is consistent
+The equation \ref{eq:weight_solve} is consistent (for cpd kernels - next section)
 \end{enumerate}
 Then the kernel-based numerical differentiation formula  satisfies:
 \begin{equation}
-\left| \xi_{w^*,L,z}(f) \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}^2(z) ||f||_\mathcal{F_K}
+\left| \xi_{w^*,L,z}(f) \right| = \left| Lf(\bm{z}) -\sum_{i=1}^N w_{z,i}^*f(\bm{x_i}) \right| \le \mathcal{P}_{K,L,X}(z) ||f||_\mathcal{F_K}
 \end{equation}
 \end{proposition}
 \noindent We note that $L$ is hence, a functional over $\mathcal{F_K}$. $L_z$ indicates applying the operator acted on the variable $\bm{z}$ in the kernel. We define $\bm{k}(\bm{z}) = [K(\bm{z},\bm{x}_1), \hdots, K(\bm{z},\bm{x}_n)]^T$. Then $\xi_{w,L,z}(f) = \left \langle f, v_{w,L,z} \right \rangle$, with $v_{w,L,z} = L_z K(\cdot, \bm{z}) - \bm{w}^T_z \bm{k}(\cdot)$. By assuming point-wise error bounds, $\| \xi_{w,L,z} \|_\mathcal{F_K^*}$,  with error estimate $\| \xi_{w,L,z} \|_\mathcal{F_K^*} = ||v_{w,K,L,X,z}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_xK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, We define the power function:
