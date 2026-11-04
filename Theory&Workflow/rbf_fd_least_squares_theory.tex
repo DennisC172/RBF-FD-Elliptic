@@ -438,10 +438,8 @@ Solving the minimizer for the residual in $L^2$ leads to:
 Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y})$, then:
 \begin{align*}
 	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} &= \left \| L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \|_{\mathcal{F_{K}}}\\
-	&= \left \| \int_{\Omega'} K(\bm{y}, \cdot) \left ( L_z K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right) \right \|_{\mathcal{F_{K}}}\\
 	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
 	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega'}\\
-	&\le \| r_{w_z} \|_{L^2(\Omega')}\\
 	&\le \| v_{w,K,z} \|_{L^2(\Omega')}\\
 	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2}\\
 	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}
@@ -449,7 +447,13 @@ Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Om
 \begin{comment}
 Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
 \end{comment}
-By letting $\Omega'$ by of unit volume for $L^2(\Omega')$ and $K$ be a translation-invariant kernel with unit value at $\|\bm{x} - \bm{y} \|_{\mathbb{R}^d} = \bm{0}$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$.
+By letting $\Omega'$ by of unit volume for $L^2(\Omega')$ and $K$ be a translation-invariant kernel with unit value at $\|\bm{x} - \bm{y} \|_{\mathbb{R}^d} = \bm{0}$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$. We can also share relate the 2 representers under their respective norms by assuming $\Omega' \subseteq \Omega$:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \| r_{w_z} \|_{L^2(\Omega')}\\
+	&= \| v_{w,K,z} \|_{L^2(\Omega')}\\
+	&\le \| v_{w,K,z} \|_{L^2(\Omega)}\\
+	&\le \| v_{w,K,z} \|_{\mathcal{F_{K}}(\Omega)}\\	
+\end{align*}
 
 \pagebreak
 
