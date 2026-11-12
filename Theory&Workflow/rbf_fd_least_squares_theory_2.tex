@@ -169,7 +169,7 @@ Here we set $\delta_z \circ \theta_{i} = w_{i,z} \delta_{x_i}$, with $w_{1,z}, \
 \section{RBF-FD Method}
 
 \subsection{Local Approximation setup}
-To obtain an approximation of the operator $L$ at a point $\bm{z} \in \Omega$, we approximate $u$ by a function $\hat{u}$ on a neighborhood $\Omega$ at $\bm{z}$, so that $Lu(\bm{z}) \approx L\hat{u}(\bm{z})$. Let $X = \left\{ \bm{x}_1, \dots, \bm{x}_n \right\} \subseteq \Omega$ be the set of stencil nodes around $\bm{z}$. Since we are working with a Hilbert Space that holds pointwise bounds, we can define $H^s:=\mathcal{F_K}$ as a  \textit{Reproducing Kernel Hilbert Space (RKHS)} and equip it with its unique kernel $K$. We define the following notation for kernels representing an RKHS:
+To obtain an approximation of the operator $L$ at a point $\bm{z} \in \Omega$, we approximate $u$ by a function $\hat{u}$ on a neighborhood $\Omega$ at $\bm{z}$, so that $Lu(\bm{z}) \approx L\hat{u}(\bm{z})$. Let $X = \left\{ \bm{x}_1, \dots, \bm{x}_n \right\} \subseteq \Omega$ be the set of stencil nodes around $\bm{z}$. Since we are interested in working with continuous, pointwise bounds for functions as well as for their derivatives, we can define $\mathcal{F_K} \hookrightarrow H^s$ as a \textit{Reproducing Kernel Hilbert Space (RKHS)} and equip it with its unique kernel $K$. We define the following notation for kernels representing an RKHS:
 \begin{align*}
 	K(\bm{y},X) &:= \left[K(\bm{y}, \bm{x}_1), \hdots, K(\bm{y}, \bm{x}_n) \right] \in \mathbb{R}^n\\
 	K(X,\bm{y}) &:= \left[K(\bm{x}_1, \bm{y}), \hdots, K(\bm{x}_n, \bm{y}) \right]^T \in \mathbb{R}^n\\

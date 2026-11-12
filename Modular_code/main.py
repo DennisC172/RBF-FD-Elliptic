@@ -155,25 +155,25 @@ if __name__ == "__main__":
     plot = False
 
     # Define the problem
-    example_num = "2"
+    example_num = "10"
     
     # Define the nodes per stencil
     num_stencil_nodes = 6
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
-    num_centers = 2
+    num_centers = 5
     
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = 0.950
-    fixed_eps = True
+    eps = 0.075
+    fixed_eps = False
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 100
+    Nx = 500
     L = 1.00
     shape = 'square'
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # -----------------------------    
     # Define the conductivity condition
     eig_1_str = "lambda p: 1e0"
-    eig_2_str = "lambda p: 1e-4"
+    eig_2_str = "lambda p: 1e-6"
     angle_str = "lambda p: 12.0/24.0*np.pi"
     print(f'Eig_1 = {eig_1_str}')
     print(f'Eig_2 = {eig_2_str}')
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     
     # Forcing term parameters
     Amp = 1e3
-    modes = [1.0,2.0]
+    modes = [1.0,1.0]
     
     # -----------------------------
     # BUILD TEST CASE AND SOLVE
