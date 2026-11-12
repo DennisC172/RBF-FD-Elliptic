@@ -1,0 +1,718 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb}
+\usepackage{amsmath, amsthm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{comment}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{bm}
+\usetikzlibrary{positioning, arrows.meta}
+\usepackage{pdfpages}
+\usepackage{xurl}
+
+\geometry{margin=1in}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  language=Python,
+  showstringspaces=false,
+  columns=fullflexible,
+  keywordstyle=\color{blue!70!black}
+}
+
+\newcommand{\diver}{\nabla\!\cdot}
+\newcommand{\grad}{\nabla}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\R}{\mathbb{R}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  language=Python,
+  showstringspaces=false,
+  columns=fullflexible,
+  keywordstyle=\color{blue!70!black}
+}
+
+\title{RBF-FD Solver: Least Squares Method for Operator Reproduction (Updated)}
+\author{Dennis Corraliza}
+\date{Began: 9/2/2026}
+\date{Updated: 11/11/2026}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\pagebreak
+
+\section{Problem Setting}
+
+Following the standard RBF-FD methods, let $u \in \mathcal{F} = W^{s,p}$ be a solution for a PDE in form of:
+\begin{equation}
+	- Lu = -\diver\!\big(A \grad u\big) = f \quad \text{in } \Omega \subset \mathbb{R}^d,
+	\label{eq:PDE}
+\end{equation}
+Throughout this document, we require that $L$ be a self-adjoint elliptic operator of order $k$ and $f \in W^{s-k}$. Let $1<p<\infty$, $A \in W^{1,\infty} (\bar{\Omega}; \mathbb{R}^{d \times d}):\bar{\Omega} \rightarrow \mathbb{R}^{d \times d}$ be a symmetric positive definite anisotropic tensor, where
+\begin{equation}
+	\zeta_1 |\xi|^2 \le \bf{A}(\bf{x}) \xi \cdot \xi \le \zeta_2 |\xi|^2 \text{, } 0 < \zeta_1 \le \zeta_2
+\end{equation}
+For $2^{nd}$ order elliptic operators, we set $k=2$. The problem then is subject to Neumann and Dirichlet Boundary Conditions partitioned within $\partial \Omega$ of the form:
+\begin{align}
+  u &= g_D \quad \text{on } \Gamma_D \subset \partial\Omega, \\
+  n \cdot A \grad u &= g_N \quad
+  \text{on } \Gamma_N \subset \partial\Omega,
+  \label{eq:neumann-bc}
+\end{align}
+For simplicity, we assume $\Omega$ be a bounded $C^{1,1}(\partial \Omega)$ domain, with $\partial \Omega = \Gamma_D \cup \Gamma_N$ and $\Gamma_D \cap \Gamma_N = \emptyset$. Furthermore, let $g_D \in W^{s-1/p,p}(\partial \Omega)$, $g_N \in W^{s-1-1/p,p}(\partial \Omega)$. By \textit{Agmon-Douglis-Nirenberg} Theorem \cite{Agmon}, we have the following estimate for $u$:
+\begin{equation}
+\|u\|_{W^{s,p}(\Omega)} \leq C\left(\|Lu\|_{W^{s-2,p}(\Omega)} + \|g_D\|_{W^{s-1/p,p}(\partial\Omega)} + \|g_N\|_{W^{s-1-1/p,p}(\partial\Omega)} + \|u\|_{L^p(\Omega)} \right).
+\end{equation}
+In the case that we work on a Hilbert space, we then have for $p=2$ ($W^{s,2} := H^s$) the following estimate for $u$:
+\begin{align*}
+\|u\|_{H^s(\Omega)} \leq C\left(\|Lu\|_{H^{s-2}(\Omega)} + \|g_D\|_{H^{s-\frac{1}{2}}(\partial\Omega)} + \|g_N\|_{H^{s-\frac{3}{2}}(\partial\Omega)} + \|u\|_{L^2(\Omega)} \right).
+\end{align*}
+If we want to study cases where $(Lu)(\bm{x})$ is known pointwise, by Morrey Embedding, 
+\begin{equation*}
+	W^{s-k,p}(\Omega) \hookrightarrow C^{\mu,\gamma}(\Omega) \hookrightarrow C^{0}(\Omega) \text{, with } \mu := \left \lfloor s-k-\frac{d}{p} \right \rfloor \text{, } \gamma := s-k-\mu-\frac{d}{p}
+\end{equation*}
+In other words, $s > k + \frac{d}{p}$. Suppose $p=2$ and $k=2$, then $s > 2 + \frac{d}{2}$. Given an operator $L: H^{s}(\Omega) \rightarrow H^{s-2}(\Omega)$, we define an error functional of the form:
+\begin{equation*}
+	\xi_{z}: H^{s}(\Omega) \rightarrow \mathbb{R} \text{, } \xi_{z} \in \left(H^{s}\right)^*(\Omega)
+\end{equation*}
+Then by Riesz Representation, there exists a $r_{z} \in H^{s}(\Omega)$ such that $\xi_{z} (u) = \left\langle u , r_{z} \right\rangle_{H^{s}(\Omega)}$, and $\| \xi_{z} |\|_{\left(H^{s}(\Omega)\right)^*} = \| r_{z} \|_{H^{s}(\Omega)}$
+
+\pagebreak
+
+\section{Functional Analysis Aspect}
+
+We examine the structural framework that governs the RBF-FD method. Let $W^{s,p}(\Omega)$ be the native space whose vectors are point-wise bounded. We later assume that $W^{s,p}(\Omega)$ is a Hilbert space (this holds, for instance, when $W^{s,p}(\Omega)$ is the native space of a symmetric positive definite kernel). Let $L:W^{s,p}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ be a bounded linear operator. For $n \in \mathbb{N}$, let $\theta_1, \dots, \theta_n \in \mathcal{L}\bigl(W^{s,p}(\Omega), W^{s-k,p}(\Omega)\bigr)$ be bounded linear maps. Define $L_w:W^{s,p}(\Omega) \rightarrow W^{s-k,p}(\Omega)$ by
+\begin{equation}
+	L_w u := \sum_{i=1}^n \theta_i(u).
+\end{equation}
+This operator is linear and bounded, since
+\begin{equation*}
+	\| L_w u \|_{W^{s-k,p}(\Omega)} \le \| \bm{w} \|_{l^2} \, \| \theta \|_{\mathcal{L}\bigl(\mathcal{N}(\Omega), W^{s-k,p}(\Omega)\bigr)} \, \| u \|_{W^{s,p}(\Omega)}.
+\end{equation*}
+The goal is for $L_w$ to approximate $L$. We further assume that there is a finite linear subspace $\mathcal{V}_h(\Omega) \subseteq W^{s,p}(\Omega)$ on which $L_w$ reproduces $L$ exactly, i.e., $Lu = L_w u$ for all $u \in \mathcal{V}_h(\Omega)$. We define the error operator $\xi_{w} \in \mathcal{L}\bigl(W^{s,p}(\Omega), W^{s-k,p}(\Omega)\bigr)$ by
+\begin{equation*}
+	\xi_{w}(u) := Lu - L_w u .
+\end{equation*}
+Since $L$ and $L_w$ are bounded, then $\xi_w$ is linear and bounded, and it vanishes on $\mathcal{V}_h(\Omega)$. Let $1 < p < \infty$ and let $q$ satisfy $\frac{1}{p} + \frac{1}{q} = 1$. For $g \in L^{q}(\Omega)$ define the linear functional $l_g$ on $W^{s-k,p}(\Omega)$ by
+\begin{equation*}
+	l_g(v) := \sum_{|\alpha| \le k} \int_\Omega v \, g \, d\bm{x}.
+\end{equation*}
+With $\| v \|_{W^{s-k,p}(\Omega)} = \bigl( \sum_{|\alpha| \le k} \| D^\alpha v \|_{L^p(\Omega)}^p \bigr)^{1/p}$, the H\"{o}lder inequality (applied to the integrals and then to the finite sum over $\alpha$) gives
+\begin{equation*}
+	|l_g(v)| \le \| v \|_{W^{s-k,p}(\Omega)} \| g \|_{L^{q}(\Omega)}.
+\end{equation*}
+Set $\xi_{w,g} := l_g \circ \xi_{w}$. It is linear, and for every $u \in W^{s,p}(\Omega)$
+\begin{align*}
+	|\xi_{w,g}(u)| &\le \| \xi_{w,L}(u) \|_{W^{s-k,p}(\Omega)} \| g \|_{L{^q}(\Omega)}\\
+	&\le \| \xi_{w,L} \|_{\mathcal{L}(W^{s,p}, W^{s-k,p})} \| g \|_{L^{q}(\Omega)} \| u \|_{W^{s,p}(\Omega)}.
+\end{align*}
+Assuming $\xi_{w}$ is bounded, then $\xi_{w,g}$ is a bounded functional, $\xi_{w,g} \in W^{s,p}(\Omega)^*$. Furthermore, if $W^{s,p}(\Omega)=H^s(\Omega)$, then Riesz Representation Theorem gives a unique $r_{w,g} \in H^s(\Omega)$ such that $\xi_{w,g}(u) = \left\langle u, r_{w,g} \right\rangle_{H^s(\Omega)}$ for all $u \in H^s(\Omega)$. Moreover,
+\begin{align*}
+	\| \xi_{w,g} \|_{(H^s(\Omega))^*} &= \sup_{\substack{u \in H^s(\Omega) \\ \| u \|_{H^s(\Omega)} \le 1}} |\xi_{w,g}(u)| \\
+	&= \sup_{\substack{u \in H^s(\Omega) \\ u \ne 0}} \frac{|\xi_{w,g}(u)|}{\| u \|_{H^s(\Omega)}} \\
+	&= \sup_{\substack{u \in H^s(\Omega) \\ u \ne 0}} \frac{|\left\langle u, r_{w,g} \right\rangle_{H^s(\Omega)}|}{\| u \|_{H^s(\Omega)}} = \| r_{w,g} \|_{H^s(\Omega)}.
+\end{align*}
+
+\subsection{Pointwise Evaluation}
+
+Suppose $s > k + \frac{d}{p}$. By Morrey Embedding, $W^{s-k,p}(\Omega) \hookrightarrow C^{\mu,\gamma}(\Omega) \hookrightarrow C^{0}(\Omega)$  Then we have a bounded functional $\delta_z \in \left(W^{s-k,p}(\Omega) \right)^*$:
+\begin{equation}
+	\xi_{w}(u)(z) = \delta_z \left( \xi_{w} (u) \right) := \xi_{w,z} (u)
+\end{equation}
+Then $\xi_{w,z} \in (H^s(\Omega))^*$ given $\xi_{w}$ is bounded. Furthermore, Assuming $H^s(\Omega)$, then there exists a representer $v_{w,z}$ such that
+\begin{align*}
+	\| \xi_{w,z} \|_{H^s(\Omega)^*} &= \sup_{\substack{u \in H^s(\Omega) \\ \| u \|_{H^s(\Omega)} \le 1}} |\xi_{w,z}(u)| \\
+	&= \sup_{\substack{u \in H^s(\Omega) \\ u \ne 0}} \frac{|\xi_{w,z}(u)|}{\| u \|_{H^s(\Omega)}} \\
+	&= \sup_{\substack{u \in H^s(\Omega) \\ u \ne 0}} \frac{|\left\langle u, r_{w,z} \right\rangle_{H^s(\Omega)}|}{\| u \|_{H^s(\Omega)}} = \| r_{w,z} \|_{H^s(\Omega)}.
+\end{align*}
+We can concretely define $\xi_{w,z}$ as follows:
+\begin{align*}
+	\xi_{w,z}(u) &= Lu(z) - \sum_{i=1}^n \delta_z \circ\theta_i(u)\\
+	&= Lu(z) - \sum_{i=1}^n w_{i,z} u(x_i)\\
+	&= Lu(z) - L_w u(z) \text{, with } L_w u(z) = \sum_{i=1}^n w_{i,z} u(x_i)
+\end{align*}
+Here we set $\delta_z \circ \theta_{i} = w_{i,z} \delta_{x_i}$, with $w_{1,z}, \hdots, w_{n,z} \in \mathbb{R}$. Throughout the rest of the document, we will be working with a Hilbert Space $H^s$ where $s > k+d/2$ and hence, have pointwise bounds.
+
+\pagebreak
+
+\section{RBF-FD Method}
+
+\subsection{Local Approximation setup}
+To obtain an approximation of the operator $L$ at a point $\bm{z} \in \Omega$, we approximate $u$ by a function $\hat{u}$ on a neighborhood $\Omega$ at $\bm{z}$, so that $Lu(\bm{z}) \approx L\hat{u}(\bm{z})$. Let $X = \left\{ \bm{x}_1, \dots, \bm{x}_n \right\} \subseteq \Omega$ be the set of stencil nodes around $\bm{z}$. Since we are working with a Hilbert Space that holds pointwise bounds, we can define $H^s:=\mathcal{F_K}$ as a  \textit{Reproducing Kernel Hilbert Space (RKHS)} and equip it with its unique kernel $K$. We define the following notation for kernels representing an RKHS:
+\begin{align*}
+	K(\bm{y},X) &:= \left[K(\bm{y}, \bm{x}_1), \hdots, K(\bm{y}, \bm{x}_n) \right] \in \mathbb{R}^n\\
+	K(X,\bm{y}) &:= \left[K(\bm{x}_1, \bm{y}), \hdots, K(\bm{x}_n, \bm{y}) \right]^T \in \mathbb{R}^n\\
+	K(X,Y) &:= [K(\bm{x}_i, \bm{y}_j)]_{i,j} \in \mathbb{R}^{n \times n}
+\end{align*}
+Assuming $K$ is a positive definite kernel, $K(X,X)$ is an spd matrix, hence invertible and diagonalizable. By the reproducing property, $f(\bm{x})= \left \langle f, K(\cdot,\bm{x}) \right \rangle_\mathcal{F_K}$ for $f \in \mathcal{F_K}$. Then, we define $V = span\{K(\cdot,\bm{x}): \bm{x} \in \Omega\} \subseteq \mathcal{F_K}$, which is dense in $\mathcal{F_K}$ ($\overline{V}^{\| \cdot \|_{\mathcal{F_K}}}=\mathcal{F_K}$). We then define the finite subspace of $V$, namely $V_h := span\{K(\cdot,\bm{x}): \bm{x} \in X\}$. For functions in $V_h$,
+\begin{equation*}
+	\| f \|_{\mathcal{F_K}}^2 = \bm{c}^T K(X,X)\bm{c} \text{ , for } f=\sum_{i=1}^n c_i K(\cdot, \bm{x}_i)
+\end{equation*}
+We define the approximation function $\hat{u} \in V_h$ to take the form:
+\begin{equation}
+	\hat{u}(\bm{x}) = \sum_{i=1}^n \lambda_i K(\bm{x}, \bm{x}_i) = K(\bm{x}, X) \bm{\lambda}
+\end{equation}
+that interpolates $u$ on the stencil, $\hat{u}(\bm{x}_i) = u(\bm{x}_i)$ for $i = 1, \dots, n$. This leads to the form $K(X,X) \bm{\lambda} = \bm{u}(X)$ for $\bm{u}(X) = [ u(\bm{x}_1), \dots, u(\bm{x}_n) ]^T$. We can solve for $\bm{\lambda}$ to obtain:
+\begin{equation*}
+	\hat{u}(\bm{x}) = \sum_{i=1}^n (K(X,X)^{-1} \bm{u}(X))_i \, K(\bm{x},\bm{x}_i) = K(\bm{x},X) K(X,X)^{-1} \bm{u}(X).
+\end{equation*}
+Applying $L$ (which acts on the argument $\bm{x}$ of $K(\cdot,\bm{x}_i)$) and evaluating at $\bm{z}$, the approximation of $Lu$ at $\bm{z}$ is
+\begin{equation}
+	Lu (\bm{z}) \approx L \hat{u} (\bm{z}) = L_z K(\bm{z},X) \bm{\lambda} = L_z K(\bm{z},X) K(X,X)^{-1} \bm{u} =: \bm{w}_z^{L, X} \bm{u}(X) = L_w u(\bm{z}),
+\end{equation}
+where $L_z$ acts on the argument with variable $\bm{z}$ and the weights $\bm{w}_z^{L, X} \in \mathbb{R}^n$ form a column vector. Thus, approximating the operator reduces to a local linear solve for the weights. Transposing the definition of $\bm{w}^{L,X}(\bm{z})$ gives
+\begin{equation}
+	K(X,X)^T \bm{w}_z^{L, X} = L_z K(X,\bm{z}).
+	\label{eq:pd_local}
+\end{equation}
+The method of undetermined coefficients on the basis $\{K(\cdot,\bm{x}_i)\}$ gives the same weights: requiring exactness on each basis function, $\sum_{i=1}^n w_i \, K(\bm{x}_j, \bm{x}_i) = L_z K(\bm{x}_j, \bm{z})$ for $j = 1, \dots, n$, is exactly the system above. Finally, we let the basis of $V_h$ be defined by radial basis functions, $K(\cdot, \bm{x}_i):=\varphi(\| \cdot - \bm{x}_i \|)$, with a radial function $\varphi:[0,\infty) \rightarrow \mathbb{R}$ and centers $X \subseteq \Omega$ introduced above. Thus we have defined the Radial Basis Function--generated Finite Difference method (RBF-FD).
+\\
+\noindent\textbf{Remark.} For $\bm{x} \in \Omega_{\bm{z}}$ let $w_{i,z} := \bigl( \bm{w}^{L,X}_z \bigr)_i$ be the weights computed with the fixed stencil $X$. Then $L_w u = \sum_{i=1}^n w_i \, u(\bm{x}_i) = L\hat{u}$ on $\Omega$, that is, $L_w = L \circ I_X$ where $I_X u := \hat{u}$ is the interpolation operator. If $u \in V_h$, then $I_X u = u$ and hence $L_w u = Lu$.
+
+\subsubsection{PD Consistency Error Analysis and Local System Derivation}
+
+We begin the construction of the error estimate for the local weights of the RBFFD by assuming $u \in H^s$, $Lu \in H^{s-k}$ with $s > k + d/2$, $\bm{w}_z \in \mathbb{R}^n$ and the following:
+\begin{align*}
+	(Lu)(\bm{z}) &= \left\langle u, L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}}\\
+	\bm{w}^T_z \bm{u}(X) &= \left\langle u, \bm{w}^T_z K(X,\cdot) \right\rangle_{\mathcal{F_K}} = L_w u(\bm{z})\\
+	\xi_{w,z}(u) :&= Lu(z) - L_w u(\bm{z})
+\end{align*}
+We note that $L$ is hence, a functional over $\mathcal{F_K}$. By Riesz Representation: $\xi_{w,z}(u) = \left \langle u, r_{w,z} \right \rangle$, where
+\begin{align*}
+	\xi_{w,z}(u) &= (\xi_{w}u)(\bm{z})\\
+	&= \xi_w \left \langle u, K(\cdot, \bm{z}) \right \rangle\\
+	&= \left \langle u, \xi_w K(\cdot, \bm{z}) \right \rangle_{\mathcal{F_K}}
+\end{align*}
+Thus, the Riesz representer for the error estimate takes the form:
+\begin{equation}
+	r_{w,z} = \xi_w K(\cdot, \bm{z}) = L_z K(\cdot, \bm{z}) - L_w K(\cdot, \bm{z})
+\end{equation}
+Hence, $\| \xi_{w,z} \|_\mathcal{F_K^*} = ||r_{w,z}||_\mathcal{F_K}$. By \cite{Davydov2025}, the functional is continuous on $\mathcal{F_K}$ if $L_zK$ exists and both, polynomial consistency and operator exactness are guaranteed. Finally, we define the power function:
+\begin{equation}
+\mathcal{P}_{K}^2(z) = \min_{\bm{w} \in \mathbb{R}^n} \left \{||r_{w,z}||_\mathcal{F_K}^2 \right \}
+\end{equation}
+According to \cite{Davydov2025}, we have the following proposition:
+\begin{proposition}
+(Davydov, 2025)Let D be a differential operator of order $k$, and $K$ a pd kernel on $\Omega \subseteq \mathbb{R}^d$ and $\bm{X}=\{ x_1, \dots, x_n\}$, assume that
+\begin{enumerate}
+\item
+$\partial^{\alpha,\beta}K(\bm{z},\bm{z})$ exists for all $|\alpha|, |\beta| \le k$
+\item
+$L_zK(\bm{x}_i,\bm{z})$ exists for all $i=1,\dots,N$ and
+\end{enumerate}
+Then the kernel-based numerical differentiation formula  satisfies:
+\begin{equation}
+\left| \xi_{w^*,z}(u) \right| = \left| Lu(\bm{z}) -\sum_{i=1}^N w_{z,i}^*u(\bm{x_i}) \right| \le \mathcal{P}_{K}^2(\bm{z}) ||f||_\mathcal{F_K}
+\end{equation}
+\end{proposition}
+\noindent A sketch of the proof can be made by expanding the inner product of the representer with itself:
+\begin{align*}
+	||r_{w,z}||_\mathcal{F_K}^2 &= \left\langle r_{w,z}, r_{w,z} \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} K(X,\cdot), \, L_z K(\cdot, \bm{z}) - \bm{w}^T_{\bm{z}} K(X,\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left\langle L_z K(\cdot, \bm{z}), L_z K(\cdot, \bm{z}) \right\rangle_{\mathcal{F_K}} - 2 \left\langle L_z K(\cdot, \bm{z}) , \bm{w}^T_{\bm{z}} K(X,\cdot) \right\rangle_{\mathcal{F_K}} \allowbreak{} + \left\langle \bm{w}^T_{\bm{z}} K(X,\cdot), \bm{w}^T_{\bm{z}} K(X,\cdot) \right\rangle_{\mathcal{F_K}}\\
+	&= \left. L_y L_x K(y,x) \right|_{y=z=x} - 2 \bm{w}_z^T L_z K(X,\bm{z}) + \bm{w}_z^T K(X,X)\bm{w}_z
+\end{align*}
+Minimizing for $w \in \mathbb{R}^n$ leads to Eq (\ref{eq:pd_local}). An error estimate for functions in $\mathcal{F_K}$ of the form:
+\begin{align*}
+	|\xi_{w,L,z}(f)| &\le \| \xi_{w,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K} \\
+	\inf_{\bm{w}\in \mathbb{R}^n} |\xi_{w,z}(f)| &\le \inf_{\bm{w}\in \mathbb{R}^n} \| \xi_{w,z} \|_\mathcal{F_K^*} ||f||_\mathcal{F_K}\\	
+	|\xi_{w^*,z}(f)| &\le \inf_{\bm{w}\in \mathbb{R}^n} ||r_{w,z}||_\mathcal{F_K} ||f||_\mathcal{F_K}\\
+	|\xi_{w^*,z}(f)| &\le \mathcal{P}_{K}(\bm{z}) ||f||_\mathcal{F_K}
+\end{align*}
+
+Furthermore, by using the provide solution for the problem, we can substitute Eq (\ref{eq:pd_local}) to have the following error representer form:
+
+\begin{equation}
+	||r_{w^*,z}||_\mathcal{F_K}^2 = \left. L_y L_x K(y,x) \right|_{y=z=x} - {\bm{w}_z^*}^T K(X,X)\bm{w}^*_z
+\end{equation}
+
+\subsection{Polynomial Augmentation}
+
+For conditionally positive definite kernels, we augment them through the form:
+
+\begin{align}
+	&\hat{u}(\bf{x}) = \sum_{j=1}^n \lambda_i K(\bm{x}, \bm{x}_i) + \sum_{j=1}^l \beta_j p_l(\bf{x}) \\	
+	&\sum_{i=1}^n \lambda_i p_j(\bm{x_i}) = 0 \text{, } \forall i=1,\hdots,n
+\end{align}
+We can generate a Gram matrix equation as follows:
+\begin{equation*}
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} = 
+	\begin{bmatrix}
+		K(X,X) & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{\lambda} \\ \bm{\alpha}
+	\end{bmatrix}
+\end{equation*}
+Hence, we can approximate the operator as below:
+\begin{equation}\
+	(L\hat{u})(\bm{z}) =
+	\begin{bmatrix}
+		L_z K(X, \bm{z}) \\ \bm{(Lp)(\bm{z})}
+	\end{bmatrix}^T 
+	\begin{bmatrix}
+		K(X,X) & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-1}
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} :=
+	\begin{bmatrix}
+		\bm{w}_z \\ \bm{\nu}_z
+	\end{bmatrix}^T 
+	\begin{bmatrix}
+		\bm{\hat{u}} \\ \bm{0}
+	\end{bmatrix} =
+	\bm{w}^T_z \bm{\hat{u}}
+	\label{eq:operator_approx}
+\end{equation}
+Thus, we get the local augmented operator reproduction scheme:
+\begin{equation}
+	\begin{bmatrix}
+		L_z K(X, \bm{z}) \\ \bm{(Lp)(\bm{z})}
+	\end{bmatrix} =
+	\begin{bmatrix}
+		K(X,X)^T & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix} \begin{bmatrix}
+		\bm{w}_z \\ \bm{\nu}_z
+	\end{bmatrix}
+	\label{eq:weight_solve}
+\end{equation}
+The polynomial constraint setup can be viewed as a Lagrange multiplier to a minimization scheme for the weights. By \cite{Davydov2020}, given the basis for $V_h$, $(L\bm{p})(\bm{z}) \in Range(\bm{P}^T)$ $\iff$ Eq. (\ref{eq:weight_solve}) is uniquely solvable, for any set $X$. Additionally, by \cite{Davydov2020}, Eq. (\ref{eq:operator_approx}) hold $\iff$ Eq. (\ref{eq:weight_solve}) holds. Note that depending on the the basis $V_h$, we get the degree of $p \in \Pi_{q-1}^d$. Below are common RBFs and their respective cpd orders:
+\begin{table}[ht]
+    \centering
+    \caption{Common radial basis functions and their minimal CPD order.}
+    \label{tab:rbf-cpd-order}
+    \begin{tabular}{lll}
+        \hline
+        \textbf{RBF} & \textbf{Radial function $\phi(r)$} & 
+        \textbf{CPD order $q$} \\
+        \hline
+        Gaussian & $\exp(-\varepsilon^2 r^2)$ & $0$ \\[2pt]
+        Inverse multiquadric & 
+        $(r^2+\varepsilon^2)^{-1/2}$ & $0$ \\[2pt]
+        Multiquadric & 
+        $(r^2+\varepsilon^2)^{1/2}$ & $1$ \\[2pt]
+        Linear & $r$ & $1$ \\[2pt]
+        Cubic & $r^3$ & $2$ \\[2pt]
+        Thin-plate spline & $r^2\log r$ & $2$ \\[2pt]
+        Quintic & $r^5$ & $3$ \\[2pt]
+        \hline
+    \end{tabular}
+\end{table}
+\begin{equation*}
+l=\begin{pmatrix}
+	d+q-1 \\ q-1
+\end{pmatrix}
+\end{equation*}
+This order provides us both, the degree of the polynomials $q-1$ and the number of terms. As shown in \cite{Bayona2019}, a polynomial augmentation can be added with a larger degree than required for the RBF, acting as a correction term while inheriting the non-oscillatory behavior of the RBF at the boundary $\partial \Omega$.
+
+\subsubsection{CPD Consistency Error Analysis and Local System Derivation}
+
+Due to the positive semidefiniteness of the cpd kernels, the polynomial augmentation plays the role of filling the nullspace the kernel does not span. We define the RKHS $\mathcal{F_K}_c = \mathcal{F_K} / \Pi_{k-1}^d$, with the equivalence relation $u ~ v \rightarrow u-v \in \Pi_{k-1}^d$. We define the semi-norm $| \cdot |_{\mathcal{F_K}}$ as:
+\begin{equation}
+	\left | u \right |_{\mathcal{F_K}_c} := \| [u] \|_{\mathcal{F_K} / \Pi_{k-1}^d} \text{, with } [u] \in \mathcal{F_K} / \Pi_{k-1}^d
+\end{equation}
+Thus, $| p |_{\mathcal{F_K}_c} = 0$ for $p \in \Pi_{k-1}^d$. Similar to the pd case, we develop the error estimate:
+\begin{align*}
+	\xi_{w,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
+	&= L_z \left \langle f, \, K(\cdot, \bm{z}) \right \rangle_{\mathcal{F_K}_c} - \sum_{i=1}^n w_{i,z} \left \langle f, \, K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	&= \left \langle f, \, L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	&= \left \langle f, \, r_{w,z} \right \rangle_{\mathcal{F_K}_c}
+\end{align*}
+The main difference between the cpd and pd error estimates is the norm/semi-norm used for $r_{w,z}$. We then state the following:
+\begin{align*}
+	\| r_{w,z} \|_{\mathcal{F_K}_c}^2 &= \left \langle r_{w,z}, \, r_{w,z} \right \rangle_{\mathcal{F_K}_c}\\
+	\| r_{w,z} \|_{\mathcal{F_K}_c}^2 &= \left \langle L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i), \, L_z K(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} K(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_K}_c}\\
+	\| r_{w,z} \|_{\mathcal{F_K}_c}^2 &= \left. L_x L_y K(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} K(\bm{x}_i, \bm{z}) + \sum_{i,j=1}^n w_{j,z} w_{i,z} K(\bm{x}_i, \bm{x}_j)\\
+	\| r_{w^*,z} \|_{\mathcal{F_K}_c}^2 &= \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} \left ( \left. L_x L_y K(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} K(\bm{x}_i, \bm{z}) + \sum_{i,j=1}^n w_{j,z} w_{i,z} K(\bm{x}_i, \bm{x}_j) \right)
+\end{align*}
+Minimizing this norm for $w \in \mathbb{R}^n$ with polynomial constraints leads to Eq (\ref{eq:weight_solve}). An error estimate for functions in $\mathcal{F_K}$ of the form:
+\begin{align*}
+	\inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} |\xi_{w,z}(f)| &\le \inf_{\substack{\bm{w}\in \mathbb{R}^n \\ \xi (\Pi_{k-1}^d) = 0}} ||r_{w,z}||_{\mathcal{F_K}_c} ||f||_{\mathcal{F_K}_c}\\
+	|\xi_{w^*,z}(f)| &\le ||r_{w^*,z}||_{\mathcal{F_K}_c} ||f||_{\mathcal{F_K}_c}
+\end{align*}
+We then define the power function for cpd kernels as follows:
+\begin{equation}
+\mathcal{P}_{K_c}^2(z) = \min_{\substack{\bm{w} \in \mathbb{R}^n \\ \xi_{w,z} \left(\Pi_{q-1}^d \right) = 0}} \left \{||r_{w,z}||_{\mathcal{F_K}_c}^2 \right \}
+\end{equation}
+According to \cite{Davydov2025}, we have the following proposition:
+\begin{proposition}
+(Davydov, 2025)Let D be a differential operator of order $k$, and $K$ a cpd kernel of order $q$ on $\Omega \subseteq \mathbb{R}^d$ and $\bm{X}=\{ x_1, \dots, x_n\}$, assume that
+\begin{enumerate}
+\item
+$\partial^{\alpha,\beta}K(\bm{z},\bm{z})$ exists for all $|\alpha|, |\beta| \le k$
+\item
+$L_zK(\bm{x}_i,\bm{z})$ exists for all $i=1,\dots,N$ and
+\item
+Equation \ref{eq:weight_solve} is consistent.
+\end{enumerate}
+Then the kernel-based numerical differentiation formula  satisfies:
+\begin{equation}
+\left| \xi_{w^*,z}(u) \right| = \left| Lu(\bm{z}) -\sum_{i=1}^N w_{z,i}^*u(\bm{x_i}) \right| \le \mathcal{P}_{K}^2(\bm{z}) ||f||_\mathcal{F_K}
+\end{equation}
+\end{proposition}
+
+\subsection{Growth Function}
+
+To define the consistency order, we define the following stencil as the stencil set.
+\begin{align*}
+	S_{\bm{z},X} := \bigcup_{i=1}^N[\bm{z}, \bm{x}_i]
+\end{align*}
+Then for $U: S_{\bm{x},X} \times S_{\bm{x},X} \rightarrow \mathbb{R}$, we define a binary H\"{o}der continuity semi-norm in the form:
+\begin{align*}
+	|U|_{\bm{z},X,\gamma}:=\sup_{\substack{\bm{x},\bm{y}\in S_{\bm{z},X} \\ \bm{x} \neq \bm{z}, \bm{y} \neq \bm{z}}} \frac{\left| U(\bm{x},\bm{y}) - U(\bm{x},\bm{z}) - U(\bm{z},\bm{y}) + U(\bm{z},\bm{z}) \right|}{\| \bm{x} - \bm{z}\|_2^\gamma \| \bm{y} - \bm{z} \|_2^\gamma} , 0 < \gamma, \le 1
+\end{align*}
+Then, for $r \in \mathbb{N}$, we get
+\begin{align*}
+	|U|_{\bm{z},X,r+\gamma}:=\frac{1}{(\gamma+1)^2\hdots (\gamma+r)^2} \left( \sum_{|\alpha|=r} \sum_{|\beta|=r} \begin{pmatrix}	r \\ \alpha \end{pmatrix}
+\begin{pmatrix}	r \\ \beta \end{pmatrix} |\partial^{\alpha,\beta}U|_{\bm{z},X,\gamma}^2	 \right)^{1/2},
+\end{align*}
+with the following coefficient definitions: $\begin{pmatrix}	r \\ \alpha \end{pmatrix} = \frac{r!}{\alpha!}, \alpha!=\alpha_1! \hdots \alpha_d!$.
+Growth function is defined as follows:
+\begin{equation}
+	\rho_{k-1,D}(\bm{z},X,\mu) := \sup \left \{ Lp(\bm{z}): p\in \Pi_{q-1}^d, | p(\bm{x_j}) | \le \| \bm{x}_j - \bm{x} \|_2^\mu, j=1,\hdots,n) \right \}
+\end{equation}
+By \cite{Davydov2018}, the dual form of $\rho$ takes the form
+\begin{equation*}
+	\rho_{k-1,D}(\bm{z},Z,\| \cdot \|) := \inf_{\substack{\bm{w} \in \mathbb{R}^n \\ \xi_{w,z} \left(\Pi_{q-1}^d \right) = 0}}{\left \{ \| \bm{w} \|  \right \}}
+\end{equation*}
+We finally have the following by \cite{Davydov2025}:
+\begin{theorem}
+(Davydov, 2025) Let L be a differential operator of order $k$ and $K$ a cpd kernel of order $s$ on $\Omega$. Given $\bm{z}\in \Omega$ and $\bm{X}=\{ \bm{x}_1, \dots, \bm{x}_n \}$, with $S_{\bm{z},\bm{X}} \subset \Omega$. Assume that \ref{eq:weight_solve} is consistent and, for some $r \ge k$ and $\gamma \in (0,1]$, the kernel $K$ possesses continuous partial derivatives $\partial^{\alpha, \beta}K(\bm{x},\bm{y})$ for all $|\alpha|,|\beta| \le r$ and all $\bm{x},\bm{y} \in S_{\bm{z},\bm{X}}$, and $|K|_{\bm{z},\bm{X},r+\gamma} < \infty$. Define $q=\max\{ s, r+1 \}$. Then for $u \in \mathcal{F_K}$ the kernel-based numerical differentiation satisfies the error bound:
+\begin{equation}
+\left| \xi_{w^*,z} (u) \right| = \left| Lu(\bm{z}) -\sum_{i=1}^N w_{z,i}^*u(\bm{x_i}) \right| \le \rho_{q, L}(\bm{z}, \bm{X}, r+\gamma) |K|_{\bm{z},\bm{X},r+\gamma} || u ||_{\mathcal{F_K}}
+\end{equation}
+\end{theorem}
+
+\pagebreak
+
+\section{Local Least Square for RBF-FD Weights}
+
+\subsection{Weight Constraint Setup}
+
+An idea relevent to a least square procedure within the RBFFD machinery was initially proposed in \cite{Shaback2003}, targeting the interpolator function. We propose instead analyzing the least squares in the direction of the numerical differentiation weights which leads to a minimum norm in the approximate solutions. Hence, rather than assuming a form for the solution, our goal is to approximate instead the operator through weights dual to $u$ sampled at nodes $X$. 
+
+WRITEUP LEFT HERE TO DEVELOP ON.
+
+\subsection{Consistency Error Analysis through Center-Based Kernel}
+
+Similar to the local interpolation scheme to derive the error functional, we begin by defining the kernel used for the reproduction scheme. Rather than using the interpolation kernel $K$, we define the following kernel:
+\begin{equation}
+	\tilde{K}(\bm{z}_1,\bm{z}_2) := \int_{\Omega'} K(\bm{y}, \bm{z}_1) K(\bm{y}, \bm{z}_2)
+\end{equation}
+Here we set $\Omega' \subseteq \mathbb{R}^d$. We can show this is a positive semi-definite kernel, and positive definite on the set of nodes $X$ by showing that the set $\{ K(\bm{x}_1,\cdot), \hdots, K(\bm{x}_n,\cdot)) \}$ is linearly independent in $L^2(\Omega')$. (NEED TO SHOW)
+\begin{align*}
+	\xi_{w,L,\tilde{K},X,z}(f) &= Lf(z) - \sum_{i=1}^n w_{i,z} f(x_i)\\
+	&= L_z \left \langle f, \, \tilde{K}(\cdot, \bm{z}) \right \rangle_{\mathcal{F_{\tilde{K}}}} - \sum_{i=1}^n w_{i,z} \left \langle f, \, \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left \langle f, \, L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left \langle f, \, v_{w,L,\tilde{K},X,z} \right \rangle_{\mathcal{F_{\tilde{K}}}}
+\end{align*}
+\begin{comment}
+	&= \left \langle L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i), \, L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \rangle_\mathcal{F_{\tilde{K}}}\\
+\end{comment}
+with $v_{w,L,\tilde{K},X,\Omega',z} := L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i)$. Then, in the same way as in the interpolation case, the goal is to minimize the Riesz representer $v_{w,L,\tilde{K},X,Y,z} := v_{w,\tilde{K},z}$. Since $\tilde{K}$ is a kernel, standard interpolation theory applies to get error estimates. However, rather than working with established theory, we proceed by exploiting the kernel structure.
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|^2_{\mathcal{F_{\tilde{K}}}} &= \left \langle v_{w,\tilde{K},z}, v_{w,\tilde{K},z} \right \rangle_{\mathcal{F_{\tilde{K}}}}\\
+	&= \left. L_x L_y \tilde{K}(\bm{x}, \bm{y}) \right|_{x=y=z} - 2 \sum_{i=1}^n w_{i,z} L_z \tilde{K}(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z} w_{j,z} \tilde{K}(\bm{x}_i, \bm{x}_j)\\
+	&= \int_{\Omega'} Lz K(\bm{y},\bm{z}) L_z K(\bm{y}, \bm{z}) - \int_{\Omega'} 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{y}, \bm{z}) K(\bm{y}, \bm{x}_i) \\ & \qquad + \int_{\Omega'} \sum_{i,j=1}^n w_{i,z} w_{j,z} K(\bm{y}, \bm{x}_i) K(\bm{y}, \bm{x}_j)\\
+	&= \int_{\Omega'} \left ( Lz K(\bm{y},\bm{z}) - \sum_{i=1}^n w_{i,z} K(\bm{y}, \bm{x}_i) \right)^2\\
+	&= \int_{\Omega'} r_{w_z}^2(\bm{y})\\
+	\| v_{w^*,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \inf_{\bm{w}\in \mathbb{R}^n} \left( \int_{\Omega'} r_{w_z}^2(\bm{y}) \right)^{1/2}
+\end{align*}
+Solving the minimizer for the residual in $L^2$ leads to:
+\begin{equation}
+	\left \langle K(X,\cdot), \, K(\cdot, X) \right \rangle_{L^2(\Omega')} \bm{w}_z^* = \left \langle K(X, \cdot), \, L_z K(\cdot, \bm{z}) \right \rangle_{L^2(\Omega')}
+\end{equation}
+Assuming that $K$ is a kernel for an RKHS $\mathcal{F_K}$, if $T(g) := \int_{\Omega'} K(\bm{y}, \cdot) g(\bm{y})$, then:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} &= \left \| L_z \tilde{K}(\cdot, \bm{z}) - \sum_{i=1}^n w_{i,z} \tilde{K}(\cdot, \bm{x}_i) \right \|_{\mathcal{F_{K}}}\\
+	&= \left \| \int_{\Omega'} K(\cdot, \bm{y}) r_{w_z}(\bm{y}) \right \|_{\mathcal{F_{K}}}\\
+	&= \inf_{\substack{g: T(g)=T(r_{w_z})}} \| g \|_{L^2(\Omega'}\\
+	&\le \| v_{w,K,z} \|_{L^2(\Omega')}\\
+	&\le \left( \int_{\Omega'} \| v_{w,K,z} \|^2_{\mathcal{F_{K}}} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2}\\
+	&\le \left( \int_{\Omega'} \| K(\cdot,\bm{y}) \|^2_{\mathcal{F_{K}}} \right)^{1/2} \| v_{w,K,z} \|_{\mathcal{F_{K}}}
+\end{align*}
+\begin{comment}
+Hence, We get that $\mathcal{F_K} \hookrightarrow \mathcal{F_{\tilde{K}}}$.
+\end{comment}
+By letting $\Omega'$ by of unit volume for $L^2(\Omega')$ and $K$ be a translation-invariant kernel with unit value at $\|\bm{x} - \bm{y} \|_{\mathbb{R}^d} = \bm{0}$, then $\| v_{w,\tilde{K},z} \|_{\mathcal{F_{K}}} \le \| v_{w,K,z} \|_{\mathcal{F_{K}}}$. We can also share relate the 2 representers under their respective norms by assuming $\Omega' \subseteq \Omega$:
+\begin{align*}
+	\| v_{w,\tilde{K},z} \|_{\mathcal{F_{\tilde{K}}}} &= \| r_{w_z} \|_{L^2(\Omega')}\\
+	&= \| v_{w,K,z} \|_{L^2(\Omega')}\\
+	&\le \| v_{w,K,z} \|_{L^2(\Omega)}\\
+	&\le \| v_{w,K,z} \|_{\mathcal{F_{K}}(\Omega)}\\	
+\end{align*}
+
+\pagebreak
+
+\subsection{Consistency Error Derivation through Standard RBF-FD}
+
+We use the solution of the interpolation scheme to compare with the discrete ordinary least squares from the uniform measure $\mu$, where $K_{XX} \bm{w}^*_z = L_zK(Y,\bm{z}):=\bm{b}$ is the local interpolation scheme. Thus, we can say $\bm{w}^{*T} K_{XX} \bm{w}^* = \bm{b}^T K_{XX}^{-1} \bm{b}$ since $K_{XX}$ is symmetric. Similar to the interpolation scheme, we define the error analysis and have the form:
+\begin{align*}
+||v_{w,K,L,X,z}||_\mathcal{F_K}^2 &= \left. L_y L_z K(y,z) \right|_{y=z=x} - 2 \sum_{i=1}^n w_{i,z} L_z K(\bm{z}, \bm{x}_i) + \sum_{i,j=1}^n w_{i,z}w_{j,z} K(\bm{x}_i, \bm{x}_j)\\
+&= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w}\\
+&= \left. L_y L_z K(y,z) \right. - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^* - \bm{b}^T K_{XX}^{-1} \bm{b}\\
+&= \left. L_y L_z K(y,z) \right. - \bm{b}^T \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
+&= \left. L_y L_z K(y,z) \right. - 2 \bm{b}^T \bm{w}^* + \bm{w}^{*T} K_{XX} \bm{w}^* - 2 \bm{w}^T \bm{b} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
+&= \mathcal{P}_{K,L,X}^2(\bm{z}) - \bm{w}^T K_{XX} \bm{w}^{*} - \bm{w}^{*T} K_{XX} \bm{w} + \bm{w}^T K_{XX} \bm{w} + \bm{w}^{*T} K_{XX} \bm{w}^*\\
+&= \mathcal{P}_{K,L,X}^2(\bm{z}) +  \left( \bm{w} - \bm{w}^* \right)^T K_{XX} \left( \bm{w} - \bm{w}^* \right)
+\end{align*}
+We can now bound the second term by considering $\bm{w}\rightarrow \bm{w_{LS}}$ obtained from a least squares result: 
+\begin{align*}
+K_{XY}K_{YX}\bm{w_{LS}}&=K_{XY}\bm{b}\\
+K_{XY}K_{YX}\bm{w_{LS}}-K_{XY}K_{YX}\bm{w}^*&=K_{XY}\bm{b}-K_{XY}K_{YX}\bm{w^*}\\
+K_{XY}K_{YX}(\bm{w_{LS}}-\bm{w}^*)&=K_{XY}(\bm{b}-K_{YX}\bm{w}^*)\\
+(\bm{w_{LS}}-\bm{w}^*)&= K_{YX}^{\dagger}\bm{r}^*\\
+|| \bm{w_{LS}}-\bm{w}^* ||_2 &\le ||K_{YX}^{\dagger} ||_2 || \bm{r}^* ||_2\\
+|| \bm{w_{LS}}-\bm{w}^* ||_2 &\le \frac{|| \bm{r}^* ||_2}{\sigma_{min}(K_{XY})}
+\end{align*}
+Finally, we say that $r^*_j=v_{w^*,K,L,X,z}(\bm{y}_j)$. Then $|| \bm{r}^* ||^2_2 = || v_{w^*,K,L,X,z}(Y) ||_2^2$. Applying kernel evaluation on $v_{w^*,K,L,X,z}$ and the power function for interpolations onto $v$ we get:
+\begin{align*}
+\| \bm{r}^* \|_2^2 &= \sum_{i=1}^m v_{w^*,K,L,X,z}^2(\bm{y}_i)\\
+&\le \sum_{i=1}^m \| v_{w^*,K,L,X,z} \|^2_\mathcal{F_K} \| K(\cdot,\bm{y}_i) \|^2_\mathcal{F_K} \\
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)
+\end{align*}
+Therefore, the error estimate (\ref{eq:LeastSquaresEstimate}) for the local Ordinary Least Squares behaves as follows:
+\begin{align}
+||v_{w_{LS},K,L,X,z}||_\mathcal{F_K}^2 &\le \mathcal{P}_{K,L,X}^2(\bm{z}) +  \lambda_{max}(K_{XX}) || \bm{w} - \bm{w}^* ||_2^2 \nonumber \\
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) + \lambda_{max}(K_{XX}) \frac{\mathcal{P}_{K,L,X}^2(\bm{z}) \sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)}{\sigma_{min}^2(K_{XY})} \nonumber \\
+&\le \mathcal{P}_{K,L,X}^2(\bm{z}) \left(1 + \frac{\lambda_{max}(K_{XX})\sum_{i=1}^m K^2(\bm{y}_i, \bm{y}_i)}{\sigma_{min}^2(K_{XY})} \right)
+\label{eq:LeastSquaresEstimate}
+\end{align}
+
+\subsection{Least Squares Finite Spaces and Interpolation Results}
+
+Suppose $\left\{p_i\right\}_{i=1}^l$ is a set of polynomials augmenting the radial basis functions. Let $\Pi_{q-1}^d=span\left\{p_i\right\}_{i=1}^l$ with polynomial degree up to $k$. We want to reproduce the operator exactly on the polynomial basis: 
+\begin{align*}
+	Lp_j(\bm{z}) :&= \sum_{i=1}^n w_{i,z} p_j(\bm{x_i}) \text{ for } j = 1, \hdots, l\\
+	L\bm{p}(\bm{z}) &= \bm{P^T} \bm{w}_z
+\end{align*}
+where $\bm{P}_{ij} := p_j(\bm{x}_i) \in \mathbb{R}^{n \times l}$. By using a uniform measure $\mu$ for the set of centers $Y$, we have a constrained least squares problem in the form:
+\begin{equation}
+	\left\{
+	\begin{aligned}
+		&\min J(\bm{w}_z) := \min \frac{1}{2}\|\bm{r}(\bm{w}_z)\|_2^2 \quad \text{for } \bm{x} \in \Omega \\
+		&\text{subject to } K_{YX} \bm{w}_z = L\bm{p}(\bm{z})
+	\end{aligned}
+	\right.
+\end{equation}
+We can solve this setup by defining the Lagrangian $\mathcal{L}$ for the problem as follows:
+\begin{align*}
+\mathcal{L}(\bm{w},\bm{\nu})
+&:= J(\bm{w})
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{z}) \right\rangle \\
+&= \frac{1}{2}
+\left\langle K_{YX}\bm{w},\,K_{YX}\bm{w} \right\rangle
+- \left\langle K_{YX}\bm{w},\,L_z K(Y, \bm{z}) \right\rangle
++ \frac{1}{2}
+\left\langle L_z K(Y,\bm{z}),\,L_z K(Y,\bm{z}) \right\rangle \\
+&\qquad
++ \left\langle \bm{\nu},\,\bm{P}^{T}\bm{w} - L\bm{p}(\bm{z}) \right\rangle.
+\end{align*}
+The resulting KKT equations for this system are then:
+\begin{align*}
+	\nabla_w \mathcal{L} &= 0: K_{XY} L_z K(Y,\bm{z}) = K_{XY} K_{YX} \bm{w} + \bm{P} \bm{\nu} \label{eq:normal_eq}\\
+	\nabla_\nu \mathcal{L} &= 0: \bm{P}^T \bm{w} = L\bm{p}
+	%\label{eq:constraint}
+\end{align*}
+The augmented matrix then takes the form:
+\begin{equation}
+	\begin{bmatrix}
+		K_{XY} K_{YX} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{w} \\ \bm{\nu}
+	\end{bmatrix} =
+	\begin{bmatrix}
+		X_{XY} L_z K(Y,\bm{z}) \\ L\bm{p}(\bm{z})
+	\end{bmatrix}
+	\label{eq:augmented}
+\end{equation}
+From \cite{Davydov2020}, Equation (\ref{eq:augmented}) has a unique solution given $L\bm{p} \in Range(\bf{P}^T)$. The primary goal is to approximate $Lu(\bm{z}) \approx \bm{w}^T_z \bm{u}$, with $\bm{u}=\left[ u(\bm{x}_1), \hdots, u(\bm{x}_n) \right]^T$. Define $L_w f(\bm{z}) := \bm{w}^T_z \bm{f}$ for some function $f$. Thus, we have the following:
+\begin{align*}
+	L_w f(\bm{z}) &= \bm{w}^T_z \bm{f}\\
+			&= \begin{bmatrix}
+					\bm{w}^T_z & \bm{\nu}^T
+				\end{bmatrix}
+				\begin{bmatrix}
+					\bm{f} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \left(
+	\begin{bmatrix}
+		K_{XY} K_{YX} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-1}
+	\begin{bmatrix}
+		K_{XY} L_z K(Y,\bm{z}) \\ L\bm{p}(\bm{z})
+	\end{bmatrix}
+				\right)^T 
+				\begin{bmatrix}
+					\bm{f} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \begin{bmatrix}
+					L_z K(\bm{z},Y) K_{XY} & L\bm{p}^T(\bm{z})
+				\end{bmatrix}
+	\begin{bmatrix}
+		K_{XY} K_{YX} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}^{-T}
+				\begin{bmatrix}
+					\bm{f} \\ \bm{0}
+				\end{bmatrix}\\
+			&= \begin{bmatrix}
+					L_z K(\bm{z},Y) K_{XY} & L\bm{p}^T(\bm{z})
+				\end{bmatrix}
+				\begin{bmatrix}
+					\bm{v} \\ \bm{\alpha}
+				\end{bmatrix}\\
+			&= L_z K(\bm{z},Y) \left(K_{YX} \bm{v}\right) + L\bm{p}^T (\bm{z}) \bm{\alpha}
+\end{align*}
+Next, we can show that the coefficients $\bm{v}, \bm{\alpha}$ relate to the coefficients of $u$ as follows:
+\begin{equation*}
+	\begin{bmatrix}
+		\bm{f} \\ \bm{0}
+	\end{bmatrix} = 
+	\begin{bmatrix}
+		K_{XY} K_{YX} & \bm{P} \\
+		\bm{P}^T & \bm{0}
+	\end{bmatrix}
+	\begin{bmatrix}
+		\bm{v} \\ \bm{\alpha}
+	\end{bmatrix}
+\end{equation*}
+Define $V_m = \left\{ \rho(z) : \rho(\bm{z}) = \sum_{i=1}^m \lambda_i K(\bm{z},\bm{y}_i) \text{ and } \lambda \in Range\left(K_{YX} \right), \bm{y}_i \in Y \right\} \subseteq V_m$. Let $s \in V_m + \Pi_{q-1}^d$. Thus, $s(\bm{z}) = K(\bm{z},Y)K_{XY} v + \bm{p}^T(\bm{z}) \bm{\alpha}$ where $\bm{q} \in \mathbb{R}^{n}$ and $\bm{\alpha} \in \mathbb{R}^{l}$. Then:
+\begin{align*}
+	\bm{s} = s(X) &= K_{XY} K_{YX} \bm{v} + \bm{P} \bm{\alpha} = f(X) = \bm{f}\\
+	\bm{P}^T \bm{v} &= \bm{0}
+\end{align*}
+Hence, we get interpolation of $f$ at the node set $X$. Furthermore, from the KKT matrix we can show that $K_{XY} \bm{r} = \bm{P} \bm{\nu}$ which implies that $K_{XY} \bm{r} \in range(\bm{P}) = \left( ker \left(\bm{P}^T \right) \right)^\perp$. Thus, we get the relationship:
+\begin{equation}
+\bm{r}^T \left( K_{YX} \bm{v} \right)=\bm{0} \text{ for } \bm{P}^T \bm{v} = \bm{0} \label{eq:res_orth}
+\end{equation}
+Finally, we check the consistency error for $s \in V_h+\Pi_{q-1}^d$ with $\bm{P}^T \bm{v}=\bm{0}$.
+\begin{align*}
+	Ls(\bm{z})-L_hs(\bm{z}) &= L\left[K(\bm{z},Y)K_YX \bm{v} + \bm{p}^T(\bm{z}) \bm{\alpha}\right] - \bm{w}^T_z\bm{s}\\
+	&= L_z K(\bm{z},Y)K_{YX} \bm{v} + L\bm{p}^T(\bm{z}) \bm{\alpha} - \bm{w}^T_z(K_{XY} K_{YX} \bm{v} + \bm{P} \bm{\alpha})\\
+	&= L_z K(\bm{z},Y)K_{YX} \bm{v} + L\bm{p}^T(\bm{z}) \bm{\alpha} - \bm{w}^T_z K_{XY} K_{YX} \bm{v} - \bm{w}^T_z \bm{P} \bm{\alpha}\\
+	&= \left[ L_z K(\bm{z},Y) - K_{YX} \bm{w}_z \right]^T K_{YX} \bm{v} + \left[ L\bm{p}(\bm{z}) - \bm{P}^T \bm{w}_z \right]^T \bm{\alpha}\\
+	&= \bm{r}^T K_{YX} \bm{v} + \left[ L\bm{p}(\bm{z}) - \bm{P}^T \bm{w}_z \right]^T \bm{\alpha}\\
+\end{align*}
+Hence, we conclude $Ls(\bm{z})-L_hs(\bm{z}) = 0 \text{ due to (\ref{eq:augmented}) and (\ref{eq:res_orth}}) \label{eq:repro}$.
+
+\pagebreak
+
+\begin{thebibliography}{2}
+
+\bibitem{Slak}
+Slak, J. (2026). \textit{Adaptive RBF-FD method}. PhD Thesis, University of Ljubljana.
+\url{https://e6.ijs.si/~jslak/files/phd.pdf}
+
+\bibitem{Agmon}
+Agmon, S., Douglis, A. and Nirenberg, L. (1959). \textit{Estimates near the boundary for solutions of elliptic partial differential equations satisfying general boundary conditions}. I. Comm. Pure Appl. Math., 12: 623-727. \\
+\url{https://doi.org/10.1002/cpa.3160120405}
+
+\bibitem{Petras2018}
+Petras, A., Ling, L., Piret, C. and Ruuth, S. J. (2018).
+\textit{A least-squares implicit RBF-FD closest point method and applications to PDEs on moving surfaces}.
+Journal of Computational Physics, 363: 94--114. \\
+\url{https://doi.org/10.1016/j.jcp.2018.02.023}
+
+\bibitem{BeatsonDavydovLevesley2009}
+Beatson, R., Davydov, O. and Levesley, J. (2009).
+\textit{Error bounds for anisotropic RBF interpolation}.
+Journal of Approximation Theory, 162(1): 1--20.
+
+\bibitem{Davydov2025}
+Davydov, O. (2025).
+\textit{Error bounds for numerical differentiation using kernels of finite smoothness}.
+November 15, 2025.
+
+\bibitem{Davydov2020}
+Davydov, O. (2020).
+\textit{Approximation with Conditionally Positive Definite Kernels on Deficient Sets}.
+arXiv preprint arXiv:2006.13543. \\
+\url{https://arxiv.org/abs/2006.13543}
+
+
+\bibitem{FlyerFornbergBayonaBarnett}
+Flyer, N., Fornberg, B., Bayona, V. and Barnett, G. A. (2016).
+\textit{On the role of polynomials in RBF-FD approximations: I. Interpolation and accuracy}.
+Journal of Computational Physics, 321: 21--38. \\
+\url{https://doi.org/10.1016/j.jcp.2016.05.026}
+
+
+\bibitem{Bayona2019}
+Bayona, V. (2019).
+\textit{An insight into RBF-FD approximations augmented with polynomials}.
+Computers \& Mathematics with Applications, 77(9): 2337--2353. \\
+\url{https://doi.org/10.1016/j.camwa.2018.12.029}
+
+\bibitem{Davydov2018}
+O. Davydov and R. Schaback. \textit{Minimal numerical differentiation formulas}. Numerische Mathematik, 140(3):555–592, 2018.\\
+\url{https://num.math.uni-goettingen.de/schaback/research/papers/MNDF.pdf}
+
+\bibitem{Oanh2016}
+D. T. Oanh, O. Davydov, and H. X. Phu. Adaptive RBF-FD method for elliptic
+problems with point singularities in 2D. Preprint, 2016.
+
+\bibitem{Schaback2016}
+R. Schaback. Error analysis of nodal meshless methods. Preprint, 2016.
+
+\bibitem{Seibold2006}
+B. Seibold. M-Matrices in Meshless Finite Difference Methods. Dissertation, University of Kaiserslautern, 2006.
+
+\bibitem{Seibold2008}
+B. Seibold. Minimal positive stencils in meshfree finite difference methods for the
+Poisson equation. Comput. Methods Appl. Mech. Eng., 198(3-4):592–601, 2008.
+
+\bibitem{Stetter1973}
+H. J. Stetter. Analysis of Discretization Methods for Ordinary Differential Equations. Springer, New York, 1973.
+
+\bibitem{Shaback2003}
+Schaback, R. (2003). Reconstruction of multivariate functions from scattered data.
+University of Göttingen. \\ \url{https://num.math.uni-goettingen.de/schaback/teaching/rbfbook.pdf}
+
+\end{thebibliography}
+
+\pagebreak
+
+\section{Appendix}
+
+\end{document}
