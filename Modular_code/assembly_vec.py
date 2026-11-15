@@ -134,7 +134,7 @@ def local_weights_solve(context, i, eps0, fixed_eps=False):
     return z if not context.augmentation else Q2 @ z + w_1, np.linalg.cond(M)
 
 ### Least Squares
-def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
+def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-0):
     Ai = context.A[i]
     P = context.nodes
 
@@ -179,7 +179,7 @@ def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
         b_2 = np.zeros(num_centers)
 
     # --------------------------------------------------
-    # RKHS residual regularization
+    # RKHS residual regularization (rank-revealing eig)
     # --------------------------------------------------
     if lam > 0:
 
@@ -189,15 +189,56 @@ def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
         diff_c = P[i][None, :] - Ps
         c = context.laplacian_phi(diff_c, Ai, eps)
 
-        # G = Rg.T @ Rg
-        Rg = np.linalg.cholesky(G).T
+        H = Q2.T @ G @ Q2
+        g = Q2.T @ (c - G @ w_1)
 
-        # Rg.T @ q = c - G @ w_1
-        q = np.linalg.solve(Rg.T, c - G @ w_1)
+        H = 0.5 * (H + H.T)
 
+        # Symmetric eigendecomposition
+        eigvals, V = np.linalg.eigh(H)
+
+        # Numerical rank tolerance
+        scale = np.max(np.abs(eigvals))
+        rtol = 100 * np.finfo(float).eps * max(H.shape)
+        tol = rtol * scale
+
+        # Significant negative eigenvalues indicate indefiniteness
+        if eigvals[0] < -tol:
+            raise np.linalg.LinAlgError(
+                f"Reduced Gram matrix is indefinite: "
+                f"lambda_min={eigvals[0]:.3e}, tolerance={tol:.3e}"
+            )
+
+        # Keep numerically significant positive eigenvalues
+        keep = eigvals > tol
+
+        # Check whether discarded eigendirections contain a
+        # significant component of the linear term
+        g_hat = V.T @ g
+        null_component = np.linalg.norm(g_hat[~keep])
+        g_scale = max(np.linalg.norm(g), np.finfo(float).tiny)
+
+        if null_component > 1.0e-10 * g_scale:
+            raise np.linalg.LinAlgError(
+                "The linear regularization term has a significant "
+                "component in the numerical nullspace of H. "
+                f"Relative component: {null_component / g_scale:.3e}"
+            )
+
+        # Rectangular factorization H ≈ B.T @ B
+        if np.any(keep):
+            sqrt_eig = np.sqrt(eigvals[keep])
+
+            B = sqrt_eig[:, None] * V[:, keep].T
+            q = g_hat[keep] / sqrt_eig
+        else:
+            B = np.zeros((0, H.shape[0]))
+            q = np.zeros(0)
+
+        # Augmented least-squares system
         M = np.vstack([
             M,
-            np.sqrt(lam) * (Rg @ Q2)
+            np.sqrt(lam) * B
         ])
 
         b_2 = np.concatenate([
@@ -270,7 +311,7 @@ def local_grad_solve(context, i, eps0, fixed_eps=False, add_anisotropy=True):
     z_grad = np.linalg.solve(R, y)
     return z_grad if not context.augmentation else Q2 @ z_grad + w_1, np.linalg.cond(M)
 
-def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.0e-3):
+def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.0e-0):
     At = context.A[i].T
     P = context.nodes
 

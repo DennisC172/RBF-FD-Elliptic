@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # Define the shape and parameters of the radial basis function
     rbf_shape = 'gaussian'
     augmentation = False
-    eps = 0.075
+    eps = 0.025
     fixed_eps = False
 
     # -----------------------------
