@@ -13,7 +13,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 from domain import PDEDomainContext
 import stencils
-import rbf_vec as rbf
+import rbf_functions_quintic_septic_fixed as rbf
 import boundary
 import geometry
 
@@ -90,7 +90,7 @@ def local_weights_solve(context, i, eps0, fixed_eps=False):
     # Augmentation form
     pdim = 0
     if context.augmentation:
-        pdim = len(rbf.poly_basis(P[0]))
+        pdim = len(context.poly_basis(P[0]))
 
     # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
     Ps = P[s]
@@ -104,13 +104,13 @@ def local_weights_solve(context, i, eps0, fixed_eps=False):
 
     M = context.phi(diff_M, eps)               # (num_nodes, num_nodes)
 
-    # b: laplacian_phi(P[i] - P[s[k]]) for all k, one vectorized call
+    # b: L_phi(P[i] - P[s[k]]) for all k, one vectorized call
     diff_b = P[i][None, :] - Ps                # (num_nodes, dim)
-    b = context.laplacian_phi(diff_b, Ai, eps) # (num_nodes,)
+    b = context.L_phi(diff_b, Ai, eps) # (num_nodes,)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)                       # (num_nodes, pdim)
-        b_poly = rbf.anisotropic_diffusion_poly(P[i])   # (pdim)
+        Pmat = context.poly_basis(Ps)                       # (num_nodes, pdim)
+        b_poly = context.L_poly(P[i], Ai)   # (pdim)
         pdim =  Pmat.shape[1]
 
         Q, R = np.linalg.qr(Pmat, mode="complete")
@@ -123,18 +123,13 @@ def local_weights_solve(context, i, eps0, fixed_eps=False):
     else:
         w_1 = np.zeros(num_nodes)
 
-    '''print(f"Conditioning: {np.linalg.cond(M): e}, ({M.shape}) at idx = {i}")
-    s = np.linalg.svd(M, compute_uv=False)
-    print(s)
-    print(s[-1]).
-    print(np.linalg.matrix_rank(M))'''
     Q,R = np.linalg.qr(M)
     y = Q.T @ b
     z = np.linalg.solve(R, y)
     return z if not context.augmentation else Q2 @ z + w_1, np.linalg.cond(M)
 
 ### Least Squares
-def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
+def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-0):
     Ai = context.A[i]
     P = context.nodes
 
@@ -159,11 +154,11 @@ def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
     M = context.phi(diff_M, eps)
 
     diff_b = P[i][None, :] - Cs
-    b = context.laplacian_phi(diff_b, Ai, eps)
+    b = context.L_phi(diff_b, Ai, eps)
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)
-        b_poly = rbf.anisotropic_diffusion_poly(P[i])
+        Pmat = context.poly_basis(Ps)
+        b_poly = context.L_poly(P[i], Ai)
         pdim = Pmat.shape[1]
 
         Q, R = np.linalg.qr(Pmat, mode="complete")
@@ -179,25 +174,68 @@ def local_weights_ls(context, i, eps0, fixed_eps=False, lam=1.0e-3):
         b_2 = np.zeros(num_centers)
 
     # --------------------------------------------------
-    # RKHS residual regularization
+    # RKHS residual regularization (rank-revealing eig)
     # --------------------------------------------------
     if lam > 0:
 
+        gram_sign = context.rbf_gram_sign
+
         diff_G = Ps[:, None, :] - Ps[None, :, :]
-        G = context.phi(diff_G, eps)
+        G = gram_sign*context.phi(diff_G, eps)
 
         diff_c = P[i][None, :] - Ps
-        c = context.laplacian_phi(diff_c, Ai, eps)
+        c = gram_sign*context.L_phi(diff_c, Ai, eps)
 
-        # G = Rg.T @ Rg
-        Rg = np.linalg.cholesky(G).T
+        H = Q2.T @ G @ Q2
+        g = Q2.T @ (c - G @ w_1)
 
-        # Rg.T @ q = c - G @ w_1
-        q = np.linalg.solve(Rg.T, c - G @ w_1)
+        H = 0.5 * (H + H.T)
 
+        # Symmetric eigendecomposition
+        eigvals, V = np.linalg.eigh(H)
+
+        # Numerical rank tolerance
+        scale = np.max(np.abs(eigvals))
+        rtol = 100 * np.finfo(float).eps * max(H.shape)
+        tol = rtol * scale
+
+        # Significant negative eigenvalues indicate indefiniteness
+        if eigvals[0] < -tol:
+            raise np.linalg.LinAlgError(
+                f"Reduced Gram matrix is indefinite: "
+                f"lambda_min={eigvals[0]:.3e}, tolerance={tol:.3e}"
+            )
+
+        # Keep numerically significant positive eigenvalues
+        keep = eigvals > tol
+
+        # Check whether discarded eigendirections contain a
+        # significant component of the linear term
+        g_hat = V.T @ g
+        null_component = np.linalg.norm(g_hat[~keep])
+        g_scale = max(np.linalg.norm(g), np.finfo(float).tiny)
+
+        if null_component > 1.0e-10 * g_scale:
+            raise np.linalg.LinAlgError(
+                "The linear regularization term has a significant "
+                "component in the numerical nullspace of H. "
+                f"Relative component: {null_component / g_scale:.3e}"
+            )
+
+        # Rectangular factorization H ≈ B.T @ B
+        if np.any(keep):
+            sqrt_eig = np.sqrt(eigvals[keep])
+
+            B = sqrt_eig[:, None] * V[:, keep].T
+            q = g_hat[keep] / sqrt_eig
+        else:
+            B = np.zeros((0, H.shape[0]))
+            q = np.zeros(0)
+
+        # Augmented least-squares system
         M = np.vstack([
             M,
-            np.sqrt(lam) * (Rg @ Q2)
+            np.sqrt(lam) * B
         ])
 
         b_2 = np.concatenate([
@@ -228,7 +266,7 @@ def local_grad_solve(context, i, eps0, fixed_eps=False, add_anisotropy=True):
     # Augmentation form
     pdim = 0
     if context.augmentation:
-        pdim = len(rbf.poly_basis(P[0]))
+        pdim = len(context.poly_basis(P[0]))
 
     Ps = P[s]
     # M: pairwise phi(P[s[j]] - P[s[k]]) for all (j,k), one vectorized call
@@ -249,8 +287,8 @@ def local_grad_solve(context, i, eps0, fixed_eps=False, add_anisotropy=True):
         b_grad = b_grad @ At
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)               # (num_nodes, pdim)
-        b_poly = rbf.grad_poly(P[i])            # (pdim, dim)
+        Pmat = context.poly_basis(Ps)               # (num_nodes, pdim)
+        b_poly = context.grad_poly(P[i])            # (pdim, dim)
         pdim =  Pmat.shape[1]
 
         Q, R = np.linalg.qr(Pmat, mode="complete")
@@ -270,7 +308,7 @@ def local_grad_solve(context, i, eps0, fixed_eps=False, add_anisotropy=True):
     z_grad = np.linalg.solve(R, y)
     return z_grad if not context.augmentation else Q2 @ z_grad + w_1, np.linalg.cond(M)
 
-def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.0e-3):
+def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.0e-0):
     At = context.A[i].T
     P = context.nodes
 
@@ -303,8 +341,8 @@ def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.
         b_grad = b_grad @ At
 
     if context.augmentation:
-        Pmat = rbf.poly_basis(Ps)
-        b_poly = rbf.grad_poly(P[i])
+        Pmat = context.poly_basis(Ps)
+        b_poly = context.grad_poly(P[i])
 
         if add_anisotropy:
             b_poly = b_poly @ At
@@ -325,24 +363,87 @@ def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.
         w_1 = np.zeros((num_nodes, dim))
         b_2 = np.zeros((num_centers, dim))
 
-    # Add RKHS residual regularization
+    # --------------------------------------------------
+    # RKHS residual regularization on polynomial nullspace
+    # --------------------------------------------------
     if lam > 0:
+
+        gram_sign = context.rbf_gram_sign
+
         diff_G = Ps[:, None, :] - Ps[None, :, :]
-        G = context.phi(diff_G, eps)
+        G = gram_sign * context.phi(diff_G, eps)
 
         diff_c = P[i][None, :] - Ps
-        c = context.grad_phi(diff_c, eps)
+        c = gram_sign * context.grad_phi(diff_c, eps)
 
         if add_anisotropy:
             c = c @ At
 
-        Rg = np.linalg.cholesky(G).T
+        # Reduced Gram matrix: only this matrix should be PSD.
+        H = Q2.T @ G @ Q2
+        g = Q2.T @ (c - G @ w_1)
 
-        q = np.linalg.solve(Rg.T, c - G @ w_1)
+        H = 0.5 * (H + H.T)
 
+        # Handle an empty polynomial nullspace.
+        if H.shape[0] == 0:
+            return w_1, np.linalg.cond(Pmat)
+
+        # Symmetric eigendecomposition.
+        eigvals, V = np.linalg.eigh(H)
+
+        scale = max(
+            float(np.max(np.abs(eigvals))),
+            np.finfo(float).tiny
+        )
+
+        rtol = 100 * np.finfo(float).eps * max(H.shape)
+        tol = rtol * scale
+
+        if eigvals[0] < -tol:
+            raise np.linalg.LinAlgError(
+                "Reduced gradient Gram matrix is indefinite: "
+                f"lambda_min={eigvals[0]:.3e}, "
+                f"tolerance={tol:.3e}"
+            )
+
+        keep = eigvals > tol
+
+        # Check consistency of the linear term.
+        g_hat = V.T @ g
+
+        null_component = np.linalg.norm(g_hat[~keep])
+        g_scale = max(
+            np.linalg.norm(g),
+            np.finfo(float).tiny
+        )
+
+        if null_component > 1.0e-10 * g_scale:
+            raise np.linalg.LinAlgError(
+                "Gradient regularization linear term has a "
+                "significant component in the numerical nullspace. "
+                f"Relative component: "
+                f"{null_component / g_scale:.3e}"
+            )
+
+        # Construct H = B.T @ B.
+        if np.any(keep):
+
+            sqrt_eig = np.sqrt(eigvals[keep])
+
+            B = sqrt_eig[:, None] * V[:, keep].T
+
+            q = g_hat[keep] / sqrt_eig[:, None]
+
+        else:
+
+            B = np.zeros((0, H.shape[0]))
+            q = np.zeros((0, g.shape[1]))
+
+        # Append regularization rows.
         M = np.vstack([
             M,
-            np.sqrt(lam) * (Rg @ Q2)
+            np.sqrt(lam) * B
         ])
 
         b_2 = np.vstack([
@@ -352,6 +453,17 @@ def local_grad_ls(context, i, eps0, fixed_eps=False, add_anisotropy=True, lam=1.
 
     else:
         b_2 = b_grad - b_2
+
+    # --------------------------------------------------
+    # QR least-squares solve
+    # --------------------------------------------------
+    Q, R = np.linalg.qr(M, mode="reduced")
+    y = Q.T @ b_2
+    z_grad = np.linalg.solve(R, y)
+
+    w = z_grad if not context.augmentation else Q2 @ z_grad + w_1
+
+    return w, np.linalg.cond(M)
 
     # Solve the augmented least-squares problem using QR
     Q, R = np.linalg.qr(M, mode="reduced")
@@ -688,15 +800,47 @@ def set_rbf_func(basis, augmentation, context, tol=1e-12):
     if (basis == 'gaussian'):
         context.set_phi(rbf.phi_gauss)
         context.set_grad_phi(rbf.grad_phi_gauss)
-        context.set_laplacian_phi(rbf.anisotropic_diffusion_phi_gauss)        
+        context.set_L_phi(rbf.anisotropic_diffusion_phi_gauss)        
     elif (basis == 'cubic'):
         context.set_phi(lambda p, eps: rbf.phi_cubic(p))
         context.set_grad_phi(lambda p, eps: rbf.grad_phi_cubic(p))
-        context.set_laplacian_phi(
+        context.set_L_phi(
             lambda p, A, eps: rbf.anisotropic_diffusion_phi_cubic(p, A, tol))
-        
+    elif (basis == 'quintic'):
+        context.set_phi(lambda p, eps: rbf.phi_quintic(p))
+        context.set_grad_phi(lambda p, eps: rbf.grad_phi_quintic(p))
+        context.set_L_phi(
+            lambda p, A, eps: rbf.anisotropic_diffusion_phi_quintic(p, A, tol))
+    elif (basis == 'septic'):
+        context.set_phi(lambda p, eps: rbf.phi_septic(p))
+        context.set_grad_phi(lambda p, eps: rbf.grad_phi_septic(p))
+        context.set_L_phi(
+            lambda p, A, eps: rbf.anisotropic_diffusion_phi_septic(p, A, tol))
+
     else:
         raise ValueError(f"'{basis}' is not a correct basis")
+
+    if augmentation:
+        if (basis == 'septic'):
+            degree = 3
+        elif (basis == 'quintic'):
+            degree = 2
+        elif (basis == 'cubic'):
+            degree = 1
+        else:
+            degree = 1
+
+        context.set_poly(lambda p: rbf.poly_basis(p, degree=degree))
+        context.set_grad_poly(lambda p: rbf.grad_poly(p, degree=degree))
+        context.set_L_poly(lambda p, A: rbf.anisotropic_diffusion_poly(p, A, degree=degree))
+
+        context.rbf_gram_sign = {
+            'gaussian': 1.0,
+            'cubic': 1.0,
+            'quintic': -1.0,
+            'septic': 1.0,
+        }[basis]
+
 
 def set_boundary_func(g_bound, btype, shape, L, context):
     if (shape == 'square'):

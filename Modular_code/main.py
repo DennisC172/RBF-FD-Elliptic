@@ -158,22 +158,22 @@ if __name__ == "__main__":
     example_num = "10"
     
     # Define the nodes per stencil
-    num_stencil_nodes = 6
+    num_stencil_nodes = 20
     
     # Define the number of rings with quasi-uniform nodes
     # For Square solve, let num_centers := None
     num_centers = 5
     
     # Define the shape and parameters of the radial basis function
-    rbf_shape = 'gaussian'
-    augmentation = False
-    eps = 0.075
+    rbf_shape = 'quintic'
+    augmentation = True
+    eps = 0.025
     fixed_eps = False
 
     # -----------------------------
     # BUILD NODES
     # -----------------------------
-    Nx = 500
+    Nx = 250
     L = 1.00
     shape = 'square'
 
