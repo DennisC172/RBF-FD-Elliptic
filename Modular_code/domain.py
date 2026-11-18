@@ -115,7 +115,10 @@ class PDEDomainContext():
         self.centers_info = centers_info
         self.phi = None
         self.grad_phi = None
-        self.laplacian_phi = None
+        self.L_phi = None
+        self.poly_basis = None
+        self.grad_poly = None
+        self.L_poly = None
         self.augmentation = False
         self.A = A
         self.W = None
@@ -157,7 +160,7 @@ class PDEDomainContext():
         
         self.grad_phi = grad_phi
         
-    def set_laplacian_phi(self, laplacian_phi):
+    def set_L_phi(self, L_phi):
         """
         Set the diffusion-operator-applied-to-kernel function.
 
@@ -176,7 +179,7 @@ class PDEDomainContext():
         None
         """
         
-        self.laplacian_phi = laplacian_phi
+        self.L_phi = L_phi
         
     def set_augmentation(self, augmentation):
         """
@@ -195,6 +198,15 @@ class PDEDomainContext():
         """
         
         self.augmentation = augmentation
+
+    def set_poly(self, poly):
+        self.poly_basis = poly
+
+    def set_grad_poly(self, grad_poly):
+        self.grad_poly = grad_poly
+
+    def set_L_poly(self, L_poly):
+        self.L_poly = L_poly
     
     def set_A(self, A):
         """
