@@ -834,12 +834,12 @@ def set_rbf_func(basis, augmentation, context, tol=1e-12):
         context.set_grad_poly(lambda p: rbf.grad_poly(p, degree=degree))
         context.set_L_poly(lambda p, A: rbf.anisotropic_diffusion_poly(p, A, degree=degree))
 
-        context.rbf_gram_sign = {
-            'gaussian': 1.0,
-            'cubic': 1.0,
-            'quintic': -1.0,
-            'septic': 1.0,
-        }[basis]
+    context.rbf_gram_sign = {
+        'gaussian': 1.0,
+        'cubic': 1.0,
+        'quintic': -1.0,
+        'septic': 1.0,
+    }[basis]
 
 
 def set_boundary_func(g_bound, btype, shape, L, context):
