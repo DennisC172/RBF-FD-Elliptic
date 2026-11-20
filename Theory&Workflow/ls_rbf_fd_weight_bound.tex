@@ -1,0 +1,225 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,citecolor=blue!50!black]{hyperref}
+
+% ---------- macros ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Pol}[2]{\Pi_{#1}^{#2}}
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\smin}{\sigma_{\min}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\pinv}{\dagger}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{hyp}{Hypothesis}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Weight growth for least-squares RBF-FD stencils with fixed auxiliary centers:\\ an $O(h^{-k})$ bound}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We consider RBF-FD weights obtained by least squares against kernel translates centered at auxiliary points that are fixed as the stencil spacing $h\to0$.
+By comparing the least-squares weights with the polynomial-exact finite-difference weights, we show $\norm{w_h}_1\le C h^{-k}$ for an operator of order $k$.
+The argument covers square stencils ($N=\dim\Pi_p^d$) and, under one additional rank condition on the nodes, arbitrary larger stencils.
+When that rank condition fails, the exponent degrades in a precise way.
+\end{abstract}
+
+\section{Setting and notation}
+
+Let $z\in\R^d$ be the target point and
+$L=\sum_{|\alpha|\le k}a_\alpha\partial^\alpha$ a differential operator of order $k$ whose coefficients are frozen at $z$.
+For a multi-index $\alpha\in\N_0^d$ write $|\alpha|$, $\alpha!$, $\xi^\alpha$ as usual, and set
+\[
+n_t:=\dim\Pol{t}{d}=\binom{t+d}{d}.
+\]
+
+\paragraph{Stencil and centers.}
+The stencil has $N$ nodes $x_j=z+h\xi_j$, $j=1,\dots,N$, with reference nodes $\xi_j$ independent of $h$.
+The auxiliary centers $c_1,\dots,c_m$ are \emph{fixed independently of $h$}.
+For a kernel $K$ (derivatives taken in the second argument) define
+\[
+A_h\in\R^{m\times N},\quad (A_h)_{\ell j}=K(c_\ell,x_j),
+\qquad
+b\in\R^m,\quad b_\ell=(L_yK)(c_\ell,z),
+\]
+and the least-squares weights
+\[
+w_h=\argmin_{w\in\R^N}\norm{A_hw-b}_2 .
+\]
+In functional terms, $\sum_j w_j\delta_{x_j}\approx\delta_z\circ L$ on the test functions $K(c_\ell,\cdot)$.
+
+\paragraph{Taylor objects.}
+For each degree $t\ge0$, with columns indexed by $|\alpha|\le t$, set
+\begin{align*}
+(V_t)_{j\alpha}&=\xi_j^\alpha\in\R^{N\times n_t}, &
+D_{h,t}&=\diag\big(h^{|\alpha|}\big)\in\R^{n_t\times n_t},\\
+(J_t)_{\ell\alpha}&=\tfrac{1}{\alpha!}\,\partial_y^\alpha K(c_\ell,z)\in\R^{m\times n_t}, &
+R_{h,t}&=A_h-J_tD_{h,t}V_t^{\top}.
+\end{align*}
+Let $p$ be the polynomial-reproduction degree and define the operator vector $\eta_L\in\R^{n_p}$ by
+\[
+(\eta_L)_\alpha=\begin{cases}\alpha!\,a_\alpha, & |\alpha|\le k,\\ 0,& k<|\alpha|\le p.\end{cases}
+\]
+(For $\alpha=e_i+e_j$, $i\ne j$, the coefficient $a_\alpha$ collects \emph{both} $(i,j)$ and $(j,i)$ terms; e.g.\ for $Lu=-\nabla\!\cdot(A\nabla u)$ one has $a_{e_i+e_j}=-(A_{ij}+A_{ji})$, $a_{2e_i}=-A_{ii}$, and $a_{e_j}=-\sum_i\partial_iA_{ij}$.)
+
+\paragraph{Two degrees.}
+\[
+p:=\max\{t:\ n_t\le N\},\qquad s:=\min\{t:\ \rank V_t=N\}.
+\]
+We assume $p\ge k$ (equivalently $N\ge n_k$).
+Always $s\ge p$, with $s=p$ if and only if $N=n_p$; for generic nodes with $N>n_p$ one has $s=p+1$.
+For distinct nodes $s\le N-1$, so $s$ is always finite.
+
+\section{Hypotheses and main result}
+
+\begin{hyp}[smoothness]\label{h:smooth}
+$y\mapsto K(c_\ell,y)$ is $C^{s+1}$ on a ball around $z$ containing all stencils with $h\le h_0$, where $h_0\le 1$.
+\end{hyp}
+\begin{hyp}[polynomial unisolvence]\label{h:poly}
+$\rank V_p=n_p$.  (For $N=n_p$ this says $V_p$ is nonsingular.)
+\end{hyp}
+\begin{hyp}[centers]\label{h:centers}
+$J_s$ has full column rank, i.e.\ $\gamma:=\smin(J_s)>0$. In particular $m\ge n_s$.
+\end{hyp}
+
+Define the minimum-norm polynomial-exact weights
+\[
+w_h^*:=(V_p^{\top})^{\pinv}D_{h,p}^{-1}\eta_L .
+\]
+They satisfy $D_{h,p}V_p^\top w_h^*=\eta_L$, which is equivalent to
+$\sum_j w_{h,j}^*\,q(x_j)=(Lq)(z)$ for all $q\in\Pol{p}{d}$.
+
+\begin{theorem}\label{thm:main}
+Under Hypotheses~\ref{h:smooth}--\ref{h:centers} there are $h_1\in(0,1]$ and constants $C,C'$ independent of $h$ such that for $0<h\le h_1$ the matrix $A_h$ is injective (so $w_h$ is unique) and
+\begin{equation}\label{eq:main}
+\norm{w_h-w_h^*}_2\le C\,h^{\,p+1-s}\,\norm{w_h^*}_2,
+\qquad
+\norm{w_h^*}_2\le \frac{\norm{\eta_L}_2}{\smin(V_p)}\,h^{-k}.
+\end{equation}
+Consequently
+\[
+\norm{w_h}_1\le\sqrt N\,\norm{w_h}_2\le C'\,h^{-k-(s-p-1)_+}.
+\]
+In particular $\norm{w_h}_1\le C'h^{-k}$ whenever $s\le p+1$.
+\end{theorem}
+
+For $N=n_p$ ($s=p$) the least-squares weights are a relative $O(h)$ perturbation of the classical finite-difference weights.
+For generic $N>n_p$ ($s=p+1$) they have the same order but are not asymptotically equal to $w_h^*$.
+
+\section{Proof}
+
+\paragraph{Step 1 (Taylor).}
+For $t\in\{p,s\}$, Taylor's theorem with Lagrange remainder, applied entrywise ($m,N$ fixed), gives
+\[
+A_h=J_tD_{h,t}V_t^\top+R_{h,t},\qquad \norm{R_{h,t}}_2\le C_R\,h^{t+1}\quad(0<h\le h_0).
+\]
+
+\paragraph{Step 2 (stability).}
+For $h\le 1$ we have $D_{h,s}\succeq h^sI$. By Hypothesis~\ref{h:centers} and the definition of $s$, with $v:=\smin(V_s)=\min_{\norm w=1}\norm{V_s^\top w}>0$,
+\[
+\norm{A_hw}\ge\norm{J_sD_{h,s}V_s^\top w}-\norm{R_{h,s}w}
+\ge\big(\gamma\,v\,h^s-C_Rh^{s+1}\big)\norm w
+\ge\tfrac12\gamma v\,h^s\norm w
+\]
+for $h\le h_1:=\min\{h_0,\gamma v/(2C_R)\}$. Hence $A_h$ is injective and
+\[
+\norm{A_h^\pinv}_2\le \frac{2}{\gamma v}\,h^{-s}.
+\]
+
+\paragraph{Step 3 (consistency).}
+Since $L$ has order $k\le p$, the identity $b=J_p\eta_L$ holds \emph{exactly}.
+Using $D_{h,p}V_p^\top w_h^*=\eta_L$,
+\[
+A_hw_h^*-b=J_p\big(D_{h,p}V_p^\top w_h^*-\eta_L\big)+R_{h,p}w_h^*=R_{h,p}\,w_h^* .
+\]
+Moreover, $\eta_L$ is supported on $|\alpha|\le k$ and $h\le1$, so $\norm{D_{h,p}^{-1}\eta_L}\le h^{-k}\norm{\eta_L}$, and therefore
+$\norm{w_h^*}\le \smin(V_p)^{-1}\norm{\eta_L}\,h^{-k}$.
+This is the only place where $k$ (rather than $p$) enters; it is why the exponent is $-k$.
+
+\paragraph{Step 4 (conclusion).}
+Injectivity gives $w_h=A_h^\pinv b$ and $A_h^\pinv A_h=I$. Hence
+\[
+w_h-w_h^*=A_h^\pinv\big(b-A_hw_h^*\big)=-A_h^\pinv R_{h,p}\,w_h^*,
+\]
+and by Steps 1--3,
+\[
+\norm{w_h-w_h^*}\le\frac{2}{\gamma v}h^{-s}\cdot C_Rh^{p+1}\norm{w_h^*}.
+\]
+This is \eqref{eq:main}. If $s\le p+1$ then $h^{p+1-s}\le1$ and $\norm{w_h}\le(1+C)\norm{w_h^*}$; if $s>p+1$ the factor $h^{p+1-s}$ gives the stated exponent. Finally $\norm w_1\le\sqrt N\norm w_2$. \hfill$\qquad\blacksquare$
+
+\section{Remarks}
+
+\begin{remark}[relation to the $\eta$-formulation]
+For $N=n_p$ put $\eta=D_hV^\top w$ and $B_h=A_hV^{-\top}D_h^{-1}=J+R_hV^{-\top}D_h^{-1}$. Then $A_h=B_hD_hV^\top$, $\eta_h=B_h^\pinv b$, and $\eta_h-\eta_L=-B_h^\pinv R_hw_h^*$.
+The statement ``$B_h=J+O(h)$'' is the stability estimate of Step~2 (via Weyl's inequality, $\smin(B_h)\ge\gamma/2$).
+The statement ``column $\alpha$ of $B_h-J$ is $O(h^{p+1-|\alpha|})$'' is the same as $R_hw_h^*=O(h^{p+1-k})$ of Step~3.
+The operator-norm bound $B_h-J=O(h)$ alone yields only $\norm{w_h}\lesssim h^{-p}$: the structure $b=J\eta_L$ is what produces $h^{-k}$.
+\end{remark}
+
+\begin{proposition}[sharpness]\label{prop:sharp}
+Assume $s\le p+1$ and $a_\beta\ne0$ for some $|\beta|=k$. Then $\norm{w_h}_1\ge c\,h^{-k}$ for small $h$.
+\end{proposition}
+\begin{proof}
+Write $A_hw_h-b=J_p(D_{h,p}V_p^\top w_h-\eta_L)+R_{h,p}w_h$. By least-squares optimality and Step~3, $\norm{A_hw_h-b}\le\norm{A_hw_h^*-b}\le C h^{p+1-k}$; also $\norm{R_{h,p}w_h}\le C_Rh^{p+1}\norm{w_h}\le Ch^{p+1-k}$ by Theorem~\ref{thm:main}.
+Since $J_p$ consists of columns of $J_s$, $\smin(J_p)\ge\gamma$, so $\norm{D_{h,p}V_p^\top w_h-\eta_L}\le C\gamma^{-1}h^{p+1-k}$.
+For $|\beta|=k$ the $\beta$-th component gives $\big|h^k\sum_j w_{h,j}\xi_j^\beta-\beta!a_\beta\big|\le C h^{p+1-k}$, hence
+$h^k\norm{w_h}_1\max_j|\xi_j^\beta|\ge\beta!|a_\beta|-Ch^{p+1-k}$, and $p+1-k\ge1$.
+\end{proof}
+
+\begin{remark}[scope]
+\begin{enumerate}[leftmargin=*,label=(\roman*)]
+\item \emph{Fixed centers.} If the centers move with $h$ (e.g.\ they are the stencil nodes), $J_s$ becomes $h$-dependent and the proof does not carry over; that is the genuine flat-limit regime (cf.\ Schaback 2008, Larsson--Fornberg 2005).
+\item \emph{Dependence of constants.} $C$ depends on $\norm{\eta_L}$, $\smin(V_p)$, $\smin(V_s)$, $\gamma$ and on bounds for the derivatives of $K(c_\ell,\cdot)$ of order $s+1$. It is not uniform over center configurations for which $J_s$ degenerates, nor over node configurations for which $V_s$ does.
+\item \emph{Number of centers.} $m\ge n_s$ is what this short proof needs. In the experiments below, generic centers with $m=N$ (and $m=N+1$) also gave bounded $h^k\norm{w_h}$; the weaker sufficient condition (injectivity of a graded limit matrix, requiring only $m\ge N$) is not proved here.
+\item \emph{Stencil sizes.} In $d=2$ the admissible square sizes are $n_t=21,28,36,45,55,\dots$; in $d=3$ they are $20,35,56,\dots$. Stencils of size $25$ or $50$ therefore fall in the rectangular case: $p=5,8$ in $d=2$ ($p=3,4$ in $d=3$), and one must verify $\rank V_{p+1}=N$ and (for this proof) $m\ge n_{p+1}$.
+\item \emph{Structured stencils.} The condition $\rank V_{p+1}=N$ can fail for Cartesian blocks and for nodes on few lines or circles. For a $5\times5$ tensor grid (zeros of a quintic in each variable), the quotient dimensions are $22,24,25$ in degrees $6,7,8$, so $s=8$.
+\end{enumerate}
+\end{remark}
+
+\section{Numerical check}
+
+Gaussian kernel $K(c,y)=e^{-|c-y|^2}$, $d=2$, $L=\Delta$ ($k=2$), $30$--$40$ random centers fixed outside the unit disk, $z=0$, $200$-digit arithmetic. Table~\ref{tab:num} reports $h^2\norm{w_h}_2$ as $h$ decreases from $10^{-2}$ to $10^{-6}$.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Stencil & $s$ & $h^2\norm{w_h}_2$ & Observation\\
+\midrule
+21 nodes, triangular lattice ($N=n_5$) & $5$ & $507.5\to504.23$ & $\to h^2\norm{w_h^*}$; $\norm{w_h-w_h^*}/\norm{w_h^*}\approx0.7h$\\
+25 generic nodes & $6$ & $1036\to1004.4$ & bounded; relative gap $\to2.9$ (not $O(h)$)\\
+$5\times5$ grid ($\rank V_6=22$) & $8$ & $9.5\!\cdot\!10^{3}\to9.5\!\cdot\!10^{11}$ & $\norm{w_h}\sim h^{-4}=h^{-k-(s-p-1)}$\\
+\bottomrule
+\end{tabular}
+\caption{Scaling of least-squares weights. The third row confirms that the rank condition $s\le p+1$ is necessary for the exponent $-k$.}
+\label{tab:num}
+\end{table}
+
+The result is asymptotic. For a \emph{random} 21-point stencil in the unit disk, $\norm{w_h^*}\approx1.4\cdot10^{6}h^{-2}$, and the least-squares weights had not entered the asymptotic regime at $h=10^{-2}$: well-conditioned stencils are needed to see the $h^{-k}$ slope at practical $h$.
+
+\section*{Background references}
+The following are background for the ingredients (derivative reproducing kernels, coalescing-node limits, polynomial-exact differentiation formulas). None proves the bound above; bibliographic details should be verified before citing.
+\begin{itemize}[leftmargin=*]
+\item D.-X.\ Zhou, Derivative reproducing properties for kernel methods in learning theory, \emph{J.\ Comput.\ Appl.\ Math.} 220 (2008).
+\item R.\ Schaback, Limit problems for interpolation by analytic radial basis functions, \emph{J.\ Comput.\ Appl.\ Math.} 212 (2008).
+\item O.\ Davydov and R.\ Schaback, Error bounds for kernel-based numerical differentiation, \emph{Numer.\ Math.} 132 (2016).
+\item O.\ Davydov and R.\ Schaback, Minimal numerical differentiation formulas, \emph{Numer.\ Math.} 140 (2018).
+\end{itemize}
+
+\end{document}
